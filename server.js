@@ -1,5 +1,7 @@
+require('dotenv').config();
 const express = require('express');
 const path = require('path');
+const { initDatabase, addToWaitlist, getWaitlistCount } = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -16,12 +18,33 @@ app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', message: 'Polsia server is running' });
 });
 
-// API endpoint for waitlist (placeholder for future implementation)
-app.post('/api/waitlist', (req, res) => {
+// API endpoint for waitlist
+app.post('/api/waitlist', async (req, res) => {
     const { email } = req.body;
-    // TODO: Add database logic here later
-    console.log('Waitlist signup:', email);
-    res.json({ success: true, message: 'Added to waitlist' });
+
+    if (!email || !email.trim()) {
+        return res.status(400).json({ success: false, message: 'Email is required' });
+    }
+
+    try {
+        const result = await addToWaitlist(email.trim().toLowerCase());
+        console.log('Waitlist signup:', email);
+        res.json(result);
+    } catch (error) {
+        console.error('Error adding to waitlist:', error);
+        res.status(500).json({ success: false, message: 'Failed to add to waitlist' });
+    }
+});
+
+// API endpoint to get waitlist count
+app.get('/api/waitlist/count', async (req, res) => {
+    try {
+        const count = await getWaitlistCount();
+        res.json({ count });
+    } catch (error) {
+        console.error('Error getting waitlist count:', error);
+        res.status(500).json({ success: false, message: 'Failed to get count' });
+    }
 });
 
 // Serve index.html for all other routes (SPA support)
@@ -30,6 +53,22 @@ app.get('*', (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
-    console.log(`🚀 Polsia server running on http://localhost:${PORT}`);
-});
+async function startServer() {
+    try {
+        // Initialize database tables
+        if (process.env.DATABASE_URL) {
+            await initDatabase();
+        } else {
+            console.warn('⚠️  DATABASE_URL not set - database features disabled');
+        }
+
+        app.listen(PORT, () => {
+            console.log(`🚀 Polsia server running on http://localhost:${PORT}`);
+        });
+    } catch (error) {
+        console.error('Failed to start server:', error);
+        process.exit(1);
+    }
+}
+
+startServer();
