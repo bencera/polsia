@@ -63,31 +63,48 @@ class PolsiaSystem {
         const joinBtn = document.getElementById('joinBtn');
         const emailInput = document.getElementById('email');
 
-        joinBtn.addEventListener('click', () => {
+        joinBtn.addEventListener('click', async () => {
             const email = emailInput.value.trim();
 
             if (email && this.isValidEmail(email)) {
-                // Simulate joining waitlist
+                // Call backend API to join waitlist
                 joinBtn.textContent = 'PROCESSING...';
                 joinBtn.disabled = true;
 
-                setTimeout(() => {
-                    joinBtn.textContent = 'ADDED TO QUEUE';
-                    joinBtn.style.borderColor = '#00ff00';
-                    joinBtn.style.color = '#00ff00';
-                    emailInput.value = '';
+                try {
+                    const response = await fetch('/api/waitlist', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ email }),
+                    });
 
-                    // Increment waitlist
-                    this.waitlistCount += 1;
-                    document.getElementById('waitlist-count').textContent = this.waitlistCount;
+                    const data = await response.json();
 
+                    if (data.success) {
+                        joinBtn.textContent = 'ADDED TO QUEUE';
+                        emailInput.value = '';
+
+                        // Increment waitlist
+                        this.waitlistCount += 1;
+                        document.getElementById('waitlist-count').textContent = this.waitlistCount;
+
+                        setTimeout(() => {
+                            joinBtn.textContent = 'Join Waitlist';
+                            joinBtn.disabled = false;
+                        }, 3000);
+                    } else {
+                        throw new Error(data.message || 'Failed to join waitlist');
+                    }
+                } catch (error) {
+                    console.error('Error joining waitlist:', error);
+                    joinBtn.textContent = 'ERROR - TRY AGAIN';
                     setTimeout(() => {
                         joinBtn.textContent = 'Join Waitlist';
                         joinBtn.disabled = false;
-                        joinBtn.style.borderColor = '';
-                        joinBtn.style.color = '';
                     }, 3000);
-                }, 1500);
+                }
             } else {
                 // Invalid email feedback
                 emailInput.style.borderColor = '#ff0000';
