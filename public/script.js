@@ -6,12 +6,12 @@ class PolsiaSystem {
 
         this.statusMessages = [
             '> Welcome to Polsia',
-            '> Analyzing market trends...',
-            '> Generating project blueprint...',
-            '> Optimizing build pipeline...',
             '> Deploying marketing campaign...',
             '> Processing autonomous tasks...',
-            '> Scaling operations...',
+            '> Replying to customer emails...',
+            '> Creating new UGC videos...',
+            '> Making competitive research...',
+            '> Fixing security holes...',
         ];
 
         this.currentStatusIndex = 0;

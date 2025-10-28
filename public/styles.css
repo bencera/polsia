@@ -79,21 +79,29 @@ h1 {
 }
 
 .btn-primary {
-    background-color: #000;
-    border: none;
-    color: #fff;
-    padding: 10px 20px;
-    font-family: "Times New Roman", Times, serif;
-    font-size: 14px;
+    background: linear-gradient(top, #ffffff, #888888);
+    background: -webkit-linear-gradient(top, #ffffff, #888888);
+    border: 1px solid #1a1a1a;
+    color: #000000;
+    padding: 2px 4px;
+    font-family: helvetica, serif;
+    font-size: 11px;
     cursor: pointer;
+    border-radius: 2px;
+    box-shadow: rgba(255, 255, 255, 0.4) 0 1px 0 0 inset, rgba(255, 255, 255, 0.4) 0 1px 0;
 }
 
 .btn-primary:hover {
-    background-color: #333;
+    background: linear-gradient(top, #ffffff, #888888);
+    background: -webkit-linear-gradient(top, #ffffff, #888888);
 }
 
 .btn-primary:active {
-    background-color: #555;
+    background: linear-gradient(top, #888888, #ffffff);
+    background: -webkit-linear-gradient(top, #888888, #ffffff);
+    box-shadow: rgba(0, 0, 0, 0.4) 0 1px 2px 0 inset;
+    padding-top: 3px;
+    padding-bottom: 1px;
 }
 
 .queue {
