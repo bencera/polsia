@@ -2,8 +2,6 @@
 
 class PolsiaSystem {
     constructor() {
-        this.waitlistCount = 247;
-
         this.statusMessages = [
             '> Welcome to Polsia',
             '> Deploying marketing campaign...',
@@ -21,7 +19,6 @@ class PolsiaSystem {
     init() {
         // Start all autonomous processes
         this.startStatusRotation();
-        this.startWaitlistCounter();
         this.setupEventListeners();
     }
 
@@ -39,23 +36,6 @@ class PolsiaSystem {
                 }, 300);
             }
         }, 5000);
-    }
-
-    // Increment waitlist counter occasionally
-    startWaitlistCounter() {
-        setInterval(() => {
-            if (Math.random() > 0.7) { // 30% chance every interval
-                this.waitlistCount += 1;
-                const element = document.getElementById('waitlist-count');
-                element.textContent = this.waitlistCount;
-
-                // Brief highlight animation
-                element.style.color = '#00ff00';
-                setTimeout(() => {
-                    element.style.color = '';
-                }, 500);
-            }
-        }, 8000);
     }
 
     // Setup event listeners
@@ -85,10 +65,6 @@ class PolsiaSystem {
                     if (data.success) {
                         joinBtn.textContent = 'ADDED TO QUEUE';
                         emailInput.value = '';
-
-                        // Increment waitlist
-                        this.waitlistCount += 1;
-                        document.getElementById('waitlist-count').textContent = this.waitlistCount;
 
                         setTimeout(() => {
                             joinBtn.textContent = 'Join Waitlist';
@@ -133,9 +109,6 @@ const style = document.createElement('style');
 style.textContent = `
     #status-text {
         transition: opacity 0.3s ease;
-    }
-    #waitlist-count {
-        transition: color 0.5s ease;
     }
 `;
 document.head.appendChild(style);
