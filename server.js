@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const { initDatabase, addToWaitlist, getWaitlistCount } = require('./db');
+const slackService = require('./slack');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -29,6 +30,12 @@ app.post('/api/waitlist', async (req, res) => {
     try {
         const result = await addToWaitlist(email.trim().toLowerCase());
         console.log('Waitlist signup:', email);
+
+        // Send Slack notification for new signups
+        if (result.success && result.data) {
+            await slackService.notifyWaitlistSignup(email.trim().toLowerCase());
+        }
+
         res.json(result);
     } catch (error) {
         console.error('Error adding to waitlist:', error);
