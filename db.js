@@ -257,6 +257,99 @@ async function updateServiceConnectionStatus(connectionId, userId, status) {
     }
 }
 
+// Store GitHub connection with encrypted token
+async function storeGitHubConnection(userId, githubData, encryptedToken) {
+    const client = await pool.connect();
+    try {
+        // Combine GitHub user data with encrypted token in metadata
+        const metadata = {
+            ...githubData,
+            encrypted_token: encryptedToken.encrypted,
+            token_iv: encryptedToken.iv,
+            token_auth_tag: encryptedToken.authTag
+        };
+
+        // Check if user already has a GitHub connection
+        const existingResult = await client.query(
+            'SELECT id FROM service_connections WHERE user_id = $1 AND service_name = $2',
+            [userId, 'github']
+        );
+
+        if (existingResult.rows.length > 0) {
+            // Update existing connection
+            const result = await client.query(
+                'UPDATE service_connections SET status = $1, metadata = $2 WHERE id = $3 RETURNING *',
+                ['connected', metadata, existingResult.rows[0].id]
+            );
+            return result.rows[0];
+        } else {
+            // Create new connection
+            const result = await client.query(
+                'INSERT INTO service_connections (user_id, service_name, status, metadata) VALUES ($1, $2, $3, $4) RETURNING *',
+                [userId, 'github', 'connected', metadata]
+            );
+            return result.rows[0];
+        }
+    } catch (err) {
+        console.error('Error storing GitHub connection:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Get decrypted GitHub token for a user
+async function getGitHubToken(userId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            'SELECT metadata FROM service_connections WHERE user_id = $1 AND service_name = $2 AND status = $3',
+            [userId, 'github', 'connected']
+        );
+
+        if (result.rows.length === 0) {
+            return null;
+        }
+
+        const metadata = result.rows[0].metadata;
+
+        // Check if encrypted token data exists
+        if (!metadata || !metadata.encrypted_token || !metadata.token_iv || !metadata.token_auth_tag) {
+            console.error('GitHub connection exists but encrypted token data is missing');
+            return null;
+        }
+
+        // Return encrypted token data (decryption will be done by the caller)
+        return {
+            encrypted: metadata.encrypted_token,
+            iv: metadata.token_iv,
+            authTag: metadata.token_auth_tag
+        };
+    } catch (err) {
+        console.error('Error getting GitHub token:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Delete GitHub connection
+async function deleteGitHubConnection(connectionId, userId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            'DELETE FROM service_connections WHERE id = $1 AND user_id = $2 AND service_name = $3 RETURNING *',
+            [connectionId, userId, 'github']
+        );
+        return result.rows.length > 0;
+    } catch (err) {
+        console.error('Error deleting GitHub connection:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
 module.exports = {
     pool,
     initDatabase,
@@ -267,4 +360,7 @@ module.exports = {
     getTasksByUserId,
     getServiceConnectionsByUserId,
     updateServiceConnectionStatus,
+    storeGitHubConnection,
+    getGitHubToken,
+    deleteGitHubConnection,
 };

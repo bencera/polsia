@@ -7,7 +7,7 @@
     "start": "node server.js",
     "server": "nodemon server.js",
     "client": "npm run dev --prefix client",
-    "dev": "concurrently -n \"server,client\" -c \"bgBlue,bgMagenta\" \"npm run server\" \"npm run client\"",
+    "dev": "node kill-ports.js && concurrently -n \"server,client\" -c \"bgBlue,bgMagenta\" \"npm run server\" \"npm run client\"",
     "client:build": "npm run build --prefix client",
     "client:install": "npm install --prefix client",
     "build": "npm run client:install && npm run client:build",
@@ -26,6 +26,7 @@
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.1.28",
     "@slack/webhook": "^7.0.6",
+    "axios": "^1.7.7",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",

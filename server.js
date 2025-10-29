@@ -53,6 +53,35 @@ function authenticateToken(req, res, next) {
     });
 }
 
+// JWT Authentication Middleware (accepts token from query parameter)
+// Used for OAuth flows where we can't set Authorization headers due to browser redirects
+function authenticateTokenFromQuery(req, res, next) {
+    const token = req.query.token;
+
+    if (!token) {
+        return res.status(401).json({ success: false, message: 'Access token required' });
+    }
+
+    jwt.verify(token, JWT_SECRET, async (err, decoded) => {
+        if (err) {
+            return res.status(403).json({ success: false, message: 'Invalid or expired token' });
+        }
+
+        // Get user from database
+        try {
+            const user = await getUserById(decoded.userId);
+            if (!user) {
+                return res.status(403).json({ success: false, message: 'User not found' });
+            }
+            req.user = user;
+            next();
+        } catch (error) {
+            console.error('Error verifying user:', error);
+            return res.status(500).json({ success: false, message: 'Authentication error' });
+        }
+    });
+}
+
 // Serve React app for all routes (including landing page)
 app.get(['/', '/login', '/dashboard', '/modules', '/connections'], (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'app', 'index.html'));
@@ -206,7 +235,14 @@ app.get('/api/waitlist/count', async (req, res) => {
 
 // Agent API Routes
 const agentRoutes = require('./routes/agent-routes');
+// Apply authentication middleware to GitHub-specific agent routes
+app.use('/api/agent/github', authenticateToken);
 app.use('/api/agent', agentRoutes);
+
+// GitHub OAuth Routes
+// Pass middleware functions to the router so it can apply them conditionally
+const githubOAuthRoutes = require('./routes/github-oauth')(authenticateTokenFromQuery, authenticateToken);
+app.use('/api/auth/github', githubOAuthRoutes);
 
 // 404 for any other routes
 app.get('*', (req, res) => {

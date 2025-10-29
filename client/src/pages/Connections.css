@@ -186,6 +186,102 @@ input:disabled + .toggle-slider {
   color: #721c24;
 }
 
+.success-state {
+  padding: 15px;
+  margin-bottom: 20px;
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #000;
+  text-align: center;
+}
+
+/* GitHub-specific styles */
+.github-connect-card {
+  background: #fff;
+  border: 2px solid #000;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.service-description {
+  margin: 4px 0 0 0;
+  color: #666;
+  font-size: 0.9em;
+  font-weight: normal;
+}
+
+.connect-button,
+.disconnect-button {
+  background-color: #000;
+  color: #fff;
+  border: 2px solid #000;
+  padding: 10px 20px;
+  font-family: "Times New Roman", Times, serif;
+  font-size: 1em;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-weight: 700;
+}
+
+.connect-button:hover:not(:disabled) {
+  background-color: #fff;
+  color: #000;
+}
+
+.disconnect-button {
+  background-color: #fff;
+  color: #000;
+}
+
+.disconnect-button:hover:not(:disabled) {
+  background-color: #000;
+  color: #fff;
+}
+
+.connect-button:disabled,
+.disconnect-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.github-metadata {
+  display: flex;
+  gap: 15px;
+  align-items: flex-start;
+}
+
+.github-avatar {
+  flex-shrink: 0;
+}
+
+.github-avatar img {
+  width: 60px;
+  height: 60px;
+  border: 2px solid #000;
+  background-color: #fff;
+}
+
+.metadata-details {
+  flex: 1;
+}
+
+.metadata-item {
+  margin-bottom: 10px;
+}
+
+.metadata-item:last-child {
+  margin-bottom: 0;
+}
+
+.metadata-value a {
+  color: #000;
+  text-decoration: underline;
+}
+
+.metadata-value a:hover {
+  text-decoration: none;
+}
+
 @media (max-width: 768px) {
   .settings-container {
     padding: 20px 15px;
