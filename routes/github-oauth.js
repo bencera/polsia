@@ -10,11 +10,7 @@ const { encryptToken, decryptToken } = require('../utils/encryption');
 const {
   storeGitHubConnection,
   getGitHubToken,
-  deleteGitHubConnection,
-  storeOAuthState,
-  getOAuthState,
-  deleteOAuthState,
-  cleanupExpiredOAuthStates
+  deleteGitHubConnection
 } = require('../db');
 
 module.exports = (authenticateTokenFromQuery, authenticateToken) => {
@@ -26,9 +22,19 @@ const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET;
 const GITHUB_CALLBACK_URL = process.env.GITHUB_CALLBACK_URL || 'http://localhost:3000/api/auth/github/callback';
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
+// In-memory store for OAuth state tokens (CSRF protection)
+// Maps state token -> { userId, timestamp }
+const stateStore = new Map();
+
 // Cleanup expired OAuth states every 10 minutes
 setInterval(() => {
-  cleanupExpiredOAuthStates();
+  const now = Date.now();
+  const tenMinutes = 10 * 60 * 1000;
+  for (const [state, data] of stateStore.entries()) {
+    if (now - data.timestamp > tenMinutes) {
+      stateStore.delete(state);
+    }
+  }
 }, 600000);
 
 /**
@@ -52,8 +58,11 @@ router.get('/', authenticateTokenFromQuery, async (req, res) => {
     // Generate CSRF state token
     const state = crypto.randomBytes(32).toString('hex');
 
-    // Store state in database (persists across server restarts)
-    await storeOAuthState(state, req.user.id, 10); // 10 minute expiration
+    // Store state in memory for CSRF protection
+    stateStore.set(state, {
+      userId: req.user.id,
+      timestamp: Date.now()
+    });
 
     // GitHub OAuth scopes - request full repo access for reading and pushing code
     const scopes = 'repo user:email';
@@ -84,22 +93,17 @@ router.get('/callback', async (req, res) => {
 
   try {
     // Validate state parameter (CSRF protection)
-    if (!state) {
-      console.error('[GitHub OAuth] Missing state parameter');
+    if (!state || !stateStore.has(state)) {
+      console.error('[GitHub OAuth] Invalid or missing state parameter');
       return res.redirect(`${FRONTEND_URL}/connections?error=invalid_state`);
     }
 
-    // Get user ID from database
-    const stateData = await getOAuthState(state);
-    if (!stateData) {
-      console.error('[GitHub OAuth] Invalid or expired state parameter');
-      return res.redirect(`${FRONTEND_URL}/connections?error=invalid_state`);
-    }
-
+    // Get user ID from stored state
+    const stateData = stateStore.get(state);
     const userId = stateData.userId;
 
-    // Remove used state token from database
-    await deleteOAuthState(state);
+    // Remove used state token
+    stateStore.delete(state);
 
     // Validate code parameter
     if (!code) {

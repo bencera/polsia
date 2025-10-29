@@ -350,91 +350,6 @@ async function deleteGitHubConnection(connectionId, userId) {
     }
 }
 
-// OAuth State Management (for GitHub OAuth CSRF protection)
-async function storeOAuthState(state, userId, expiresInMinutes = 10) {
-    const client = await pool.connect();
-    try {
-        await client.query(`
-            CREATE TABLE IF NOT EXISTS oauth_states (
-                state VARCHAR(255) PRIMARY KEY,
-                user_id INTEGER NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                expires_at TIMESTAMP NOT NULL
-            )
-        `);
-
-        const expiresAt = new Date(Date.now() + expiresInMinutes * 60 * 1000);
-        await client.query(
-            'INSERT INTO oauth_states (state, user_id, expires_at) VALUES ($1, $2, $3)',
-            [state, userId, expiresAt]
-        );
-    } catch (err) {
-        console.error('Error storing OAuth state:', err);
-        throw err;
-    } finally {
-        client.release();
-    }
-}
-
-async function getOAuthState(state) {
-    const client = await pool.connect();
-    try {
-        const result = await client.query(
-            'SELECT user_id, expires_at FROM oauth_states WHERE state = $1',
-            [state]
-        );
-
-        if (result.rows.length === 0) {
-            return null;
-        }
-
-        const { user_id, expires_at } = result.rows[0];
-
-        // Check if expired
-        if (new Date() > new Date(expires_at)) {
-            // Delete expired state
-            await client.query('DELETE FROM oauth_states WHERE state = $1', [state]);
-            return null;
-        }
-
-        return { userId: user_id };
-    } catch (err) {
-        console.error('Error getting OAuth state:', err);
-        throw err;
-    } finally {
-        client.release();
-    }
-}
-
-async function deleteOAuthState(state) {
-    const client = await pool.connect();
-    try {
-        await client.query('DELETE FROM oauth_states WHERE state = $1', [state]);
-    } catch (err) {
-        console.error('Error deleting OAuth state:', err);
-        throw err;
-    } finally {
-        client.release();
-    }
-}
-
-// Cleanup expired OAuth states (call this periodically)
-async function cleanupExpiredOAuthStates() {
-    const client = await pool.connect();
-    try {
-        const result = await client.query(
-            'DELETE FROM oauth_states WHERE expires_at < NOW() RETURNING state'
-        );
-        if (result.rows.length > 0) {
-            console.log(`[OAuth] Cleaned up ${result.rows.length} expired state tokens`);
-        }
-    } catch (err) {
-        console.error('Error cleaning up expired OAuth states:', err);
-    } finally {
-        client.release();
-    }
-}
-
 module.exports = {
     pool,
     initDatabase,
@@ -448,8 +363,4 @@ module.exports = {
     storeGitHubConnection,
     getGitHubToken,
     deleteGitHubConnection,
-    storeOAuthState,
-    getOAuthState,
-    deleteOAuthState,
-    cleanupExpiredOAuthStates,
 };
