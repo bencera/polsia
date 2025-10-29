@@ -1,90 +1,95 @@
+/* Polsia Settings - Matching Landing Page Aesthetic */
+
 .settings-container {
   min-height: 100vh;
-  background-color: #f7fafc;
+  background-color: #fff;
+  font-family: "Times New Roman", Times, serif;
+  color: #000;
+  line-height: 1.6;
 }
 
 .settings-content {
-  max-width: 1200px;
+  max-width: 700px;
   margin: 0 auto;
-  padding: 40px 24px;
+  padding: 0 20px 40px 20px;
 }
 
 .settings-header {
-  margin-bottom: 32px;
+  margin-bottom: 30px;
 }
 
 .settings-header h2 {
-  margin: 0 0 8px 0;
-  font-size: 32px;
-  color: #1a202c;
+  margin: 0 0 0.3em 0;
+  font-size: 2em;
+  color: #000;
   font-weight: 700;
+  line-height: 1.1;
 }
 
 .settings-header p {
   margin: 0;
-  color: #718096;
-  font-size: 16px;
+  color: #666;
+  font-size: 1.1em;
 }
 
 .connections-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  gap: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .connection-card {
-  background: white;
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  transition: all 0.2s;
+  background: #fff;
+  border: 1px solid #000;
+  padding: 20px;
 }
 
 .connection-card:hover {
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  background-color: #fafafa;
 }
 
 .connection-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .service-info {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
 }
 
 .service-icon {
-  font-size: 32px;
+  font-size: 24px;
 }
 
 .service-info h3 {
   margin: 0 0 4px 0;
-  font-size: 18px;
-  color: #1a202c;
-  font-weight: 600;
+  font-size: 1.3em;
+  color: #000;
+  font-weight: 700;
   text-transform: capitalize;
 }
 
 .connection-status {
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 600;
+  padding: 2px 6px;
+  border: 1px solid #000;
+  font-size: 11px;
+  font-weight: normal;
   text-transform: capitalize;
+  background-color: #fff;
 }
 
 .connection-status.connected {
-  background-color: #c6f6d5;
-  color: #22543d;
+  background-color: #fff;
+  color: #000;
 }
 
 .connection-status.disconnected {
-  background-color: #fed7d7;
-  color: #742a2a;
+  background-color: #000;
+  color: #fff;
 }
 
 .toggle-switch {
@@ -107,9 +112,10 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: #cbd5e0;
+  background: linear-gradient(top, #ffffff, #888888);
+  background: -webkit-linear-gradient(top, #ffffff, #888888);
+  border: 1px solid #000;
   transition: 0.3s;
-  border-radius: 28px;
 }
 
 .toggle-slider:before {
@@ -118,14 +124,14 @@
   height: 20px;
   width: 20px;
   left: 4px;
-  bottom: 4px;
-  background-color: white;
+  bottom: 3px;
+  background-color: #000;
   transition: 0.3s;
-  border-radius: 50%;
 }
 
 input:checked + .toggle-slider {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(top, #888888, #ffffff);
+  background: -webkit-linear-gradient(top, #888888, #ffffff);
 }
 
 input:checked + .toggle-slider:before {
@@ -138,33 +144,47 @@ input:disabled + .toggle-slider {
 }
 
 .connection-metadata {
-  padding-top: 16px;
-  border-top: 1px solid #e2e8f0;
+  padding-top: 12px;
+  border-top: 1px solid #000;
 }
 
 .metadata-label {
   margin: 0 0 4px 0;
-  color: #718096;
-  font-size: 13px;
-  font-weight: 600;
+  color: #666;
+  font-size: 0.9em;
+  font-weight: normal;
 }
 
 .metadata-value {
   margin: 0;
-  color: #2d3748;
-  font-size: 14px;
+  color: #000;
+  font-size: 1em;
+}
+
+.loading-state,
+.error-state,
+.empty-state {
+  padding: 30px;
+  text-align: center;
+  border: 1px solid #000;
+  background-color: #fff;
+}
+
+.error-state {
+  background-color: #f8d7da;
+  color: #721c24;
 }
 
 @media (max-width: 768px) {
   .settings-content {
-    padding: 24px 16px;
-  }
-
-  .connections-grid {
-    grid-template-columns: 1fr;
+    padding: 0 15px 20px 15px;
   }
 
   .settings-header h2 {
-    font-size: 24px;
+    font-size: 1.8em;
+  }
+
+  .settings-header p {
+    font-size: 1em;
   }
 }
