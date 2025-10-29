@@ -53,6 +53,11 @@ function authenticateToken(req, res, next) {
     });
 }
 
+// Serve React app for all routes (including landing page)
+app.get(['/', '/login', '/dashboard', '/modules', '/connections'], (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'app', 'index.html'));
+});
+
 // Serve static files (HTML, CSS, JS)
 // Serve app assets first (for login/dashboard)
 app.use('/assets', express.static(path.join(__dirname, 'public', 'app', 'assets')));
@@ -197,16 +202,6 @@ app.get('/api/waitlist/count', async (req, res) => {
         console.error('Error getting waitlist count:', error);
         res.status(500).json({ success: false, message: 'Failed to get count' });
     }
-});
-
-// Serve React app for authenticated routes
-app.get(['/login', '/dashboard', '/settings'], (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'app', 'index.html'));
-});
-
-// Serve landing page for root
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // 404 for any other routes

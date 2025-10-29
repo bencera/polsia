@@ -1,6 +1,6 @@
-/* Polsia Login - Matching Landing Page Aesthetic */
+/* Polsia Landing - Universal Paperclips Aesthetic */
 
-.login-container {
+.landing-container {
   font-family: "Times New Roman", Times, serif;
   background-color: #fff;
   color: #000;
@@ -21,12 +21,12 @@
   font-size: 13px;
 }
 
-/* Login Content */
-.login-content {
+/* Intro Section */
+.intro {
   margin-bottom: 30px;
 }
 
-.login-content h1 {
+.intro h1 {
   font-size: 2.5em;
   font-weight: 700;
   margin-bottom: 0.3em;
@@ -35,33 +35,21 @@
 
 .tagline {
   font-size: 1.3em;
-  margin-bottom: 1.5em;
+  margin-bottom: 1em;
   font-weight: normal;
 }
 
-.error-message {
-  background-color: #f8d7da;
-  color: #721c24;
-  padding: 10px 12px;
-  border: 1px solid #000;
-  margin-bottom: 20px;
-  font-size: 0.95em;
+.description {
+  font-size: 1.05em;
+  margin-bottom: 2em;
+  line-height: 1.7;
 }
 
-.login-form {
+/* CTA */
+.cta {
   margin: 30px 0;
-}
-
-.form-group {
-  margin-bottom: 20px;
-}
-
-.form-group label {
-  display: block;
-  font-size: 1em;
-  font-weight: normal;
-  margin-bottom: 8px;
-  color: #000;
+  display: flex;
+  gap: 8px;
 }
 
 .input-field {
@@ -71,8 +59,8 @@
   padding: 10px 12px;
   font-family: "Times New Roman", Times, serif;
   font-size: 16px;
-  width: 100%;
-  box-sizing: border-box;
+  flex: 1;
+  max-width: 300px;
 }
 
 .input-field:focus {
@@ -96,7 +84,7 @@
   cursor: pointer;
   border-radius: 2px;
   box-shadow: rgba(255, 255, 255, 0.4) 0 1px 0 0 inset, rgba(255, 255, 255, 0.4) 0 1px 0;
-  margin-top: 10px;
+  white-space: nowrap;
 }
 
 .btn-primary:hover:not(:disabled) {
@@ -117,6 +105,23 @@
   cursor: not-allowed;
 }
 
+.login-link {
+  margin-top: 20px;
+  font-size: 0.95em;
+  color: #666;
+}
+
+.login-link a {
+  color: #000;
+  text-decoration: none;
+  border-bottom: 1px solid #000;
+}
+
+.login-link a:hover {
+  color: #333;
+  border-bottom-color: #333;
+}
+
 /* Footer */
 .footer {
   text-align: center;
@@ -131,16 +136,9 @@
   margin: 4px 0;
 }
 
-.back-link {
-  color: #000;
-  text-decoration: none;
-  border-bottom: 1px solid #000;
-  font-size: 12px;
-}
-
-.back-link:hover {
-  color: #333;
-  border-bottom-color: #333;
+.footer-note {
+  color: #999;
+  font-style: italic;
 }
 
 .footer-contact {
@@ -160,15 +158,28 @@
 
 /* Responsive Design */
 @media (max-width: 768px) {
-  .login-container {
+  .landing-container {
     padding: 20px 15px;
   }
 
-  .login-content h1 {
+  .intro h1 {
     font-size: 2em;
   }
 
   .tagline {
     font-size: 1.1em;
+  }
+
+  .cta {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .input-field {
+    max-width: 100%;
+  }
+
+  .btn-primary {
+    width: 100%;
   }
 }

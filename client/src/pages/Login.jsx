@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import './Login.css';
 
@@ -80,6 +80,7 @@ function Login() {
       </div>
 
       <footer className="footer">
+        <p><Link to="/" className="back-link">← Back to landing page</Link></p>
         <p>Polsia v1.0.0 | Autonomous Operations Division</p>
         <p className="footer-contact">Contact: <a href="mailto:hello@polsia.ai">hello@polsia.ai</a></p>
       </footer>
