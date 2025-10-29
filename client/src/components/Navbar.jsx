@@ -11,6 +11,10 @@ function Navbar() {
     navigate('/login');
   };
 
+  const handleSettings = () => {
+    navigate('/settings');
+  };
+
   return (
     <nav className="navbar">
       <Link to="/dashboard" className="navbar-brand">
@@ -18,9 +22,9 @@ function Navbar() {
       </Link>
       <div className="navbar-actions">
         <span className="user-info">{user?.email}</span>
-        <Link to="/settings" className="nav-link">
+        <button onClick={handleSettings} className="nav-button">
           Settings
-        </Link>
+        </button>
         <button onClick={handleLogout} className="nav-button">
           Logout
         </button>
