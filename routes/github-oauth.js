@@ -36,7 +36,7 @@ setInterval(() => {
  * Initiate GitHub OAuth flow
  * Authentication: Required (via query parameter)
  */
-router.get('/', authenticateTokenFromQuery, (req, res) => {
+router.get('/', authenticateTokenFromQuery, async (req, res) => {
   try {
     // Check if GitHub OAuth is configured
     if (!GITHUB_CLIENT_ID || !GITHUB_CLIENT_SECRET) {
