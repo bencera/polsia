@@ -5,7 +5,6 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
 const {
-    initDatabase,
     addToWaitlist,
     getWaitlistCount,
     getUserByEmail,
@@ -55,6 +54,8 @@ function authenticateToken(req, res, next) {
 }
 
 // Serve static files (HTML, CSS, JS)
+// Serve app assets first (for login/dashboard)
+app.use('/assets', express.static(path.join(__dirname, 'public', 'app', 'assets')));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // API Routes (ready for future backend logic)
@@ -216,11 +217,12 @@ app.get('*', (req, res) => {
 // Start server
 async function startServer() {
     try {
-        // Initialize database tables
-        if (process.env.DATABASE_URL) {
-            await initDatabase();
-        } else {
+        // Database migrations are managed via node-pg-migrate
+        // Run migrations before starting: npm run migrate
+        if (!process.env.DATABASE_URL) {
             console.warn('⚠️  DATABASE_URL not set - database features disabled');
+        } else {
+            console.log('✅ Database configured');
         }
 
         app.listen(PORT, () => {
