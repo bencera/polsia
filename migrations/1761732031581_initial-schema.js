@@ -18,8 +18,8 @@ exports.up = (pgm) => {
       notNull: true,
       default: pgm.func('current_timestamp'),
     },
-  });
-  pgm.createIndex('waitlist', 'email');
+  }, { ifNotExists: true });
+  pgm.createIndex('waitlist', 'email', { ifNotExists: true });
 
   // Create users table
   pgm.createTable('users', {
@@ -37,8 +37,8 @@ exports.up = (pgm) => {
       notNull: true,
       default: pgm.func('current_timestamp'),
     },
-  });
-  pgm.createIndex('users', 'email');
+  }, { ifNotExists: true });
+  pgm.createIndex('users', 'email', { ifNotExists: true });
 
   // Create tasks table
   pgm.createTable('tasks', {
@@ -58,8 +58,8 @@ exports.up = (pgm) => {
       default: pgm.func('current_timestamp'),
     },
     completed_at: { type: 'timestamp', notNull: false },
-  });
-  pgm.createIndex('tasks', 'user_id');
+  }, { ifNotExists: true });
+  pgm.createIndex('tasks', 'user_id', { ifNotExists: true });
 
   // Create service_connections table
   pgm.createTable('service_connections', {
@@ -78,8 +78,8 @@ exports.up = (pgm) => {
       notNull: true,
       default: pgm.func('current_timestamp'),
     },
-  });
-  pgm.createIndex('service_connections', 'user_id');
+  }, { ifNotExists: true });
+  pgm.createIndex('service_connections', 'user_id', { ifNotExists: true });
 
   // Create task_services junction table (many-to-many)
   pgm.createTable('task_services', {
@@ -101,12 +101,12 @@ exports.up = (pgm) => {
       notNull: true,
       default: pgm.func('current_timestamp'),
     },
-  });
+  }, { ifNotExists: true });
   pgm.createConstraint('task_services', 'task_services_unique', {
     unique: ['task_id', 'service_connection_id'],
-  });
-  pgm.createIndex('task_services', 'task_id');
-  pgm.createIndex('task_services', 'service_connection_id');
+  }, { ifNotExists: true });
+  pgm.createIndex('task_services', 'task_id', { ifNotExists: true });
+  pgm.createIndex('task_services', 'service_connection_id', { ifNotExists: true });
 };
 
 /**
