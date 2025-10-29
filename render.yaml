@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: polsia
+    runtime: node
+    region: oregon
+    plan: starter
+    branch: main
+    buildCommand: npm run build
+    startCommand: npm start
+    preDeployCommand: npm run migrate
+    envVars:
+      - key: NODE_ENV
+        value: production
