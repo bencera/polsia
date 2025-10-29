@@ -63,9 +63,12 @@ function Connections() {
 
   const connectGitHub = () => {
     // Redirect to GitHub OAuth flow
-    // The backend will handle the OAuth process and redirect back
-    // Note: Use full URL because window.location.href doesn't use Vite proxy
-    const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    // Auto-detect backend URL based on current domain
+    const isProduction = window.location.hostname !== 'localhost';
+    const backendUrl = isProduction
+      ? window.location.origin // Use same domain in production (https://polsia.ai)
+      : (import.meta.env.VITE_API_URL || 'http://localhost:3000'); // Use env var or localhost in dev
+
     window.location.href = `${backendUrl}/api/auth/github?token=${token}`;
   };
 
