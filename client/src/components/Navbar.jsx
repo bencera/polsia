@@ -11,8 +11,12 @@ function Navbar() {
     navigate('/login');
   };
 
-  const handleSettings = () => {
-    navigate('/settings');
+  const handleConnections = () => {
+    navigate('/connections');
+  };
+
+  const handleModules = () => {
+    navigate('/modules');
   };
 
   return (
@@ -22,8 +26,11 @@ function Navbar() {
       </Link>
       <div className="navbar-actions">
         <span className="user-info">{user?.email}</span>
-        <button onClick={handleSettings} className="nav-button">
-          Settings
+        <button onClick={handleModules} className="nav-button">
+          Modules
+        </button>
+        <button onClick={handleConnections} className="nav-button">
+          Connections
         </button>
         <button onClick={handleLogout} className="nav-button">
           Logout

@@ -1,4 +1,4 @@
-/* Polsia Settings - Matching Landing Page Aesthetic */
+/* Polsia Connections - Matching Landing Page Aesthetic */
 
 .settings-container {
   min-height: 100vh;
@@ -6,12 +6,23 @@
   font-family: "Times New Roman", Times, serif;
   color: #000;
   line-height: 1.6;
+  padding: 40px 20px;
+  max-width: 850px;
+  margin: 0 auto;
+}
+
+/* Terminal */
+.terminal {
+  background-color: #000;
+  color: #fff;
+  font-family: 'Courier New', Courier, monospace;
+  padding: 10px 15px;
+  margin-bottom: 30px;
+  font-size: 13px;
 }
 
 .settings-content {
-  max-width: 700px;
-  margin: 0 auto;
-  padding: 0 20px 40px 20px;
+  margin-bottom: 30px;
 }
 
 .settings-header {
@@ -176,8 +187,8 @@ input:disabled + .toggle-slider {
 }
 
 @media (max-width: 768px) {
-  .settings-content {
-    padding: 0 15px 20px 15px;
+  .settings-container {
+    padding: 20px 15px;
   }
 
   .settings-header h2 {

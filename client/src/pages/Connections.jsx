@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import Navbar from '../components/Navbar';
-import './Settings.css';
+import './Connections.css';
 
-function Settings() {
+function Connections() {
   const [connections, setConnections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -78,11 +78,15 @@ function Settings() {
 
   return (
     <div className="settings-container">
+      <div className="terminal">
+        <span>&gt; Access control system</span>
+      </div>
+
       <Navbar />
 
       <div className="settings-content">
         <div className="settings-header">
-          <h2>Settings</h2>
+          <h2>Connections</h2>
           <p>Manage your service connections</p>
         </div>
 
@@ -153,4 +157,4 @@ function Settings() {
   );
 }
 
-export default Settings;
+export default Connections;
