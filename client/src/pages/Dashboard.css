@@ -1,0 +1,147 @@
+/* Polsia Dashboard - Matching Landing Page Aesthetic */
+
+.dashboard-container {
+  font-family: "Times New Roman", Times, serif;
+  background-color: #fff;
+  color: #000;
+  line-height: 1.6;
+  padding: 40px 20px;
+  min-height: 100vh;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+/* Terminal */
+.terminal {
+  background-color: #000;
+  color: #fff;
+  font-family: 'Courier New', Courier, monospace;
+  padding: 10px 15px;
+  margin-bottom: 30px;
+  font-size: 13px;
+}
+
+/* Dashboard Content */
+.dashboard-content {
+  margin-bottom: 30px;
+}
+
+.dashboard-content h1 {
+  font-size: 2.5em;
+  font-weight: 700;
+  margin-bottom: 0.3em;
+  line-height: 1.1;
+}
+
+.subtitle {
+  font-size: 1.3em;
+  margin-bottom: 1.5em;
+  font-weight: normal;
+}
+
+.status-message {
+  padding: 20px;
+  border: 1px solid #000;
+  margin: 30px 0;
+  font-size: 1em;
+}
+
+.status-message.error {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+/* Tasks Feed */
+.tasks-feed {
+  margin: 30px 0;
+}
+
+.task-item {
+  padding: 20px 0;
+  border-bottom: 1px solid #000;
+}
+
+.task-item:last-child {
+  border-bottom: none;
+}
+
+.task-timestamp {
+  font-size: 0.85em;
+  color: #999;
+  margin-top: 12px;
+  font-style: italic;
+}
+
+.task-title {
+  font-size: 1.2em;
+  font-weight: 700;
+  margin: 8px 0;
+  line-height: 1.3;
+}
+
+.task-description {
+  font-size: 1em;
+  margin: 8px 0;
+  line-height: 1.7;
+  color: #333;
+}
+
+.task-services {
+  font-size: 0.9em;
+  color: #666;
+  margin-top: 10px;
+  font-style: italic;
+}
+
+.task-services span {
+  color: #000;
+  font-weight: normal;
+}
+
+/* Footer */
+.footer {
+  text-align: center;
+  padding: 20px 0 0 0;
+  border-top: 1px solid #000;
+  margin-top: 40px;
+}
+
+.footer p {
+  font-size: 11px;
+  color: #666;
+  margin: 4px 0;
+}
+
+.footer-contact {
+  margin-top: 8px;
+}
+
+.footer-contact a {
+  color: #000;
+  text-decoration: none;
+  border-bottom: 1px solid #000;
+}
+
+.footer-contact a:hover {
+  color: #333;
+  border-bottom-color: #333;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .dashboard-container {
+    padding: 20px 15px;
+  }
+
+  .dashboard-content h1 {
+    font-size: 2em;
+  }
+
+  .subtitle {
+    font-size: 1.1em;
+  }
+
+  .task-title {
+    font-size: 1.1em;
+  }
+}

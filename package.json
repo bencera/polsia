@@ -5,7 +5,13 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "server": "nodemon server.js",
+    "client": "npm run dev --prefix client",
+    "dev": "concurrently -n \"server,client\" -c \"bgBlue,bgMagenta\" \"npm run server\" \"npm run client\"",
+    "client:build": "npm run build --prefix client",
+    "client:install": "npm install --prefix client",
+    "build": "npm run client:install && npm run client:build",
+    "db:seed": "/opt/homebrew/opt/postgresql@16/bin/psql -d polsia -f seed.sql"
   },
   "keywords": [
     "autonomous",
@@ -16,14 +22,18 @@
   "license": "MIT",
   "dependencies": {
     "@slack/webhook": "^7.0.6",
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2",
     "pg": "^8.16.3"
   },
   "engines": {
     "node": ">=18.0.0"
   },
   "devDependencies": {
+    "concurrently": "^9.2.1",
     "nodemon": "^3.1.10"
   }
 }

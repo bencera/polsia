@@ -1,0 +1,87 @@
+/* Polsia Navbar - Matching Landing Page Aesthetic */
+
+.navbar {
+  padding: 15px 0;
+  border-bottom: 1px solid #000;
+  margin-bottom: 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.navbar-brand {
+  font-size: 1.5em;
+  font-weight: 700;
+  color: #000;
+  text-decoration: none;
+  font-family: "Times New Roman", Times, serif;
+}
+
+.navbar-brand:hover {
+  color: #333;
+}
+
+.navbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  font-size: 0.95em;
+}
+
+.user-info {
+  color: #666;
+  font-size: 0.9em;
+}
+
+.nav-link {
+  color: #000;
+  text-decoration: none;
+  border-bottom: 1px solid #000;
+  font-family: "Times New Roman", Times, serif;
+}
+
+.nav-link:hover {
+  color: #333;
+  border-bottom-color: #333;
+}
+
+.nav-button {
+  background: linear-gradient(top, #ffffff, #888888);
+  background: -webkit-linear-gradient(top, #ffffff, #888888);
+  border: 1px solid #1a1a1a;
+  color: #000000;
+  padding: 4px 12px;
+  font-family: helvetica, serif;
+  font-size: 12px;
+  cursor: pointer;
+  border-radius: 2px;
+  box-shadow: rgba(255, 255, 255, 0.4) 0 1px 0 0 inset, rgba(255, 255, 255, 0.4) 0 1px 0;
+}
+
+.nav-button:hover {
+  background: linear-gradient(top, #ffffff, #888888);
+  background: -webkit-linear-gradient(top, #ffffff, #888888);
+}
+
+.nav-button:active {
+  background: linear-gradient(top, #888888, #ffffff);
+  background: -webkit-linear-gradient(top, #888888, #ffffff);
+  box-shadow: rgba(0, 0, 0, 0.4) 0 1px 2px 0 inset;
+  padding-top: 5px;
+  padding-bottom: 3px;
+}
+
+@media (max-width: 640px) {
+  .navbar-actions {
+    gap: 10px;
+  }
+
+  .user-info {
+    display: none;
+  }
+
+  .nav-link,
+  .nav-button {
+    font-size: 11px;
+  }
+}

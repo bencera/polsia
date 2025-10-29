@@ -1,0 +1,162 @@
+/* Polsia Login - Matching Landing Page Aesthetic */
+
+.login-container {
+  font-family: "Times New Roman", Times, serif;
+  background-color: #fff;
+  color: #000;
+  line-height: 1.6;
+  padding: 40px 20px;
+  min-height: 100vh;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+/* Terminal */
+.terminal {
+  background-color: #000;
+  color: #fff;
+  font-family: 'Courier New', Courier, monospace;
+  padding: 10px 15px;
+  margin-bottom: 30px;
+  font-size: 13px;
+}
+
+/* Login Content */
+.login-content {
+  margin-bottom: 30px;
+}
+
+.login-content h1 {
+  font-size: 2.5em;
+  font-weight: 700;
+  margin-bottom: 0.3em;
+  line-height: 1.1;
+}
+
+.tagline {
+  font-size: 1.3em;
+  margin-bottom: 1.5em;
+  font-weight: normal;
+}
+
+.error-message {
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 10px 12px;
+  border: 1px solid #000;
+  margin-bottom: 20px;
+  font-size: 0.95em;
+}
+
+.login-form {
+  margin: 30px 0;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 1em;
+  font-weight: normal;
+  margin-bottom: 8px;
+  color: #000;
+}
+
+.input-field {
+  background-color: #fff;
+  border: 1px solid #000;
+  color: #000;
+  padding: 10px 12px;
+  font-family: "Times New Roman", Times, serif;
+  font-size: 16px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: #000;
+}
+
+.input-field:disabled {
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: linear-gradient(top, #ffffff, #888888);
+  background: -webkit-linear-gradient(top, #ffffff, #888888);
+  border: 1px solid #1a1a1a;
+  color: #000000;
+  padding: 8px 16px;
+  font-family: helvetica, serif;
+  font-size: 14px;
+  cursor: pointer;
+  border-radius: 2px;
+  box-shadow: rgba(255, 255, 255, 0.4) 0 1px 0 0 inset, rgba(255, 255, 255, 0.4) 0 1px 0;
+  margin-top: 10px;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(top, #ffffff, #888888);
+  background: -webkit-linear-gradient(top, #ffffff, #888888);
+}
+
+.btn-primary:active:not(:disabled) {
+  background: linear-gradient(top, #888888, #ffffff);
+  background: -webkit-linear-gradient(top, #888888, #ffffff);
+  box-shadow: rgba(0, 0, 0, 0.4) 0 1px 2px 0 inset;
+  padding-top: 9px;
+  padding-bottom: 7px;
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Footer */
+.footer {
+  text-align: center;
+  padding: 20px 0 0 0;
+  border-top: 1px solid #000;
+  margin-top: 40px;
+}
+
+.footer p {
+  font-size: 11px;
+  color: #666;
+  margin: 4px 0;
+}
+
+.footer-contact {
+  margin-top: 8px;
+}
+
+.footer-contact a {
+  color: #000;
+  text-decoration: none;
+  border-bottom: 1px solid #000;
+}
+
+.footer-contact a:hover {
+  color: #333;
+  border-bottom-color: #333;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .login-container {
+    padding: 20px 15px;
+  }
+
+  .login-content h1 {
+    font-size: 2em;
+  }
+
+  .tagline {
+    font-size: 1.1em;
+  }
+}
