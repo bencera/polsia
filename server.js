@@ -204,6 +204,10 @@ app.get('/api/waitlist/count', async (req, res) => {
     }
 });
 
+// Agent API Routes
+const agentRoutes = require('./routes/agent-routes');
+app.use('/api/agent', agentRoutes);
+
 // 404 for any other routes
 app.get('*', (req, res) => {
     res.status(404).json({ success: false, message: 'Not found' });
