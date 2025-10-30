@@ -2,3 +2,9 @@ node_modules/
 npm-debug.log
 .env
 .DS_Store
+
+# Temporary files and logs
+temp/
+*.log
+dev.log
+server.log
