@@ -130,9 +130,8 @@ function Landing() {
 
       {/* Footer */}
       <footer className="footer">
-        <p>Polsia v1.0.0 | Autonomous Operations Division</p>
         <p className="footer-note">Warning: System operates independently. Human oversight recommended.</p>
-        <p className="footer-contact">Contact: <a href="mailto:hello@polsia.ai">hello@polsia.ai</a></p>
+        <p className="footer-contact">Contact: <a href="mailto:system@polsia.ai">system@polsia.ai</a></p>
       </footer>
     </div>
   );
