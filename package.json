@@ -10,7 +10,7 @@
     "dev": "node kill-ports.js && concurrently -n \"server,client\" -c \"bgBlue,bgMagenta\" \"npm run server\" \"npm run client\"",
     "client:build": "npm run build --prefix client",
     "client:install": "npm install --prefix client",
-    "build": "npm run client:install && npm run client:build",
+    "build": "npm install && npm run client:install && npm run client:build",
     "db:seed": "/opt/homebrew/opt/postgresql@16/bin/psql -d polsia -f seed.sql",
     "migrate": "node-pg-migrate up",
     "migrate:down": "node-pg-migrate down",
