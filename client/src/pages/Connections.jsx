@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useTerminal } from '../contexts/TerminalContext';
 import Navbar from '../components/Navbar';
 import './Connections.css';
 
@@ -10,6 +11,7 @@ function Connections() {
   const [updating, setUpdating] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
   const { token } = useAuth();
+  const { terminalLogs } = useTerminal();
 
   useEffect(() => {
     fetchConnections();
@@ -144,10 +146,39 @@ function Connections() {
     return icons[serviceName.toLowerCase()] || icons.default;
   };
 
+  // Format log for terminal display
+  const formatLogMessage = (log) => {
+    const time = new Date(log.timestamp).toLocaleTimeString();
+    return `[${time}] ${log.stage ? `[${log.stage}] ` : ''}${log.message}`;
+  };
+
+  // Get last 4 logs for terminal display
+  const displayLogs = terminalLogs.slice(-4);
+
   return (
     <div className="settings-container">
       <div className="terminal">
-        <span>&gt; Access control system</span>
+        {displayLogs.length === 0 ? (
+          // Show 4 lines when idle
+          <>
+            <div>&gt; Autonomous Operations Control</div>
+            <div>&nbsp;</div>
+            <div>&nbsp;</div>
+            <div>&nbsp;</div>
+          </>
+        ) : (
+          // Show logs and fill remaining lines
+          <>
+            {displayLogs.map((log, index) => (
+              <div key={`${log.id}-${index}`}>&gt; {formatLogMessage(log)}</div>
+            ))}
+            {displayLogs.length < 4 &&
+              Array.from({ length: 4 - displayLogs.length }).map((_, i) => (
+                <div key={`empty-${i}`}>&nbsp;</div>
+              ))
+            }
+          </>
+        )}
       </div>
 
       <Navbar />

@@ -350,6 +350,369 @@ async function deleteGitHubConnection(connectionId, userId) {
     }
 }
 
+// ===== MODULE FUNCTIONS =====
+
+// Get all modules for a user
+async function getModulesByUserId(userId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            'SELECT * FROM modules WHERE user_id = $1 ORDER BY created_at DESC',
+            [userId]
+        );
+        return result.rows;
+    } catch (err) {
+        console.error('Error getting modules:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Get a specific module by ID
+async function getModuleById(moduleId, userId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            'SELECT * FROM modules WHERE id = $1 AND user_id = $2',
+            [moduleId, userId]
+        );
+        return result.rows[0] || null;
+    } catch (err) {
+        console.error('Error getting module by ID:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Create a new module
+async function createModule(userId, moduleData) {
+    const client = await pool.connect();
+    try {
+        const { name, description, type, status, frequency, config } = moduleData;
+        const result = await client.query(
+            `INSERT INTO modules (user_id, name, description, type, status, frequency, config)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)
+             RETURNING *`,
+            [userId, name, description || null, type, status || 'active', frequency || 'auto', config || null]
+        );
+        return result.rows[0];
+    } catch (err) {
+        console.error('Error creating module:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Update a module
+async function updateModule(moduleId, userId, updates) {
+    const client = await pool.connect();
+    try {
+        const setClauses = [];
+        const values = [];
+        let paramCount = 1;
+
+        // Build dynamic SET clause
+        if (updates.name !== undefined) {
+            setClauses.push(`name = $${paramCount++}`);
+            values.push(updates.name);
+        }
+        if (updates.description !== undefined) {
+            setClauses.push(`description = $${paramCount++}`);
+            values.push(updates.description);
+        }
+        if (updates.type !== undefined) {
+            setClauses.push(`type = $${paramCount++}`);
+            values.push(updates.type);
+        }
+        if (updates.status !== undefined) {
+            setClauses.push(`status = $${paramCount++}`);
+            values.push(updates.status);
+        }
+        if (updates.frequency !== undefined) {
+            setClauses.push(`frequency = $${paramCount++}`);
+            values.push(updates.frequency);
+        }
+        if (updates.config !== undefined) {
+            setClauses.push(`config = $${paramCount++}`);
+            values.push(updates.config);
+        }
+
+        // Always update updated_at
+        setClauses.push(`updated_at = CURRENT_TIMESTAMP`);
+
+        // Add WHERE clause params
+        values.push(moduleId, userId);
+
+        const query = `UPDATE modules SET ${setClauses.join(', ')}
+                       WHERE id = $${paramCount++} AND user_id = $${paramCount++}
+                       RETURNING *`;
+
+        const result = await client.query(query, values);
+        return result.rows[0] || null;
+    } catch (err) {
+        console.error('Error updating module:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Delete a module
+async function deleteModule(moduleId, userId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            'DELETE FROM modules WHERE id = $1 AND user_id = $2 RETURNING *',
+            [moduleId, userId]
+        );
+        return result.rows.length > 0;
+    } catch (err) {
+        console.error('Error deleting module:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Get execution history for a module
+async function getModuleExecutions(moduleId, userId, limit = 50) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            `SELECT * FROM module_executions
+             WHERE module_id = $1 AND user_id = $2
+             ORDER BY created_at DESC
+             LIMIT $3`,
+            [moduleId, userId, limit]
+        );
+        return result.rows;
+    } catch (err) {
+        console.error('Error getting module executions:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Create a new module execution record
+async function createModuleExecution(moduleId, userId, executionData) {
+    const client = await pool.connect();
+    try {
+        const { trigger_type, status } = executionData;
+        const result = await client.query(
+            `INSERT INTO module_executions (module_id, user_id, status, trigger_type, started_at)
+             VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
+             RETURNING *`,
+            [moduleId, userId, status || 'pending', trigger_type || 'manual']
+        );
+        return result.rows[0];
+    } catch (err) {
+        console.error('Error creating module execution:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Update a module execution
+async function updateModuleExecution(executionId, updates) {
+    const client = await pool.connect();
+    try {
+        const setClauses = [];
+        const values = [];
+        let paramCount = 1;
+
+        // Build dynamic SET clause
+        if (updates.status !== undefined) {
+            setClauses.push(`status = $${paramCount++}`);
+            values.push(updates.status);
+        }
+        if (updates.completed_at !== undefined) {
+            setClauses.push(`completed_at = $${paramCount++}`);
+            values.push(updates.completed_at);
+        }
+        if (updates.duration_ms !== undefined) {
+            setClauses.push(`duration_ms = $${paramCount++}`);
+            values.push(updates.duration_ms);
+        }
+        if (updates.cost_usd !== undefined) {
+            setClauses.push(`cost_usd = $${paramCount++}`);
+            values.push(updates.cost_usd);
+        }
+        if (updates.metadata !== undefined) {
+            setClauses.push(`metadata = $${paramCount++}`);
+            values.push(updates.metadata);
+        }
+        if (updates.error_message !== undefined) {
+            setClauses.push(`error_message = $${paramCount++}`);
+            values.push(updates.error_message);
+        }
+
+        values.push(executionId);
+
+        const query = `UPDATE module_executions SET ${setClauses.join(', ')}
+                       WHERE id = $${paramCount++}
+                       RETURNING *`;
+
+        const result = await client.query(query, values);
+        return result.rows[0] || null;
+    } catch (err) {
+        console.error('Error updating module execution:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Get all active modules that might need to run (for scheduler)
+async function getActiveModulesForScheduling() {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            `SELECT m.*, u.id as user_id, u.email
+             FROM modules m
+             JOIN users u ON m.user_id = u.id
+             WHERE m.status = 'active'
+             ORDER BY m.updated_at ASC`
+        );
+        return result.rows;
+    } catch (err) {
+        console.error('Error getting active modules for scheduling:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// ===== EXECUTION LOGS FUNCTIONS =====
+
+// Save a log entry for a module execution
+async function saveExecutionLog(executionId, logData) {
+    const client = await pool.connect();
+    try {
+        const { log_level, stage, message, metadata } = logData;
+        const result = await client.query(
+            `INSERT INTO execution_logs (execution_id, log_level, stage, message, metadata)
+             VALUES ($1, $2, $3, $4, $5)
+             RETURNING *`,
+            [executionId, log_level || 'info', stage || null, message, metadata || null]
+        );
+        return result.rows[0];
+    } catch (err) {
+        console.error('Error saving execution log:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Get all logs for a specific execution
+async function getExecutionLogs(executionId, limit = 1000) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            `SELECT * FROM execution_logs
+             WHERE execution_id = $1
+             ORDER BY timestamp ASC
+             LIMIT $2`,
+            [executionId, limit]
+        );
+        return result.rows;
+    } catch (err) {
+        console.error('Error getting execution logs:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Get logs after a specific log ID (for SSE streaming)
+async function getExecutionLogsSince(executionId, sinceLogId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            `SELECT * FROM execution_logs
+             WHERE execution_id = $1 AND id > $2
+             ORDER BY id ASC`,
+            [executionId, sinceLogId || 0]
+        );
+        return result.rows;
+    } catch (err) {
+        console.error('Error getting execution logs since log ID:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// ===== TASK SUMMARY FUNCTIONS =====
+
+// Create a task summary for a completed module execution
+async function createTaskSummary(userId, taskData) {
+    const client = await pool.connect();
+    try {
+        const {
+            title,
+            description,
+            status,
+            serviceIds,
+            execution_id,
+            module_id,
+            cost_usd,
+            duration_ms,
+            num_turns,
+            completed_at,
+        } = taskData;
+
+        // Insert task with execution metadata
+        const taskResult = await client.query(
+            `INSERT INTO tasks (
+                user_id, title, description, status,
+                execution_id, module_id, cost_usd, duration_ms, num_turns,
+                completed_at, created_at
+            )
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10)
+             RETURNING *`,
+            [
+                userId,
+                title,
+                description || null,
+                status || 'completed',
+                execution_id || null,
+                module_id || null,
+                cost_usd || null,
+                duration_ms || null,
+                num_turns || null,
+                completed_at || new Date(), // Use provided timestamp or current time
+            ]
+        );
+
+        const task = taskResult.rows[0];
+
+        // Link to services if provided
+        if (serviceIds && serviceIds.length > 0) {
+            for (const serviceId of serviceIds) {
+                await client.query(
+                    `INSERT INTO task_services (task_id, service_connection_id)
+                     VALUES ($1, $2)
+                     ON CONFLICT (task_id, service_connection_id) DO NOTHING`,
+                    [task.id, serviceId]
+                );
+            }
+        }
+
+        return task;
+    } catch (err) {
+        console.error('Error creating task summary:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
 module.exports = {
     pool,
     initDatabase,
@@ -363,4 +726,20 @@ module.exports = {
     storeGitHubConnection,
     getGitHubToken,
     deleteGitHubConnection,
+    // Module functions
+    getModulesByUserId,
+    getModuleById,
+    createModule,
+    updateModule,
+    deleteModule,
+    getModuleExecutions,
+    createModuleExecution,
+    updateModuleExecution,
+    getActiveModulesForScheduling,
+    // Execution log functions
+    saveExecutionLog,
+    getExecutionLogs,
+    getExecutionLogsSince,
+    // Task summary functions
+    createTaskSummary,
 };

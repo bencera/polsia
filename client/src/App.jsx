@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { TerminalProvider } from './contexts/TerminalContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
@@ -47,36 +48,38 @@ function LoginOrDashboard() {
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <Routes>
-          <Route path="/" element={<LandingOrDashboard />} />
-          <Route path="/login" element={<LoginOrDashboard />} />
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/modules"
-            element={
-              <ProtectedRoute>
-                <Modules />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/connections"
-            element={
-              <ProtectedRoute>
-                <Connections />
-              </ProtectedRoute>
-            }
-          />
-        </Routes>
-      </Router>
+      <TerminalProvider>
+        <Router>
+          <Routes>
+            <Route path="/" element={<LandingOrDashboard />} />
+            <Route path="/login" element={<LoginOrDashboard />} />
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/modules"
+              element={
+                <ProtectedRoute>
+                  <Modules />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/connections"
+              element={
+                <ProtectedRoute>
+                  <Connections />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </Router>
+      </TerminalProvider>
     </AuthProvider>
   )
 }

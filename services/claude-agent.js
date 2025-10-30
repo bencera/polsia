@@ -36,6 +36,7 @@ async function initializeSDK() {
  * @param {string} options.cwd - Working directory for file operations
  * @param {number} options.maxTurns - Maximum conversation turns (default: 10)
  * @param {string} options.model - Model to use (default: auto)
+ * @param {Object} options.mcpServers - MCP server configurations
  * @param {Function} options.onMessage - Callback for streaming messages
  * @param {Function} options.onProgress - Callback for progress updates
  * @returns {Promise<Object>} Result with files, messages, and metadata
@@ -46,6 +47,7 @@ async function executeTask(prompt, options = {}) {
     cwd = process.cwd(),
     maxTurns = 10,
     model,
+    mcpServers,
     onMessage,
     onProgress
   } = options;
@@ -67,6 +69,11 @@ async function executeTask(prompt, options = {}) {
 
     if (model) {
       queryOptions.model = model;
+    }
+
+    if (mcpServers) {
+      queryOptions.mcpServers = mcpServers;
+      console.log('[Claude Agent] MCP servers configured:', Object.keys(mcpServers).join(', '));
     }
 
     // Track execution state

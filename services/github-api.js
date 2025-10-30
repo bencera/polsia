@@ -213,23 +213,22 @@ async function pushChanges(token, repoDir, commitMessage, branch = null) {
   try {
     console.log(`[GitHub API] Pushing changes from: ${repoDir}`);
 
-    // Change to repository directory
-    process.chdir(repoDir);
+    const gitOptions = { cwd: repoDir, stdio: 'pipe' };
 
     // Stage all changes
-    execSync('git add .', { stdio: 'pipe' });
+    execSync('git add .', gitOptions);
 
     // Commit changes
-    execSync(`git commit -m "${commitMessage}"`, { stdio: 'pipe' });
+    execSync(`git commit -m "${commitMessage}"`, gitOptions);
 
     // Push to remote (using token for authentication)
     const pushCmd = branch ? `git push origin ${branch}` : 'git push';
 
     // Configure git to use the token
-    execSync(`git config credential.helper store`, { stdio: 'pipe' });
+    execSync(`git config credential.helper store`, gitOptions);
 
     execSync(pushCmd, {
-      stdio: 'pipe',
+      ...gitOptions,
       env: {
         ...process.env,
         GIT_ASKPASS: 'echo',

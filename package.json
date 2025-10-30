@@ -25,13 +25,17 @@
   "license": "MIT",
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.1.28",
+    "@anthropic-ai/sdk": "^0.68.0",
+    "@modelcontextprotocol/server-github": "^2025.4.8",
     "@slack/webhook": "^7.0.6",
     "axios": "^1.7.7",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^4.18.2",
+    "http-proxy-middleware": "^3.0.5",
     "jsonwebtoken": "^9.0.2",
+    "node-cron": "^4.2.1",
     "node-pg-migrate": "^8.0.3",
     "pg": "^8.16.3"
   },

@@ -244,6 +244,106 @@ app.use('/api/agent', agentRoutes);
 const githubOAuthRoutes = require('./routes/github-oauth')(authenticateTokenFromQuery, authenticateToken);
 app.use('/api/auth/github', githubOAuthRoutes);
 
+// MCP Routes - Host third-party MCP servers
+const mcpRoutes = require('./routes/mcp-routes');
+app.use('/mcp', authenticateToken, mcpRoutes);
+
+// SSE route for streaming logs (needs query auth because EventSource doesn't support headers)
+// IMPORTANT: This must be registered BEFORE the general module routes to avoid route conflicts
+const { getModuleById, getExecutionLogs, getExecutionLogsSince, getModuleExecutions } = require('./db');
+app.get('/api/modules/:id/executions/:executionId/logs/stream', authenticateTokenFromQuery, async (req, res) => {
+    try {
+        const moduleId = parseInt(req.params.id);
+        const executionId = parseInt(req.params.executionId);
+
+        if (isNaN(moduleId) || isNaN(executionId)) {
+            return res.status(400).json({ success: false, message: 'Invalid module or execution ID' });
+        }
+
+        // Verify module exists and belongs to user
+        const module = await getModuleById(moduleId, req.user.id);
+
+        if (!module) {
+            return res.status(404).json({ success: false, message: 'Module not found' });
+        }
+
+        // Set up SSE headers
+        res.writeHead(200, {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            'X-Accel-Buffering': 'no', // Disable nginx buffering
+        });
+
+        console.log(`[SSE] Client connected for execution ${executionId}`);
+
+        // Send initial comment to establish connection
+        res.write(': connected\n\n');
+
+        // 1. Send all existing logs
+        const existingLogs = await getExecutionLogs(executionId);
+        for (const log of existingLogs) {
+            res.write(`data: ${JSON.stringify(log)}\n\n`);
+        }
+
+        // 2. Poll for new logs every second
+        let lastLogId = existingLogs.length > 0
+            ? existingLogs[existingLogs.length - 1].id
+            : 0;
+
+        const pollInterval = setInterval(async () => {
+            try {
+                const newLogs = await getExecutionLogsSince(executionId, lastLogId);
+
+                for (const log of newLogs) {
+                    res.write(`data: ${JSON.stringify(log)}\n\n`);
+                    lastLogId = log.id;
+                }
+
+                // Check if execution is completed
+                const executions = await getModuleExecutions(moduleId, req.user.id, 1);
+                const currentExecution = executions.find(e => e.id === executionId);
+
+                if (currentExecution && (currentExecution.status === 'completed' || currentExecution.status === 'failed')) {
+                    // Send completion event
+                    res.write(`data: ${JSON.stringify({ type: 'completion', status: currentExecution.status })}\n\n`);
+                    clearInterval(pollInterval);
+                    res.end();
+                    console.log(`[SSE] Stream ended for execution ${executionId} (${currentExecution.status})`);
+                }
+            } catch (err) {
+                console.error('[SSE] Error polling logs:', err);
+                clearInterval(pollInterval);
+                res.end();
+            }
+        }, 1000); // Poll every second
+
+        // Clean up on client disconnect
+        req.on('close', () => {
+            console.log(`[SSE] Client disconnected from execution ${executionId}`);
+            clearInterval(pollInterval);
+            res.end();
+        });
+
+        // Auto-timeout after 30 minutes
+        setTimeout(() => {
+            console.log(`[SSE] Stream timeout for execution ${executionId}`);
+            clearInterval(pollInterval);
+            res.end();
+        }, 30 * 60 * 1000);
+
+    } catch (error) {
+        console.error('Error setting up SSE stream:', error);
+        if (!res.headersSent) {
+            res.status(500).json({ success: false, message: 'Failed to stream logs' });
+        }
+    }
+});
+
+// Module Routes - Autonomous module management (registered after SSE route)
+const moduleRoutes = require('./routes/module-routes');
+app.use('/api/modules', authenticateToken, moduleRoutes);
+
 // 404 for any other routes
 app.get('*', (req, res) => {
     res.status(404).json({ success: false, message: 'Not found' });
@@ -263,6 +363,10 @@ async function startServer() {
         app.listen(PORT, () => {
             console.log(`🚀 Polsia server running on http://localhost:${PORT}`);
         });
+
+        // Start module scheduler
+        const { startScheduler } = require('./services/scheduler');
+        startScheduler();
     } catch (error) {
         console.error('Failed to start server:', error);
         process.exit(1);

@@ -1,0 +1,238 @@
+/* Module Execution History Modal */
+
+.history-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.history-modal {
+  background-color: #fff;
+  border: 2px solid #000;
+  max-width: 800px;
+  width: 100%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  font-family: "Times New Roman", Times, serif;
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #000;
+}
+
+.history-header h2 {
+  font-size: 1.8em;
+  font-weight: 700;
+  margin: 0;
+}
+
+.close-btn {
+  background: linear-gradient(top, #ffffff, #888888);
+  background: -webkit-linear-gradient(top, #ffffff, #888888);
+  border: 1px solid #1a1a1a;
+  color: #000;
+  font-size: 20px;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+  box-shadow: rgba(255, 255, 255, 0.4) 0 1px 0 0 inset, rgba(255, 255, 255, 0.4) 0 1px 0;
+}
+
+.close-btn:hover {
+  background: linear-gradient(top, #ffffff, #aaaaaa);
+  background: -webkit-linear-gradient(top, #ffffff, #aaaaaa);
+}
+
+.close-btn:active {
+  background: linear-gradient(top, #888888, #ffffff);
+  background: -webkit-linear-gradient(top, #888888, #ffffff);
+  box-shadow: rgba(0, 0, 0, 0.4) 0 1px 2px 0 inset;
+}
+
+.history-content {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.history-message {
+  text-align: center;
+  color: #666;
+  font-size: 1em;
+  padding: 40px 20px;
+}
+
+.history-message.error {
+  color: #ff4444;
+}
+
+.executions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.execution-card {
+  border: 1px solid #000;
+  padding: 15px;
+  background-color: #fff;
+}
+
+.execution-card:hover {
+  background-color: #fafafa;
+}
+
+.execution-main {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.execution-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.execution-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.95em;
+}
+
+.execution-status {
+  padding: 2px 8px;
+  border: 1px solid #000;
+  font-size: 11px;
+  font-weight: normal;
+  text-transform: capitalize;
+  background-color: #fff;
+  color: #000;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.execution-status.status-completed {
+  background-color: #d4edda;
+  border-color: #28a745;
+  color: #155724;
+}
+
+.execution-status.status-failed {
+  background-color: #f8d7da;
+  border-color: #dc3545;
+  color: #721c24;
+}
+
+.execution-status.status-running {
+  background-color: #fff3cd;
+  border-color: #ffc107;
+  color: #856404;
+}
+
+.execution-status.status-pending {
+  background-color: #e7f3ff;
+  border-color: #007bff;
+  color: #004085;
+}
+
+.execution-trigger {
+  font-size: 0.9em;
+  color: #666;
+  font-style: italic;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.execution-label {
+  font-weight: 700;
+  color: #000;
+  min-width: 90px;
+}
+
+.execution-value {
+  color: #333;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.9em;
+}
+
+.execution-error {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 10px;
+  background-color: #fff5f5;
+  border: 1px solid #ffcccc;
+  margin-top: 5px;
+}
+
+.execution-error .execution-label {
+  color: #d32f2f;
+}
+
+.execution-error .execution-value {
+  color: #721c24;
+  font-size: 0.85em;
+  word-break: break-word;
+}
+
+.execution-metadata {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.metadata-item {
+  font-size: 0.85em;
+  color: #666;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .history-modal {
+    max-width: 100%;
+    max-height: 95vh;
+  }
+
+  .history-header {
+    padding: 15px;
+  }
+
+  .history-header h2 {
+    font-size: 1.5em;
+  }
+
+  .history-content {
+    padding: 15px;
+  }
+
+  .execution-card {
+    padding: 12px;
+  }
+
+  .execution-label {
+    min-width: 80px;
+  }
+}

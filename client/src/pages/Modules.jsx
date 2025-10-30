@@ -1,126 +1,224 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
+import { useAuth } from '../contexts/AuthContext';
+import { useTerminal } from '../contexts/TerminalContext';
 import './Modules.css';
 
-// Demo modules data
-const DEMO_MODULES = [
-  {
-    id: 'ugc-marketing',
-    name: 'UGC Marketing Agent',
-    description: 'Generate and post user-generated content to social media and ads',
-    status: 'active',
-    frequency: 'daily',
-    services: ['instagram', 'meta-ads'],
-    tier: 'free',
-    guardrails: {
-      requireApproval: false,
-      autoPost: true
-    }
-  },
-  {
-    id: 'customer-support',
-    name: 'Customer Support Agent',
-    description: 'Monitor and respond to customer inquiries across channels',
-    status: 'active',
-    frequency: 'auto',
-    services: ['gmail'],
-    tier: 'free',
-    guardrails: {
-      requireApproval: true,
-      autoPost: false
-    }
-  },
-  {
-    id: 'documentation',
-    name: 'Documentation Agent',
-    description: 'Generate and update technical documentation from code changes',
-    status: 'active',
-    frequency: 'auto',
-    services: ['github'],
-    tier: 'free',
-    guardrails: {
-      requireApproval: false,
-      autoPost: true
-    }
-  },
-  {
-    id: 'security-auditor',
-    name: 'Security Auditor',
-    description: 'Scan codebase for vulnerabilities and suggest fixes',
-    status: 'coming-soon',
-    frequency: 'auto',
-    services: ['github'],
-    tier: 'free',
-    guardrails: {
-      requireApproval: true,
-      autoPost: false
-    }
-  },
-  {
-    id: 'growth-analytics',
-    name: 'Growth Analytics Agent',
-    description: 'Analyze metrics and suggest growth experiments',
-    status: 'locked',
-    frequency: 'auto',
-    services: ['google-analytics', 'mixpanel'],
-    tier: 'pro',
-    guardrails: {
-      requireApproval: false,
-      autoPost: false
-    }
-  }
-];
-
 function Modules() {
-  const [modules, setModules] = useState(DEMO_MODULES);
-  const [expandedModule, setExpandedModule] = useState(null);
+  const { token } = useAuth();
+  const { terminalLogs, runModule, isStreaming } = useTerminal();
+  const [modules, setModules] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [runningModules, setRunningModules] = useState(new Set());
 
-  const toggleModuleStatus = (moduleId) => {
-    setModules(modules.map(module => {
-      if (module.id === moduleId && module.status !== 'coming-soon' && module.status !== 'locked') {
-        return {
-          ...module,
-          status: module.status === 'active' ? 'paused' : 'active'
-        };
+  // Fetch modules from API
+  useEffect(() => {
+    fetchModules();
+  }, [token]);
+
+  const fetchModules = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/modules', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch modules');
       }
-      return module;
-    }));
+
+      const data = await response.json();
+      setModules(data.modules || []);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching modules:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const updateFrequency = (moduleId, frequency) => {
-    setModules(modules.map(module => {
-      if (module.id === moduleId) {
-        return { ...module, frequency };
+  const toggleModuleStatus = async (moduleId, currentStatus) => {
+    try {
+      const newStatus = currentStatus === 'active' ? 'disabled' : 'active';
+
+      const response = await fetch(`/api/modules/${moduleId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update module status');
       }
-      return module;
-    }));
+
+      const data = await response.json();
+
+      // Update local state
+      setModules(modules.map(module =>
+        module.id === moduleId ? data.module : module
+      ));
+    } catch (err) {
+      console.error('Error toggling module status:', err);
+      alert('Failed to update module status');
+    }
   };
 
-  const toggleGuardrail = (moduleId, guardrail) => {
-    setModules(modules.map(module => {
-      if (module.id === moduleId) {
-        return {
-          ...module,
-          guardrails: {
-            ...module.guardrails,
-            [guardrail]: !module.guardrails[guardrail]
-          }
-        };
+  const updateFrequency = async (moduleId, frequency) => {
+    try {
+      const response = await fetch(`/api/modules/${moduleId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ frequency })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update frequency');
       }
-      return module;
-    }));
+
+      const data = await response.json();
+
+      // Update local state
+      setModules(modules.map(module =>
+        module.id === moduleId ? data.module : module
+      ));
+    } catch (err) {
+      console.error('Error updating frequency:', err);
+      alert('Failed to update frequency');
+    }
   };
 
-  const toggleSettings = (moduleId) => {
-    setExpandedModule(expandedModule === moduleId ? null : moduleId);
+  const updateGuardrails = async (moduleId, guardrail, value) => {
+    try {
+      const module = modules.find(m => m.id === moduleId);
+      const newConfig = {
+        ...module.config,
+        guardrails: {
+          ...module.config?.guardrails,
+          [guardrail]: value
+        }
+      };
+
+      const response = await fetch(`/api/modules/${moduleId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ config: newConfig })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update guardrails');
+      }
+
+      const data = await response.json();
+
+      // Update local state
+      setModules(modules.map(m =>
+        m.id === moduleId ? data.module : m
+      ));
+    } catch (err) {
+      console.error('Error updating guardrails:', err);
+      alert('Failed to update guardrails');
+    }
+  };
+
+  const runModuleNow = async (moduleId, moduleName) => {
+    if (!confirm(`Run "${moduleName}" now?`)) {
+      return;
+    }
+
+    // Mark module as running
+    setRunningModules(prev => new Set([...prev, moduleId]));
+
+    // Use context's runModule function
+    const success = await runModule(moduleId, moduleName);
+
+    if (!success) {
+      alert('Failed to run module');
+      setRunningModules(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(moduleId);
+        return newSet;
+      });
+    }
   };
 
   const activeCount = modules.filter(m => m.status === 'active').length;
 
+  if (loading) {
+    return (
+      <div className="modules-container">
+        <div className="terminal">
+          <span>&gt; Autonomous Operations Control</span>
+        </div>
+        <Navbar />
+        <div className="modules-content">
+          <p style={{ textAlign: 'center', marginTop: '40px' }}>Loading modules...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="modules-container">
+        <div className="terminal">
+          <span>&gt; Autonomous Operations Control</span>
+        </div>
+        <Navbar />
+        <div className="modules-content">
+          <p style={{ textAlign: 'center', marginTop: '40px', color: '#ff4444' }}>
+            Error: {error}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Format log for terminal display
+  const formatLogMessage = (log) => {
+    const time = new Date(log.timestamp).toLocaleTimeString();
+    return `[${time}] ${log.stage ? `[${log.stage}] ` : ''}${log.message}`;
+  };
+
+  // Get last 4 logs for terminal display
+  const displayLogs = terminalLogs.slice(-4);
+
   return (
     <div className="modules-container">
       <div className="terminal">
-        <span>&gt; Autonomous Operations Control</span>
+        {displayLogs.length === 0 ? (
+          // Show 4 lines when idle
+          <>
+            <div>&gt; Autonomous Operations Control</div>
+            <div>&nbsp;</div>
+            <div>&nbsp;</div>
+            <div>&nbsp;</div>
+          </>
+        ) : (
+          // Show logs and fill remaining lines
+          <>
+            {displayLogs.map((log, index) => (
+              <div key={`${log.id}-${index}`}>&gt; {formatLogMessage(log)}</div>
+            ))}
+            {displayLogs.length < 4 &&
+              Array.from({ length: 4 - displayLogs.length }).map((_, i) => (
+                <div key={`empty-${i}`}>&nbsp;</div>
+              ))
+            }
+          </>
+        )}
       </div>
 
       <Navbar />
@@ -129,107 +227,74 @@ function Modules() {
         <div className="modules-header">
           <h2>Modules</h2>
           <p className="modules-subtitle">
-            Active modules will run automatically based on system priority.
-            You can adjust frequency or disable specific modules.
+            Active modules will run automatically based on their frequency.
+            You can adjust settings or disable specific modules.
           </p>
           <p className="modules-status">
             {activeCount} {activeCount === 1 ? 'module' : 'modules'} active
           </p>
         </div>
 
-        <div className="modules-list">
-          {modules.map((module) => (
-            <div key={module.id} className="module-card">
-              <div className="module-main">
-                <div className="module-info">
-                  <h3 className="module-name">{module.name}</h3>
-                  <p className="module-description">{module.description}</p>
+        {modules.length === 0 ? (
+          <div style={{ textAlign: 'center', marginTop: '40px', color: '#666' }}>
+            <p>No modules created yet.</p>
+            <p style={{ fontSize: '14px', marginTop: '10px' }}>
+              Modules will appear here once created via the API.
+            </p>
+          </div>
+        ) : (
+          <div className="modules-list">
+            {modules.map((module) => (
+              <div key={module.id} className="module-card">
+                <div className="module-main">
+                  <div className="module-info">
+                    <h3 className={`module-name ${module.status !== 'active' ? 'disabled' : ''}`}>
+                      {module.name}
+                    </h3>
+                    <p className={`module-description ${module.status !== 'active' ? 'disabled' : ''}`}>
+                      {module.description}
+                    </p>
 
-                  <div className="module-meta">
-                    <span className={`module-status ${module.status}`}>
-                      {module.status === 'coming-soon' ? 'Coming Soon' :
-                       module.status === 'locked' ? `Locked - ${module.tier} tier` :
-                       module.status}
-                    </span>
-                    <span className="module-frequency">
-                      {module.frequency}
-                    </span>
-                    {module.services.length > 0 && (
-                      <span className="module-services">
-                        Needs: {module.services.join(', ')}
+                    <div className="module-meta">
+                      <span className={`module-status ${module.status}`}>
+                        {module.status}
                       </span>
-                    )}
+                      <span className="module-type">
+                        Type: {module.type}
+                      </span>
+                    </div>
                   </div>
-                </div>
 
-                <div className="module-controls">
-                  {module.status !== 'coming-soon' && module.status !== 'locked' && (
-                    <>
-                      <label className="toggle-switch">
-                        <input
-                          type="checkbox"
-                          checked={module.status === 'active'}
-                          onChange={() => toggleModuleStatus(module.id)}
-                        />
-                        <span className="toggle-slider"></span>
-                      </label>
-                      <button
-                        className="settings-btn"
-                        onClick={() => toggleSettings(module.id)}
-                      >
-                        ⚙
-                      </button>
-                    </>
-                  )}
+                  <div className="module-controls">
+                    <button
+                      className="toggle-status-btn"
+                      onClick={() => toggleModuleStatus(module.id, module.status)}
+                    >
+                      {module.status === 'active' ? 'Disable' : 'Enable'}
+                    </button>
+                    <button
+                      className="run-now-btn"
+                      onClick={() => runModuleNow(module.id, module.name)}
+                      disabled={runningModules.has(module.id)}
+                    >
+                      {runningModules.has(module.id) ? 'Running...' : 'Run Now'}
+                    </button>
+                    <select
+                      className="module-frequency-select"
+                      value={module.frequency}
+                      onChange={(e) => updateFrequency(module.id, e.target.value)}
+                    >
+                      <option value="auto">AUTO</option>
+                      <option value="daily">DAILY</option>
+                      <option value="weekly">WEEKLY</option>
+                      <option value="manual">MANUAL</option>
+                    </select>
+                  </div>
                 </div>
               </div>
-
-              {expandedModule === module.id && module.status !== 'coming-soon' && module.status !== 'locked' && (
-                <div className="module-settings">
-                  <div className="settings-section">
-                    <label className="settings-label">Frequency:</label>
-                    <div className="frequency-options">
-                      {['auto', 'daily', 'weekly', 'manual'].map((freq) => (
-                        <label key={freq} className="radio-option">
-                          <input
-                            type="radio"
-                            name={`frequency-${module.id}`}
-                            value={freq}
-                            checked={module.frequency === freq}
-                            onChange={() => updateFrequency(module.id, freq)}
-                          />
-                          <span>{freq}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="settings-section">
-                    <label className="settings-label">Guardrails:</label>
-                    <div className="guardrails-options">
-                      <label className="checkbox-option">
-                        <input
-                          type="checkbox"
-                          checked={module.guardrails.requireApproval}
-                          onChange={() => toggleGuardrail(module.id, 'requireApproval')}
-                        />
-                        <span>Require approval before executing</span>
-                      </label>
-                      <label className="checkbox-option">
-                        <input
-                          type="checkbox"
-                          checked={module.guardrails.autoPost}
-                          onChange={() => toggleGuardrail(module.id, 'autoPost')}
-                        />
-                        <span>Allow automatic posting</span>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <footer className="footer">

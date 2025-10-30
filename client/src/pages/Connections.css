@@ -19,6 +19,15 @@
   padding: 10px 15px;
   margin-bottom: 30px;
   font-size: 13px;
+  line-height: 1.4;
+  height: 82px; /* Fixed height for exactly 4 lines (13px * 1.4 * 4 + 20px padding) */
+  overflow: hidden;
+}
+
+.terminal div {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .settings-content {

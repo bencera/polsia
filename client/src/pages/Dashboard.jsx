@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useTerminal } from '../contexts/TerminalContext';
 import Navbar from '../components/Navbar';
 import './Dashboard.css';
 
@@ -8,6 +9,7 @@ function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const { token } = useAuth();
+  const { terminalLogs } = useTerminal();
 
   useEffect(() => {
     fetchTasks();
@@ -55,10 +57,39 @@ function Dashboard() {
     return `${years} year${years !== 1 ? 's' : ''} ago`;
   };
 
+  // Format log for terminal display
+  const formatLogMessage = (log) => {
+    const time = new Date(log.timestamp).toLocaleTimeString();
+    return `[${time}] ${log.stage ? `[${log.stage}] ` : ''}${log.message}`;
+  };
+
+  // Get last 4 logs for terminal display
+  const displayLogs = terminalLogs.slice(-4);
+
   return (
     <div className="dashboard-container">
       <div className="terminal">
-        <span>&gt; Task execution log</span>
+        {displayLogs.length === 0 ? (
+          // Show 4 lines when idle
+          <>
+            <div>&gt; Autonomous Operations Control</div>
+            <div>&nbsp;</div>
+            <div>&nbsp;</div>
+            <div>&nbsp;</div>
+          </>
+        ) : (
+          // Show logs and fill remaining lines
+          <>
+            {displayLogs.map((log, index) => (
+              <div key={`${log.id}-${index}`}>&gt; {formatLogMessage(log)}</div>
+            ))}
+            {displayLogs.length < 4 &&
+              Array.from({ length: 4 - displayLogs.length }).map((_, i) => (
+                <div key={`empty-${i}`}>&nbsp;</div>
+              ))
+            }
+          </>
+        )}
       </div>
 
       <Navbar />
