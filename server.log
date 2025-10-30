@@ -1,0 +1,2090 @@
+
+> polsia@1.0.0 server
+> nodemon server.js
+
+[33m[nodemon] 3.1.10[39m
+[33m[nodemon] to restart at any time, enter `rs`[39m
+[33m[nodemon] watching path(s): *.*[39m
+[33m[nodemon] watching extensions: js,mjs,cjs,json[39m
+[32m[nodemon] starting `node server.js`[39m
+[dotenv@17.2.3] injecting env (12) from .env -- tip: ✅ audit secrets and track compliance: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🔐 prevent building .env in docker: https://dotenvx.com/prebuild
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🔐 encrypt with Dotenvx: https://dotenvx.com
+✅ Slack notifications initialized
+✅ Database configured
+[Scheduler] Starting module scheduler
+[Scheduler] Scheduler started successfully
+🚀 Polsia server running on http://localhost:3000
+[Scheduler] Running initial module check
+✅ Connected to PostgreSQL database
+[Scheduler] Found 1 active modules
+[Scheduler] Module 1 is due to run (last run: 28862.975s ago)
+[Scheduler] Triggering module: Security Patcher (ID: 1)
+[Agent Runner] Starting module execution: 1 for user 1
+[Agent Runner] Module found: Security Patcher
+[Agent Runner] Execution record created: 4
+[Agent Runner] Configured GitHub MCP server
+[Agent Runner] Context prepared with 1 MCP servers
+[Agent Runner] Workspace created: /Users/benbroca/Documents/polsia/temp/module-executions/4-814a0148
+[Agent Runner] 🤖 Starting AI execution...
+[Agent Runner] Prompt: Review the repository for outdated dependencies, known vulnerabilities, and insecure patterns. Use G...
+[Claude Agent] Starting task execution
+[Claude Agent] Prompt: Review the repository for outdated dependencies, known vulnerabilities, and insecure patterns. Use G...
+[Claude Agent] Working directory: /Users/benbroca/Documents/polsia/temp/module-executions/4-814a0148
+[Claude Agent] SDK initialized successfully
+[Claude Agent] MCP servers configured: github
+[Claude Agent] Executing query...
+[Claude Agent] Session initialized with model: claude-sonnet-4-5-20250929
+[Agent Runner] ✓ Session initialized with model: claude-sonnet-4-5-20250929
+[Claude Agent] Assistant: I'll help you review the repository for security issues and outdated dependencies. Let me start by e...
+[Agent Runner] 💭 AI thinking: I'll help you review the repository for security issues and outdated dependencies. Let me start by examining the repository structure and its dependencies.
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 1)
+[Claude Agent] Assistant: Now let me examine the key dependency files to assess the security posture:...
+[Agent Runner] 💭 AI thinking: Now let me examine the key dependency files to assess the security posture:
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 2)
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 3)
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 4)
+[Claude Agent] Assistant: Now let me get the actual package.json files for backend and frontend to analyze dependencies:...
+[Agent Runner] 💭 AI thinking: Now let me get the actual package.json files for backend and frontend to analyze dependencies:
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 5)
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+[dotenv@17.2.3] injecting env (12) from .env -- tip: 🛠️  run anywhere with `dotenvx run -- yourcommand`
+[dotenv@17.2.3] injecting env (0) from .env -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
+[32m[nodemon] restarting due to changes...[39m
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 👥 sync secrets across teammates & machines: https://dotenvx.com/ops
+✅ Slack notifications initialized
+✅ Database configured
+[Scheduler] Starting module scheduler
+[Scheduler] Scheduler started successfully
+🚀 Polsia server running on http://localhost:3000
+[Scheduler] Running initial module check
+[32m[nodemon] starting `node server.js`[39m
+[dotenv@17.2.3] injecting env (12) from .env -- tip: 🔐 prevent committing .env to code: https://dotenvx.com/precommit
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🔐 prevent committing .env to code: https://dotenvx.com/precommit
+[dotenv@17.2.3] injecting env (0) from .env -- tip: ✅ audit secrets and track compliance: https://dotenvx.com/ops
+✅ Slack notifications initialized
+✅ Database configured
+[Scheduler] Starting module scheduler
+[Scheduler] Scheduler started successfully
+🚀 Polsia server running on http://localhost:3000
+[Scheduler] Running initial module check
+✅ Connected to PostgreSQL database
+[Scheduler] Found 1 active modules
+[Scheduler] Module 1 is due to run (last run: 30296.17s ago)
+[Scheduler] Triggering module: Security Patcher (ID: 1)
+[Agent Runner] Starting module execution: 1 for user 1
+[Agent Runner] Module found: Security Patcher
+[Agent Runner] Execution record created: 6
+[Agent Runner] Configured GitHub MCP server
+[Agent Runner] Context prepared with 1 MCP servers
+[Agent Runner] Workspace created: /Users/benbroca/Documents/polsia/temp/module-executions/6-409df95b
+[Agent Runner] 🤖 Starting AI execution...
+[Agent Runner] Prompt: Review the repository for outdated dependencies, known vulnerabilities, and insecure patterns. Use G...
+[Claude Agent] Starting task execution
+[Claude Agent] Prompt: Review the repository for outdated dependencies, known vulnerabilities, and insecure patterns. Use G...
+[Claude Agent] Working directory: /Users/benbroca/Documents/polsia/temp/module-executions/6-409df95b
+[Claude Agent] SDK initialized successfully
+[Claude Agent] MCP servers configured: github
+[Claude Agent] Executing query...
+[Claude Agent] Session initialized with model: claude-sonnet-4-5-20250929
+[Agent Runner] ✓ Session initialized with model: claude-sonnet-4-5-20250929
+[Claude Agent] Assistant: I'll help you review the repository for outdated dependencies, vulnerabilities, and insecure pattern...
+[Agent Runner] 💭 AI thinking: I'll help you review the repository for outdated dependencies, vulnerabilities, and insecure patterns, then create PRs with fixes. Let me start by examining the repository structure and dependency files.
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 1)
+[Claude Agent] Assistant: Now let me fetch the key dependency files to analyze them:...
+[Agent Runner] 💭 AI thinking: Now let me fetch the key dependency files to analyze them:
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 2)
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 3)
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 4)
+[Claude Agent] Assistant: Now let me fetch the actual package.json files to analyze dependencies:...
+[Agent Runner] 💭 AI thinking: Now let me fetch the actual package.json files to analyze dependencies:
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 5)
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 6)
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 7)
+[Claude Agent] Assistant: Let me create a comprehensive security and dependency audit. I'll start by creating a todo list to t...
+[Agent Runner] 💭 AI thinking: Let me create a comprehensive security and dependency audit. I'll start by creating a todo list to track this analysis systematically.
+[Claude Agent] Tool use: TodoWrite
+[Agent Runner] 🔧 Using tool: TodoWrite (turn 8)
+[Claude Agent] Assistant: Now let me search for common security issues and check key security-sensitive files:...
+[Agent Runner] 💭 AI thinking: Now let me search for common security issues and check key security-sensitive files:
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 9)
+[Claude Agent] Tool use: mcp__github__search_code
+[Agent Runner] 🔧 Using tool: mcp__github__search_code (turn 10)
+[Claude Agent] Tool use: mcp__github__search_code
+[Agent Runner] 🔧 Using tool: mcp__github__search_code (turn 11)
+[Claude Agent] Tool use: mcp__github__search_code
+[Agent Runner] 🔧 Using tool: mcp__github__search_code (turn 12)
+[Claude Agent] Assistant: Based on my comprehensive analysis of the repository, I've identified several security issues, outda...
+[Agent Runner] 💭 AI thinking: Based on my comprehensive analysis of the repository, I've identified several security issues, outdated dependencies, and vulnerabilities. Now let me create a detailed security audit report and prepare fixes. Let me update the todos and create a branch with fixes:
+[Claude Agent] Tool use: TodoWrite
+[Agent Runner] 🔧 Using tool: TodoWrite (turn 13)
+[Claude Agent] Assistant: Now let me create a new branch and prepare the security fixes:...
+[Agent Runner] 💭 AI thinking: Now let me create a new branch and prepare the security fixes:
+[Claude Agent] Tool use: mcp__github__create_branch
+[Agent Runner] 🔧 Using tool: mcp__github__create_branch (turn 14)
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+[dotenv@17.2.3] injecting env (12) from .env -- tip: 🛠️  run anywhere with `dotenvx run -- yourcommand`
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🛠️  run anywhere with `dotenvx run -- yourcommand`
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🗂️ backup and recover secrets: https://dotenvx.com/ops
+✅ Slack notifications initialized
+✅ Database configured
+[Scheduler] Starting module scheduler
+[Scheduler] Scheduler started successfully
+node:events:486
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at app.listen (/Users/benbroca/Documents/polsia/node_modules/express/lib/application.js:635:24)
+    at startServer (/Users/benbroca/Documents/polsia/server.js:271:13)
+    at Object.<anonymous> (/Users/benbroca/Documents/polsia/server.js:284:1)
+    at Module._compile (node:internal/modules/cjs/loader:1738:14)
+    at Object..js (node:internal/modules/cjs/loader:1871:10)
+    at Module.load (node:internal/modules/cjs/loader:1470:32)
+    at Module._load (node:internal/modules/cjs/loader:1290:12)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}
+
+Node.js v24.6.0
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+[dotenv@17.2.3] injecting env (12) from .env -- tip: 🔑 add access controls to secrets: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
+[dotenv@17.2.3] injecting env (0) from .env -- tip: ⚙️  write to custom object with { processEnv: myObject }
+✅ Slack notifications initialized
+✅ Database configured
+[Scheduler] Starting module scheduler
+[Scheduler] Scheduler started successfully
+🚀 Polsia server running on http://localhost:3000
+[Scheduler] Running initial module check
+✅ Connected to PostgreSQL database
+[Scheduler] Found 1 active modules
+[Scheduler] Module 1 is due to run (last run: 28808.715s ago)
+[Scheduler] Triggering module: Security Patcher (ID: 1)
+[Agent Runner] Starting module execution: 1 for user 1
+[Agent Runner] Module found: Security Patcher
+[Agent Runner] Execution record created: 8
+[Agent Runner] Configured GitHub MCP server
+[Agent Runner] Context prepared with 1 MCP servers
+[Agent Runner] Workspace created: /Users/benbroca/Documents/polsia/temp/module-executions/8-caa8e4ab
+[Agent Runner] 🤖 Starting AI execution...
+[Agent Runner] Prompt: Review the repository for outdated dependencies, known vulnerabilities, and insecure patterns. Use G...
+[Claude Agent] Starting task execution
+[Claude Agent] Prompt: Review the repository for outdated dependencies, known vulnerabilities, and insecure patterns. Use G...
+[Claude Agent] Working directory: /Users/benbroca/Documents/polsia/temp/module-executions/8-caa8e4ab
+[Claude Agent] SDK initialized successfully
+[Claude Agent] MCP servers configured: github
+[Claude Agent] Executing query...
+[Claude Agent] Session initialized with model: claude-sonnet-4-5-20250929
+[Agent Runner] ✓ Session initialized with model: claude-sonnet-4-5-20250929
+[Claude Agent] Assistant: I'll help you review the repository for security issues and create fixes. Let me start by examining ...
+[Agent Runner] 💭 AI thinking: I'll help you review the repository for security issues and create fixes. Let me start by examining the repository structure and dependencies.
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 1)
+[Claude Agent] Assistant: Now let me check the package.json files in both frontend and backend directories to examine dependen...
+[Agent Runner] 💭 AI thinking: Now let me check the package.json files in both frontend and backend directories to examine dependencies:
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 2)
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 3)
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 4)
+[Claude Agent] Assistant: Now let me search for common security-sensitive files and patterns:...
+[Agent Runner] 💭 AI thinking: Now let me search for common security-sensitive files and patterns:
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+[dotenv@17.2.3] injecting env (12) from .env -- tip: 🔐 encrypt with Dotenvx: https://dotenvx.com
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🔄 add secrets lifecycle management: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🔑 add access controls to secrets: https://dotenvx.com/ops
+✅ Slack notifications initialized
+✅ Database configured
+[Scheduler] Starting module scheduler
+[Scheduler] Scheduler started successfully
+node:events:486
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at app.listen (/Users/benbroca/Documents/polsia/node_modules/express/lib/application.js:635:24)
+    at startServer (/Users/benbroca/Documents/polsia/server.js:271:13)
+    at Object.<anonymous> (/Users/benbroca/Documents/polsia/server.js:284:1)
+    at Module._compile (node:internal/modules/cjs/loader:1738:14)
+    at Object..js (node:internal/modules/cjs/loader:1871:10)
+    at Module.load (node:internal/modules/cjs/loader:1470:32)
+    at Module._load (node:internal/modules/cjs/loader:1290:12)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}
+
+Node.js v24.6.0
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+[dotenv@17.2.3] injecting env (12) from .env -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
+[dotenv@17.2.3] injecting env (0) from .env -- tip: ✅ audit secrets and track compliance: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env -- tip: ⚙️  override existing env vars with { override: true }
+✅ Slack notifications initialized
+✅ Database configured
+[Scheduler] Starting module scheduler
+[Scheduler] Scheduler started successfully
+node:events:486
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at app.listen (/Users/benbroca/Documents/polsia/node_modules/express/lib/application.js:635:24)
+    at startServer (/Users/benbroca/Documents/polsia/server.js:271:13)
+    at Object.<anonymous> (/Users/benbroca/Documents/polsia/server.js:284:1)
+    at Module._compile (node:internal/modules/cjs/loader:1738:14)
+    at Object..js (node:internal/modules/cjs/loader:1871:10)
+    at Module.load (node:internal/modules/cjs/loader:1470:32)
+    at Module._load (node:internal/modules/cjs/loader:1290:12)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}
+
+Node.js v24.6.0
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+[dotenv@17.2.3] injecting env (12) from .env -- tip: ⚙️  suppress all logs with { quiet: true }
+[dotenv@17.2.3] injecting env (0) from .env -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🔐 prevent building .env in docker: https://dotenvx.com/prebuild
+✅ Slack notifications initialized
+✅ Database configured
+[Scheduler] Starting module scheduler
+[Scheduler] Scheduler started successfully
+🚀 Polsia server running on http://localhost:3000
+[Scheduler] Running initial module check
+✅ Connected to PostgreSQL database
+[Scheduler] Found 1 active modules
+[Scheduler] Module 1 is due to run (last run: 28804.64s ago)
+[Scheduler] Triggering module: Security Patcher (ID: 1)
+[Agent Runner] Starting module execution: 1 for user 1
+[Agent Runner] Module found: Security Patcher
+[Agent Runner] Execution record created: 12
+[Agent Runner] Configured GitHub MCP server
+[Agent Runner] Context prepared with 1 MCP servers
+[Agent Runner] Workspace created: /Users/benbroca/Documents/polsia/temp/module-executions/12-35618657
+[Agent Runner] 🤖 Starting AI execution...
+[Agent Runner] Prompt: Review the repository for outdated dependencies, known vulnerabilities, and insecure patterns. Use G...
+[Claude Agent] Starting task execution
+[Claude Agent] Prompt: Review the repository for outdated dependencies, known vulnerabilities, and insecure patterns. Use G...
+[Claude Agent] Working directory: /Users/benbroca/Documents/polsia/temp/module-executions/12-35618657
+[Claude Agent] SDK initialized successfully
+[Claude Agent] MCP servers configured: github
+[Claude Agent] Executing query...
+[Claude Agent] Session initialized with model: claude-sonnet-4-5-20250929
+[Agent Runner] ✓ Session initialized with model: claude-sonnet-4-5-20250929
+[Claude Agent] Assistant: I'll help you review the repository for security issues and create fixes. Let me start by examining ...
+[Agent Runner] 💭 AI thinking: I'll help you review the repository for security issues and create fixes. Let me start by examining the repository structure and dependencies.
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 1)
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+[dotenv@17.2.3] injecting env (12) from .env -- tip: 🔄 add secrets lifecycle management: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 👥 sync secrets across teammates & machines: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🛠️  run anywhere with `dotenvx run -- yourcommand`
+✅ Slack notifications initialized
+✅ Database configured
+[Scheduler] Starting module scheduler
+[Scheduler] Scheduler started successfully
+node:events:486
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at app.listen (/Users/benbroca/Documents/polsia/node_modules/express/lib/application.js:635:24)
+    at startServer (/Users/benbroca/Documents/polsia/server.js:271:13)
+    at Object.<anonymous> (/Users/benbroca/Documents/polsia/server.js:284:1)
+    at Module._compile (node:internal/modules/cjs/loader:1738:14)
+    at Object..js (node:internal/modules/cjs/loader:1871:10)
+    at Module.load (node:internal/modules/cjs/loader:1470:32)
+    at Module._load (node:internal/modules/cjs/loader:1290:12)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}
+
+Node.js v24.6.0
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+[dotenv@17.2.3] injecting env (12) from .env -- tip: ⚙️  write to custom object with { processEnv: myObject }
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 📡 add observability to secrets: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 👥 sync secrets across teammates & machines: https://dotenvx.com/ops
+✅ Slack notifications initialized
+✅ Database configured
+[Scheduler] Starting module scheduler
+[Scheduler] Scheduler started successfully
+🚀 Polsia server running on http://localhost:3000
+[Scheduler] Running initial module check
+✅ Connected to PostgreSQL database
+[Scheduler] Found 1 active modules
+[Scheduler] Module 1 is due to run (last run: 28822.391s ago)
+[Scheduler] Triggering module: Security Patcher (ID: 1)
+[Agent Runner] Starting module execution: 1 for user 1
+[Agent Runner] Module found: Security Patcher
+[Agent Runner] Execution record created: 14
+[Agent Runner] Configured GitHub MCP server
+[Agent Runner] Context prepared with 1 MCP servers
+[Agent Runner] Workspace created: /Users/benbroca/Documents/polsia/temp/module-executions/14-ee214187
+[Agent Runner] 🤖 Starting AI execution...
+[Agent Runner] Prompt: Review the repository for outdated dependencies, known vulnerabilities, and insecure patterns. Use G...
+[Claude Agent] Starting task execution
+[Claude Agent] Prompt: Review the repository for outdated dependencies, known vulnerabilities, and insecure patterns. Use G...
+[Claude Agent] Working directory: /Users/benbroca/Documents/polsia/temp/module-executions/14-ee214187
+[Claude Agent] SDK initialized successfully
+[Claude Agent] MCP servers configured: github
+[Claude Agent] Executing query...
+[Claude Agent] Session initialized with model: claude-sonnet-4-5-20250929
+[Agent Runner] ✓ Session initialized with model: claude-sonnet-4-5-20250929
+[Claude Agent] Assistant: I'll help you review the repository for security issues and create fixes. Let me start by examining ...
+[Agent Runner] 💭 AI thinking: I'll help you review the repository for security issues and create fixes. Let me start by examining the repository structure and dependencies.
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 1)
+[Claude Agent] Assistant: Now let me check the package.json files for both frontend and backend:...
+[Agent Runner] 💭 AI thinking: Now let me check the package.json files for both frontend and backend:
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 2)
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 3)
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 4)
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+[dotenv@17.2.3] injecting env (12) from .env -- tip: 📡 add observability to secrets: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 📡 add observability to secrets: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🛠️  run anywhere with `dotenvx run -- yourcommand`
+✅ Slack notifications initialized
+✅ Database configured
+[Scheduler] Starting module scheduler
+[Scheduler] Scheduler started successfully
+node:events:486
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at app.listen (/Users/benbroca/Documents/polsia/node_modules/express/lib/application.js:635:24)
+    at startServer (/Users/benbroca/Documents/polsia/server.js:271:13)
+    at Object.<anonymous> (/Users/benbroca/Documents/polsia/server.js:284:1)
+    at Module._compile (node:internal/modules/cjs/loader:1738:14)
+    at Object..js (node:internal/modules/cjs/loader:1871:10)
+    at Module.load (node:internal/modules/cjs/loader:1470:32)
+    at Module._load (node:internal/modules/cjs/loader:1290:12)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}
+
+Node.js v24.6.0
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+[dotenv@17.2.3] injecting env (12) from .env -- tip: 🔐 prevent committing .env to code: https://dotenvx.com/precommit
+[dotenv@17.2.3] injecting env (0) from .env -- tip: ⚙️  suppress all logs with { quiet: true }
+[dotenv@17.2.3] injecting env (0) from .env -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
+✅ Slack notifications initialized
+✅ Database configured
+[Scheduler] Starting module scheduler
+[Scheduler] Scheduler started successfully
+node:events:486
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at app.listen (/Users/benbroca/Documents/polsia/node_modules/express/lib/application.js:635:24)
+    at startServer (/Users/benbroca/Documents/polsia/server.js:362:13)
+    at Object.<anonymous> (/Users/benbroca/Documents/polsia/server.js:375:1)
+    at Module._compile (node:internal/modules/cjs/loader:1738:14)
+    at Object..js (node:internal/modules/cjs/loader:1871:10)
+    at Module.load (node:internal/modules/cjs/loader:1470:32)
+    at Module._load (node:internal/modules/cjs/loader:1290:12)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}
+
+Node.js v24.6.0
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+[dotenv@17.2.3] injecting env (12) from .env -- tip: ✅ audit secrets and track compliance: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 📡 add observability to secrets: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🔑 add access controls to secrets: https://dotenvx.com/ops
+✅ Slack notifications initialized
+✅ Database configured
+[Scheduler] Starting module scheduler
+[Scheduler] Scheduler started successfully
+🚀 Polsia server running on http://localhost:3000
+[Scheduler] Running initial module check
+✅ Connected to PostgreSQL database
+[Scheduler] Found 1 active modules
+[Scheduler] Module 1 is due to run (last run: 28814.975s ago)
+[Scheduler] Triggering module: Security Patcher (ID: 1)
+[Agent Runner] Starting module execution: 1 for user 1
+[Agent Runner] Module found: Security Patcher
+[Agent Runner] Execution record created: 20
+[Agent Runner] Configured GitHub MCP server
+[Agent Runner] Context prepared with 1 MCP servers
+[Agent Runner] Workspace created: /Users/benbroca/Documents/polsia/temp/module-executions/20-6522b7c9
+[Agent Runner] 🤖 Starting AI execution...
+[Agent Runner] Prompt: Review the repository for outdated dependencies, known vulnerabilities, and insecure patterns. Use G...
+[Claude Agent] Starting task execution
+[Claude Agent] Prompt: Review the repository for outdated dependencies, known vulnerabilities, and insecure patterns. Use G...
+[Claude Agent] Working directory: /Users/benbroca/Documents/polsia/temp/module-executions/20-6522b7c9
+[Claude Agent] SDK initialized successfully
+[Claude Agent] MCP servers configured: github
+[Claude Agent] Executing query...
+[Claude Agent] Session initialized with model: claude-sonnet-4-5-20250929
+[Agent Runner] ✓ Session initialized with model: claude-sonnet-4-5-20250929
+[Claude Agent] Assistant: I'll help you review the repository for security issues and create fixes. Let me start by examining ...
+[Agent Runner] 💭 AI thinking: I'll help you review the repository for security issues and create fixes. Let me start by examining the repository structure and dependencies.
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 1)
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+[dotenv@17.2.3] injecting env (12) from .env -- tip: 👥 sync secrets across teammates & machines: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 📡 add observability to secrets: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🔄 add secrets lifecycle management: https://dotenvx.com/ops
+✅ Slack notifications initialized
+✅ Database configured
+[Scheduler] Starting module scheduler
+[Scheduler] Scheduler started successfully
+node:events:486
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at app.listen (/Users/benbroca/Documents/polsia/node_modules/express/lib/application.js:635:24)
+    at startServer (/Users/benbroca/Documents/polsia/server.js:362:13)
+    at Object.<anonymous> (/Users/benbroca/Documents/polsia/server.js:375:1)
+    at Module._compile (node:internal/modules/cjs/loader:1738:14)
+    at Object..js (node:internal/modules/cjs/loader:1871:10)
+    at Module.load (node:internal/modules/cjs/loader:1470:32)
+    at Module._load (node:internal/modules/cjs/loader:1290:12)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}
+
+Node.js v24.6.0
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+[dotenv@17.2.3] injecting env (12) from .env -- tip: 👥 sync secrets across teammates & machines: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 📡 add observability to secrets: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 👥 sync secrets across teammates & machines: https://dotenvx.com/ops
+✅ Slack notifications initialized
+✅ Database configured
+[Scheduler] Starting module scheduler
+[Scheduler] Scheduler started successfully
+node:events:486
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at app.listen (/Users/benbroca/Documents/polsia/node_modules/express/lib/application.js:635:24)
+    at startServer (/Users/benbroca/Documents/polsia/server.js:362:13)
+    at Object.<anonymous> (/Users/benbroca/Documents/polsia/server.js:375:1)
+    at Module._compile (node:internal/modules/cjs/loader:1738:14)
+    at Object..js (node:internal/modules/cjs/loader:1871:10)
+    at Module.load (node:internal/modules/cjs/loader:1470:32)
+    at Module._load (node:internal/modules/cjs/loader:1290:12)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}
+
+Node.js v24.6.0
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+[dotenv@17.2.3] injecting env (12) from .env -- tip: ⚙️  override existing env vars with { override: true }
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🔑 add access controls to secrets: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 📡 add observability to secrets: https://dotenvx.com/ops
+✅ Slack notifications initialized
+✅ Database configured
+[Scheduler] Starting module scheduler
+[Scheduler] Scheduler started successfully
+node:events:486
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at app.listen (/Users/benbroca/Documents/polsia/node_modules/express/lib/application.js:635:24)
+    at startServer (/Users/benbroca/Documents/polsia/server.js:362:13)
+    at Object.<anonymous> (/Users/benbroca/Documents/polsia/server.js:375:1)
+    at Module._compile (node:internal/modules/cjs/loader:1738:14)
+    at Object..js (node:internal/modules/cjs/loader:1871:10)
+    at Module.load (node:internal/modules/cjs/loader:1470:32)
+    at Module._load (node:internal/modules/cjs/loader:1290:12)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}
+
+Node.js v24.6.0
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+[dotenv@17.2.3] injecting env (12) from .env -- tip: 🔄 add secrets lifecycle management: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env -- tip: ✅ audit secrets and track compliance: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env -- tip: ✅ audit secrets and track compliance: https://dotenvx.com/ops
+✅ Slack notifications initialized
+✅ Database configured
+[Scheduler] Starting module scheduler
+[Scheduler] Scheduler started successfully
+🚀 Polsia server running on http://localhost:3000
+[Scheduler] Running initial module check
+✅ Connected to PostgreSQL database
+[Scheduler] Found 1 active modules
+[Scheduler] Module 1 is due to run (last run: 28865.503s ago)
+[Scheduler] Triggering module: Security Patcher (ID: 1)
+[Agent Runner] Starting module execution: 1 for user 1
+[Agent Runner] Module found: Security Patcher
+[Agent Runner] Execution record created: 23
+[Agent Runner] Configured GitHub MCP server
+[Agent Runner] Context prepared with 1 MCP servers
+[Agent Runner] Workspace created: /Users/benbroca/Documents/polsia/temp/module-executions/23-299cbf6a
+[Agent Runner] 🤖 Starting AI execution...
+[Agent Runner] Prompt: Review the repository for outdated dependencies, known vulnerabilities, and insecure patterns. Use G...
+[Claude Agent] Starting task execution
+[Claude Agent] Prompt: Review the repository for outdated dependencies, known vulnerabilities, and insecure patterns. Use G...
+[Claude Agent] Working directory: /Users/benbroca/Documents/polsia/temp/module-executions/23-299cbf6a
+[Claude Agent] SDK initialized successfully
+[Claude Agent] MCP servers configured: github
+[Claude Agent] Executing query...
+[Claude Agent] Session initialized with model: claude-sonnet-4-5-20250929
+[Agent Runner] ✓ Session initialized with model: claude-sonnet-4-5-20250929
+[Claude Agent] Assistant: I'll help you review the repository for security issues and outdated dependencies. Let me start by e...
+[Agent Runner] 💭 AI thinking: I'll help you review the repository for security issues and outdated dependencies. Let me start by examining the repository structure and identifying potential security concerns.
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 1)
+[Claude Agent] Assistant: Now let me examine the key dependency files for both frontend and backend:...
+[Agent Runner] 💭 AI thinking: Now let me examine the key dependency files for both frontend and backend:
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 2)
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+[dotenv@17.2.3] injecting env (12) from .env -- tip: ⚙️  enable debug logging with { debug: true }
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 👥 sync secrets across teammates & machines: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 👥 sync secrets across teammates & machines: https://dotenvx.com/ops
+✅ Slack notifications initialized
+✅ Database configured
+[Scheduler] Starting module scheduler
+[Scheduler] Scheduler started successfully
+node:events:486
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at app.listen (/Users/benbroca/Documents/polsia/node_modules/express/lib/application.js:635:24)
+    at startServer (/Users/benbroca/Documents/polsia/server.js:363:13)
+    at Object.<anonymous> (/Users/benbroca/Documents/polsia/server.js:376:1)
+    at Module._compile (node:internal/modules/cjs/loader:1738:14)
+    at Object..js (node:internal/modules/cjs/loader:1871:10)
+    at Module.load (node:internal/modules/cjs/loader:1470:32)
+    at Module._load (node:internal/modules/cjs/loader:1290:12)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}
+
+Node.js v24.6.0
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+[dotenv@17.2.3] injecting env (12) from .env -- tip: 🔑 add access controls to secrets: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 👥 sync secrets across teammates & machines: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 👥 sync secrets across teammates & machines: https://dotenvx.com/ops
+✅ Slack notifications initialized
+✅ Database configured
+[Scheduler] Starting module scheduler
+[Scheduler] Scheduler started successfully
+🚀 Polsia server running on http://localhost:3000
+[Scheduler] Running initial module check
+✅ Connected to PostgreSQL database
+[Scheduler] Found 1 active modules
+[Scheduler] Module 1 is due to run (last run: 28975.238s ago)
+[Scheduler] Triggering module: Security Patcher (ID: 1)
+[Agent Runner] Starting module execution: 1 for user 1
+[Agent Runner] Module found: Security Patcher
+[Agent Runner] Execution record created: 29
+[Agent Runner] Configured GitHub MCP server
+[Agent Runner] Context prepared with 1 MCP servers
+[Agent Runner] Workspace created: /Users/benbroca/Documents/polsia/temp/module-executions/29-96685e15
+[Agent Runner] 🤖 Starting AI execution...
+[Agent Runner] Prompt: Review the repository for outdated dependencies, known vulnerabilities, and insecure patterns. Use G...
+[Claude Agent] Starting task execution
+[Claude Agent] Prompt: Review the repository for outdated dependencies, known vulnerabilities, and insecure patterns. Use G...
+[Claude Agent] Working directory: /Users/benbroca/Documents/polsia/temp/module-executions/29-96685e15
+[Claude Agent] SDK initialized successfully
+[Claude Agent] MCP servers configured: github
+[Claude Agent] Executing query...
+[Claude Agent] Session initialized with model: claude-sonnet-4-5-20250929
+[Agent Runner] ✓ Session initialized with model: claude-sonnet-4-5-20250929
+[Claude Agent] Assistant: I'll help you review the repository for security issues and outdated dependencies. Let me start by e...
+[Agent Runner] 💭 AI thinking: I'll help you review the repository for security issues and outdated dependencies. Let me start by examining the repository structure and identifying potential security concerns.
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 1)
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+[dotenv@17.2.3] injecting env (12) from .env -- tip: 🔐 encrypt with Dotenvx: https://dotenvx.com
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🗂️ backup and recover secrets: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🛠️  run anywhere with `dotenvx run -- yourcommand`
+✅ Slack notifications initialized
+✅ Database configured
+[Scheduler] Starting module scheduler
+[Scheduler] Scheduler started successfully
+node:events:486
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at app.listen (/Users/benbroca/Documents/polsia/node_modules/express/lib/application.js:635:24)
+    at startServer (/Users/benbroca/Documents/polsia/server.js:363:13)
+    at Object.<anonymous> (/Users/benbroca/Documents/polsia/server.js:376:1)
+    at Module._compile (node:internal/modules/cjs/loader:1738:14)
+    at Object..js (node:internal/modules/cjs/loader:1871:10)
+    at Module.load (node:internal/modules/cjs/loader:1470:32)
+    at Module._load (node:internal/modules/cjs/loader:1290:12)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}
+
+Node.js v24.6.0
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+[dotenv@17.2.3] injecting env (12) from .env -- tip: ⚙️  override existing env vars with { override: true }
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🔄 add secrets lifecycle management: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env -- tip: ⚙️  enable debug logging with { debug: true }
+✅ Slack notifications initialized
+✅ Database configured
+[Scheduler] Starting module scheduler
+[Scheduler] Scheduler started successfully
+🚀 Polsia server running on http://localhost:3000
+[Scheduler] Running initial module check
+✅ Connected to PostgreSQL database
+[Scheduler] Found 1 active modules
+[Scheduler] Module 1 is due to run (last run: 28804.309s ago)
+[Scheduler] Triggering module: Security Patcher (ID: 1)
+[Agent Runner] Starting module execution: 1 for user 1
+[Agent Runner] Module found: Security Patcher
+[Agent Runner] Execution record created: 31
+[Agent Runner] Configured GitHub MCP server
+[Agent Runner] Context prepared with 1 MCP servers
+[Agent Runner] Workspace created: /Users/benbroca/Documents/polsia/temp/module-executions/31-e39a8d7d
+[Agent Runner] 🤖 Starting AI execution...
+[Agent Runner] Prompt: Review the repository for outdated dependencies, known vulnerabilities, and insecure patterns. Use G...
+[Claude Agent] Starting task execution
+[Claude Agent] Prompt: Review the repository for outdated dependencies, known vulnerabilities, and insecure patterns. Use G...
+[Claude Agent] Working directory: /Users/benbroca/Documents/polsia/temp/module-executions/31-e39a8d7d
+[Claude Agent] SDK initialized successfully
+[Claude Agent] MCP servers configured: github
+[Claude Agent] Executing query...
+[Claude Agent] Session initialized with model: claude-sonnet-4-5-20250929
+[Agent Runner] ✓ Session initialized with model: claude-sonnet-4-5-20250929
+[Claude Agent] Assistant: I'll help you review the repository for outdated dependencies, vulnerabilities, and insecure pattern...
+[Agent Runner] 💭 AI thinking: I'll help you review the repository for outdated dependencies, vulnerabilities, and insecure patterns, then create PRs with fixes. Let me start by examining the repository structure and its dependencies.
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 1)
+[Claude Agent] Assistant: Now let me examine the key dependency files:...
+[Agent Runner] 💭 AI thinking: Now let me examine the key dependency files:
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 2)
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 3)
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 4)
+[Claude Agent] Assistant: Let me also check for security configuration files and examine the security notes:...
+[Agent Runner] 💭 AI thinking: Let me also check for security configuration files and examine the security notes:
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 5)
+[Claude Agent] Tool use: Grep
+[Agent Runner] 🔧 Using tool: Grep (turn 6)
+[Claude Agent] Tool use: Glob
+[Agent Runner] 🔧 Using tool: Glob (turn 7)
+[Claude Agent] Assistant: Now let me search for security configuration and check for common vulnerabilities. Let me also look ...
+[Agent Runner] 💭 AI thinking: Now let me search for security configuration and check for common vulnerabilities. Let me also look for Python/backend requirements files:
+[Claude Agent] Tool use: Glob
+[Agent Runner] 🔧 Using tool: Glob (turn 8)
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 9)
+[Claude Agent] Assistant: Let me create a comprehensive task list to track this security audit and remediation work:...
+[Agent Runner] 💭 AI thinking: Let me create a comprehensive task list to track this security audit and remediation work:
+[Claude Agent] Tool use: TodoWrite
+[Agent Runner] 🔧 Using tool: TodoWrite (turn 10)
+[Claude Agent] Assistant: Now let me search for known vulnerabilities and check the authentication/authorization code:...
+[Agent Runner] 💭 AI thinking: Now let me search for known vulnerabilities and check the authentication/authorization code:
+[Claude Agent] Tool use: WebSearch
+[Agent Runner] 🔧 Using tool: WebSearch (turn 11)
+[Claude Agent] Tool use: WebSearch
+[Agent Runner] 🔧 Using tool: WebSearch (turn 12)
+[Claude Agent] Tool use: WebSearch
+[Agent Runner] 🔧 Using tool: WebSearch (turn 13)
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 14)
+[Claude Agent] Assistant: Now let me check for more security issues in the code:...
+[Agent Runner] 💭 AI thinking: Now let me check for more security issues in the code:
+✅ Connected to PostgreSQL database
+[Claude Agent] Tool use: WebSearch
+[Agent Runner] 🔧 Using tool: WebSearch (turn 15)
+[Claude Agent] Tool use: WebSearch
+[Agent Runner] 🔧 Using tool: WebSearch (turn 16)
+[Claude Agent] Tool use: WebSearch
+[Agent Runner] 🔧 Using tool: WebSearch (turn 17)
+[Claude Agent] Tool use: TodoWrite
+[Agent Runner] 🔧 Using tool: TodoWrite (turn 18)
+✅ Connected to PostgreSQL database
+[Claude Agent] Assistant: Now let me examine the backend code for insecure patterns:...
+[Agent Runner] 💭 AI thinking: Now let me examine the backend code for insecure patterns:
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 19)
+[Claude Agent] Assistant: Let me examine the main index.js and middleware for security issues:...
+[Agent Runner] 💭 AI thinking: Let me examine the main index.js and middleware for security issues:
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 20)
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 21)
+[Claude Agent] Task completed in 116615ms
+[Claude Agent] Cost: $0.564744
+[Claude Agent] Turns used: 20
+[Agent Runner] 📊 Stage: completed
+[Agent Runner] ✓ AI execution completed. Success: true
+[Agent Runner] 🧹 Cleaning up workspace...
+[Agent Runner] 📊 Execution stats:
+   - Duration: 119.42s
+   - Cost: $0.5647
+   - Turns: 20
+   - Status: ✓ completed
+[Agent Runner] ✅ Module execution completed: 1
+[Agent Runner] ⚠️  Failed to create task summary: config is not defined
+✅ Connected to PostgreSQL database
+✅ Connected to PostgreSQL database
+✅ Connected to PostgreSQL database
+✅ Connected to PostgreSQL database
+✅ Connected to PostgreSQL database
+✅ Connected to PostgreSQL database
+✅ Connected to PostgreSQL database
+✅ Connected to PostgreSQL database
+[Module Routes] Manual execution triggered for module: Security Patcher
+[Agent Runner] Starting module execution: 1 for user 1
+[Agent Runner] Module found: Security Patcher
+[Agent Runner] Execution record created: 32
+[Agent Runner] Configured GitHub MCP server
+[Agent Runner] Context prepared with 1 MCP servers
+[Agent Runner] Workspace created: /Users/benbroca/Documents/polsia/temp/module-executions/32-4a76a7b2
+[Agent Runner] 🤖 Starting AI execution...
+[Agent Runner] Prompt: Review the repository for outdated dependencies, known vulnerabilities, and insecure patterns. Use G...
+[Claude Agent] Starting task execution
+[Claude Agent] Prompt: Review the repository for outdated dependencies, known vulnerabilities, and insecure patterns. Use G...
+[Claude Agent] Working directory: /Users/benbroca/Documents/polsia/temp/module-executions/32-4a76a7b2
+[Claude Agent] MCP servers configured: github
+[Claude Agent] Executing query...
+[SSE] Client connected for execution 32
+[Claude Agent] Session initialized with model: claude-sonnet-4-5-20250929
+[Agent Runner] ✓ Session initialized with model: claude-sonnet-4-5-20250929
+[Claude Agent] Assistant: I'll help you review the repository for outdated dependencies, vulnerabilities, and insecure pattern...
+[Agent Runner] 💭 AI thinking: I'll help you review the repository for outdated dependencies, vulnerabilities, and insecure patterns, then create PRs with fixes. Let me start by examining the repository structure and contents.
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 1)
+[Claude Agent] Assistant: Now let me check the key dependency files for both frontend and backend:...
+[Agent Runner] 💭 AI thinking: Now let me check the key dependency files for both frontend and backend:
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 2)
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 3)
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 4)
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 5)
+[Claude Agent] Tool use: TodoWrite
+[Agent Runner] 🔧 Using tool: TodoWrite (turn 6)
+[Claude Agent] Assistant: Now let me search for additional security-sensitive files and check for common vulnerability pattern...
+[Agent Runner] 💭 AI thinking: Now let me search for additional security-sensitive files and check for common vulnerability patterns:
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 7)
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 8)
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 9)
+[Claude Agent] Assistant: Now let me look at the authentication middleware to check for security issues:...
+[Agent Runner] 💭 AI thinking: Now let me look at the authentication middleware to check for security issues:
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 10)
+[Claude Agent] Tool use: TodoWrite
+[Agent Runner] 🔧 Using tool: TodoWrite (turn 11)
+[Claude Agent] Assistant: Now let me check for SQL injection vulnerabilities and other security issues in the codebase:...
+[Agent Runner] 💭 AI thinking: Now let me check for SQL injection vulnerabilities and other security issues in the codebase:
+[Claude Agent] Tool use: Task
+[Agent Runner] 🔧 Using tool: Task (turn 12)
+[Claude Agent] Tool use: Bash
+[Agent Runner] 🔧 Using tool: Bash (turn 13)
+[Claude Agent] Tool use: Glob
+[Agent Runner] 🔧 Using tool: Glob (turn 14)
+[Claude Agent] Tool use: Glob
+[Agent Runner] 🔧 Using tool: Glob (turn 15)
+[Claude Agent] Tool use: Glob
+[Agent Runner] 🔧 Using tool: Glob (turn 16)
+[Claude Agent] Tool use: Glob
+[Agent Runner] 🔧 Using tool: Glob (turn 17)
+[Claude Agent] Tool use: Glob
+[Agent Runner] 🔧 Using tool: Glob (turn 18)
+[Claude Agent] Tool use: Bash
+[Agent Runner] 🔧 Using tool: Bash (turn 19)
+[Claude Agent] Tool use: Bash
+[Agent Runner] 🔧 Using tool: Bash (turn 20)
+[Claude Agent] Tool use: Glob
+[Agent Runner] 🔧 Using tool: Glob (turn 21)
+[Claude Agent] Tool use: Glob
+[Agent Runner] 🔧 Using tool: Glob (turn 22)
+[Claude Agent] Tool use: Read
+[Agent Runner] 🔧 Using tool: Read (turn 23)
+[Claude Agent] Tool use: Read
+[Agent Runner] 🔧 Using tool: Read (turn 24)
+[Claude Agent] Tool use: Read
+[Agent Runner] 🔧 Using tool: Read (turn 25)
+[Claude Agent] Tool use: Read
+[Agent Runner] 🔧 Using tool: Read (turn 26)
+[Claude Agent] Tool use: Read
+[Agent Runner] 🔧 Using tool: Read (turn 27)
+[Claude Agent] Tool use: Read
+[Agent Runner] 🔧 Using tool: Read (turn 28)
+[Claude Agent] Tool use: Read
+[Agent Runner] 🔧 Using tool: Read (turn 29)
+[Claude Agent] Tool use: Read
+[Agent Runner] 🔧 Using tool: Read (turn 30)
+[Claude Agent] Tool use: Read
+[Agent Runner] 🔧 Using tool: Read (turn 31)
+[Claude Agent] Tool use: Read
+[Agent Runner] 🔧 Using tool: Read (turn 32)
+[Claude Agent] Tool use: Glob
+[Agent Runner] 🔧 Using tool: Glob (turn 33)
+[Claude Agent] Tool use: Read
+[Agent Runner] 🔧 Using tool: Read (turn 34)
+[Claude Agent] Tool use: Grep
+[Agent Runner] 🔧 Using tool: Grep (turn 35)
+[Claude Agent] Tool use: Read
+[Agent Runner] 🔧 Using tool: Read (turn 36)
+[Claude Agent] Tool use: Read
+[Agent Runner] 🔧 Using tool: Read (turn 37)
+[Claude Agent] Tool use: Grep
+[Agent Runner] 🔧 Using tool: Grep (turn 38)
+[Claude Agent] Tool use: Grep
+[Agent Runner] 🔧 Using tool: Grep (turn 39)
+[Claude Agent] Tool use: Grep
+[Agent Runner] 🔧 Using tool: Grep (turn 40)
+[Claude Agent] Tool use: Grep
+[Agent Runner] 🔧 Using tool: Grep (turn 41)
+[Claude Agent] Tool use: Grep
+[Agent Runner] 🔧 Using tool: Grep (turn 42)
+[Claude Agent] Tool use: Grep
+[Agent Runner] 🔧 Using tool: Grep (turn 43)
+[SSE] Client disconnected from execution 32
+✅ Connected to PostgreSQL database
+✅ Connected to PostgreSQL database
+[SSE] Client connected for execution 32
+[SSE] Client disconnected from execution 32
+[SSE] Client connected for execution 32
+[SSE] Client disconnected from execution 32
+[SSE] Client connected for execution 32
+[SSE] Client disconnected from execution 32
+[SSE] Client connected for execution 32
+[SSE] Client disconnected from execution 32
+[SSE] Client connected for execution 32
+[SSE] Client disconnected from execution 32
+[SSE] Client connected for execution 32
+[SSE] Client disconnected from execution 32
+[SSE] Client connected for execution 32
+[SSE] Client disconnected from execution 32
+[SSE] Client connected for execution 32
+[SSE] Client disconnected from execution 32
+[SSE] Client connected for execution 32
+[SSE] Client disconnected from execution 32
+[SSE] Client connected for execution 32
+[Module Routes] Manual execution triggered for module: Security Patcher
+[Agent Runner] Starting module execution: 1 for user 1
+[Agent Runner] Module found: Security Patcher
+[Agent Runner] Execution record created: 33
+[Agent Runner] Configured GitHub MCP server
+[Agent Runner] Context prepared with 1 MCP servers
+[Agent Runner] Workspace created: /Users/benbroca/Documents/polsia/temp/module-executions/33-f6e5168c
+[Agent Runner] 🤖 Starting AI execution...
+[Agent Runner] Prompt: Review the repository for outdated dependencies, known vulnerabilities, and insecure patterns. Use G...
+[Claude Agent] Starting task execution
+[Claude Agent] Prompt: Review the repository for outdated dependencies, known vulnerabilities, and insecure patterns. Use G...
+[Claude Agent] Working directory: /Users/benbroca/Documents/polsia/temp/module-executions/33-f6e5168c
+[Claude Agent] MCP servers configured: github
+[Claude Agent] Executing query...
+[SSE] Client disconnected from execution 32
+[SSE] Client connected for execution 33
+[Claude Agent] Session initialized with model: claude-sonnet-4-5-20250929
+[Agent Runner] ✓ Session initialized with model: claude-sonnet-4-5-20250929
+[Claude Agent] Assistant: I'll help you review the repository for security issues and dependencies. Let me start by examining ...
+[Agent Runner] 💭 AI thinking: I'll help you review the repository for security issues and dependencies. Let me start by examining the repository structure and its dependencies.
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 1)
+[Claude Agent] Assistant: Now let me examine the package.json files for both frontend and backend to understand the dependenci...
+[Agent Runner] 💭 AI thinking: Now let me examine the package.json files for both frontend and backend to understand the dependencies:
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 2)
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 3)
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 4)
+[Claude Agent] Assistant: Now let me search for common security issues and configuration files:...
+[Agent Runner] 💭 AI thinking: Now let me search for common security issues and configuration files:
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 5)
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 6)
+[Claude Agent] Assistant: Let me create a comprehensive security audit plan and track my progress:...
+[Agent Runner] 💭 AI thinking: Let me create a comprehensive security audit plan and track my progress:
+[Claude Agent] Tool use: TodoWrite
+[Agent Runner] 🔧 Using tool: TodoWrite (turn 7)
+[Claude Agent] Assistant: Now let me examine the main backend index file and middleware for security patterns:...
+[Agent Runner] 💭 AI thinking: Now let me examine the main backend index file and middleware for security patterns:
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 8)
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 9)
+[Claude Agent] Assistant: Let me examine the authentication middleware more closely:...
+[Agent Runner] 💭 AI thinking: Let me examine the authentication middleware more closely:
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 10)
+[Claude Agent] Assistant: Now let me analyze the dependencies for outdated versions and known vulnerabilities:...
+[Agent Runner] 💭 AI thinking: Now let me analyze the dependencies for outdated versions and known vulnerabilities:
+[Claude Agent] Tool use: WebSearch
+[Agent Runner] 🔧 Using tool: WebSearch (turn 44)
+[Claude Agent] Tool use: TodoWrite
+[Agent Runner] 🔧 Using tool: TodoWrite (turn 11)
+[Claude Agent] Tool use: WebSearch
+[Agent Runner] 🔧 Using tool: WebSearch (turn 45)
+[Claude Agent] Tool use: WebSearch
+[Agent Runner] 🔧 Using tool: WebSearch (turn 46)
+[Claude Agent] Assistant: Now let me check for any hardcoded secrets or environment variable issues:...
+[Agent Runner] 💭 AI thinking: Now let me check for any hardcoded secrets or environment variable issues:
+[Claude Agent] Tool use: mcp__github__search_code
+[Agent Runner] 🔧 Using tool: mcp__github__search_code (turn 12)
+[Claude Agent] Tool use: mcp__github__search_code
+[Agent Runner] 🔧 Using tool: mcp__github__search_code (turn 13)
+[Claude Agent] Assistant: Now let me compile my findings and create a comprehensive security audit document:...
+[Agent Runner] 💭 AI thinking: Now let me compile my findings and create a comprehensive security audit document:
+[Claude Agent] Tool use: TodoWrite
+[Agent Runner] 🔧 Using tool: TodoWrite (turn 14)
+[Claude Agent] Assistant: Now let me create the security audit document and prepare fixes:...
+[Agent Runner] 💭 AI thinking: Now let me create the security audit document and prepare fixes:
+[Claude Agent] Tool use: mcp__github__create_branch
+[Agent Runner] 🔧 Using tool: mcp__github__create_branch (turn 15)
+[Claude Agent] Assistant: The branch already exists. Let me use a new branch name:...
+[Agent Runner] 💭 AI thinking: The branch already exists. Let me use a new branch name:
+[Claude Agent] Tool use: mcp__github__create_branch
+[Agent Runner] 🔧 Using tool: mcp__github__create_branch (turn 16)
+[Claude Agent] Tool use: mcp__github__create_branch
+[Agent Runner] 🔧 Using tool: mcp__github__create_branch (turn 17)
+[Claude Agent] Assistant: Perfect! Now let me create a comprehensive security audit report and push the necessary fixes:...
+[Agent Runner] 💭 AI thinking: Perfect! Now let me create a comprehensive security audit report and push the necessary fixes:
+[Claude Agent] Assistant: Now let me compile a comprehensive security fix and create pull requests. Let me update the todo lis...
+[Agent Runner] 💭 AI thinking: Now let me compile a comprehensive security fix and create pull requests. Let me update the todo list first:
+[Claude Agent] Tool use: TodoWrite
+[Agent Runner] 🔧 Using tool: TodoWrite (turn 47)
+[Claude Agent] Assistant: Now let me create security fix branches and PRs. I'll create separate PRs for critical, high, and me...
+[Agent Runner] 💭 AI thinking: Now let me create security fix branches and PRs. I'll create separate PRs for critical, high, and medium priority fixes:
+[Claude Agent] Tool use: mcp__github__create_branch
+[Agent Runner] 🔧 Using tool: mcp__github__create_branch (turn 48)
+[Claude Agent] Tool use: mcp__github__create_branch
+[Agent Runner] 🔧 Using tool: mcp__github__create_branch (turn 49)
+[Claude Agent] Tool use: mcp__github__create_branch
+[Agent Runner] 🔧 Using tool: mcp__github__create_branch (turn 50)
+[Claude Agent] Assistant: Good! Now let me create the comprehensive fixes. Let me start with the critical vulnerabilities PR:...
+[Agent Runner] 💭 AI thinking: Good! Now let me create the comprehensive fixes. Let me start with the critical vulnerabilities PR:
+[SSE] Client disconnected from execution 33
+✅ Connected to PostgreSQL database
+✅ Connected to PostgreSQL database
+[SSE] Client connected for execution 33
+[SSE] Client disconnected from execution 33
+[SSE] Client connected for execution 33
+[Claude Agent] Tool use: mcp__github__push_files
+[Agent Runner] 🔧 Using tool: mcp__github__push_files (turn 18)
+[Claude Agent] Tool use: TodoWrite
+[Agent Runner] 🔧 Using tool: TodoWrite (turn 19)
+[Claude Agent] Assistant: Now let me create a comprehensive pull request with all the security improvements:...
+[Agent Runner] 💭 AI thinking: Now let me create a comprehensive pull request with all the security improvements:
+[Claude Agent] Tool use: mcp__github__push_files
+[Agent Runner] 🔧 Using tool: mcp__github__push_files (turn 51)
+[Claude Agent] Task completed in 367079ms
+[Claude Agent] Cost: $1.315174
+[Claude Agent] Turns used: 20
+[Agent Runner] 📊 Stage: completed
+[Agent Runner] ✓ AI execution completed. Success: true
+[Agent Runner] 🧹 Cleaning up workspace...
+[Agent Runner] 📊 Execution stats:
+   - Duration: 369.80s
+   - Cost: $1.3152
+   - Turns: 20
+   - Status: ✓ completed
+[Agent Runner] ✅ Module execution completed: 1
+[Agent Runner] ⚠️  Failed to create task summary: config is not defined
+[Claude Agent] Tool use: mcp__github__create_pull_request
+[Agent Runner] 🔧 Using tool: mcp__github__create_pull_request (turn 20)
+[Claude Agent] Task completed in 250467ms
+[Claude Agent] Cost: $0.716679
+[Claude Agent] Turns used: 20
+[Agent Runner] 📊 Stage: completed
+[Agent Runner] ✓ AI execution completed. Success: true
+[Agent Runner] 🧹 Cleaning up workspace...
+[Agent Runner] 📊 Execution stats:
+   - Duration: 253.43s
+   - Cost: $0.7167
+   - Turns: 20
+   - Status: ✓ completed
+[Agent Runner] ✅ Module execution completed: 1
+[Agent Runner] ⚠️  Failed to create task summary: config is not defined
+[SSE] Stream ended for execution 33 (completed)
+[SSE] Client disconnected from execution 33
+✅ Connected to PostgreSQL database
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+[dotenv@17.2.3] injecting env (12) from .env -- tip: ⚙️  write to custom object with { processEnv: myObject }
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🛠️  run anywhere with `dotenvx run -- yourcommand`
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🗂️ backup and recover secrets: https://dotenvx.com/ops
+✅ Slack notifications initialized
+✅ Database configured
+[Scheduler] Starting module scheduler
+[Scheduler] Scheduler started successfully
+node:events:486
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at app.listen (/Users/benbroca/Documents/polsia/node_modules/express/lib/application.js:635:24)
+    at startServer (/Users/benbroca/Documents/polsia/server.js:363:13)
+    at Object.<anonymous> (/Users/benbroca/Documents/polsia/server.js:376:1)
+    at Module._compile (node:internal/modules/cjs/loader:1738:14)
+    at Object..js (node:internal/modules/cjs/loader:1871:10)
+    at Module.load (node:internal/modules/cjs/loader:1470:32)
+    at Module._load (node:internal/modules/cjs/loader:1290:12)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}
+
+Node.js v24.6.0
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+[dotenv@17.2.3] injecting env (12) from .env -- tip: 📡 add observability to secrets: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env -- tip: ⚙️  suppress all logs with { quiet: true }
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🗂️ backup and recover secrets: https://dotenvx.com/ops
+✅ Slack notifications initialized
+✅ Database configured
+[32m[nodemon] restarting due to changes...[39m
+[Scheduler] Starting module scheduler
+[Scheduler] Scheduler started successfully
+node:events:486
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at app.listen (/Users/benbroca/Documents/polsia/node_modules/express/lib/application.js:635:24)
+    at startServer (/Users/benbroca/Documents/polsia/server.js:363:13)
+    at Object.<anonymous> (/Users/benbroca/Documents/polsia/server.js:376:1)
+    at Module._compile (node:internal/modules/cjs/loader:1738:14)
+    at Object..js (node:internal/modules/cjs/loader:1871:10)
+    at Module.load (node:internal/modules/cjs/loader:1470:32)
+    at Module._load (node:internal/modules/cjs/loader:1290:12)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}
+
+Node.js v24.6.0
+[32m[nodemon] starting `node server.js`[39m
+[dotenv@17.2.3] injecting env (12) from .env -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🛠️  run anywhere with `dotenvx run -- yourcommand`
+[dotenv@17.2.3] injecting env (0) from .env -- tip: ✅ audit secrets and track compliance: https://dotenvx.com/ops
+✅ Slack notifications initialized
+✅ Database configured
+[Scheduler] Starting module scheduler
+[Scheduler] Scheduler started successfully
+node:events:486
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at app.listen (/Users/benbroca/Documents/polsia/node_modules/express/lib/application.js:635:24)
+    at startServer (/Users/benbroca/Documents/polsia/server.js:363:13)
+    at Object.<anonymous> (/Users/benbroca/Documents/polsia/server.js:376:1)
+    at Module._compile (node:internal/modules/cjs/loader:1738:14)
+    at Object..js (node:internal/modules/cjs/loader:1871:10)
+    at Module.load (node:internal/modules/cjs/loader:1470:32)
+    at Module._load (node:internal/modules/cjs/loader:1290:12)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}
+
+Node.js v24.6.0
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+[dotenv@17.2.3] injecting env (12) from .env -- tip: 🔐 prevent committing .env to code: https://dotenvx.com/precommit
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🔐 prevent building .env in docker: https://dotenvx.com/prebuild
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🔑 add access controls to secrets: https://dotenvx.com/ops
+✅ Slack notifications initialized
+✅ Database configured
+[Scheduler] Starting module scheduler
+[Scheduler] Scheduler started successfully
+node:events:486
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at app.listen (/Users/benbroca/Documents/polsia/node_modules/express/lib/application.js:635:24)
+    at startServer (/Users/benbroca/Documents/polsia/server.js:363:13)
+    at Object.<anonymous> (/Users/benbroca/Documents/polsia/server.js:376:1)
+    at Module._compile (node:internal/modules/cjs/loader:1738:14)
+    at Object..js (node:internal/modules/cjs/loader:1871:10)
+    at Module.load (node:internal/modules/cjs/loader:1470:32)
+    at Module._load (node:internal/modules/cjs/loader:1290:12)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}
+
+Node.js v24.6.0
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+[dotenv@17.2.3] injecting env (12) from .env -- tip: 🔐 prevent building .env in docker: https://dotenvx.com/prebuild
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 👥 sync secrets across teammates & machines: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🔄 add secrets lifecycle management: https://dotenvx.com/ops
+✅ Slack notifications initialized
+✅ Database configured
+[Scheduler] Starting module scheduler
+[Scheduler] Scheduler started successfully
+node:events:486
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at app.listen (/Users/benbroca/Documents/polsia/node_modules/express/lib/application.js:635:24)
+    at startServer (/Users/benbroca/Documents/polsia/server.js:363:13)
+    at Object.<anonymous> (/Users/benbroca/Documents/polsia/server.js:376:1)
+    at Module._compile (node:internal/modules/cjs/loader:1738:14)
+    at Object..js (node:internal/modules/cjs/loader:1871:10)
+    at Module.load (node:internal/modules/cjs/loader:1470:32)
+    at Module._load (node:internal/modules/cjs/loader:1290:12)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}
+
+Node.js v24.6.0
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+[dotenv@17.2.3] injecting env (12) from .env -- tip: 📡 add observability to secrets: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env -- tip: ⚙️  write to custom object with { processEnv: myObject }
+[dotenv@17.2.3] injecting env (0) from .env -- tip: ⚙️  override existing env vars with { override: true }
+✅ Slack notifications initialized
+node:internal/modules/cjs/loader:1413
+  throw err;
+  ^
+
+Error: Cannot find module '@anthropic-ai/sdk'
+Require stack:
+- /Users/benbroca/Documents/polsia/services/summary-generator.js
+- /Users/benbroca/Documents/polsia/services/agent-runner.js
+- /Users/benbroca/Documents/polsia/routes/module-routes.js
+- /Users/benbroca/Documents/polsia/server.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1410:15)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1051:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1056:22)
+    at Module._load (node:internal/modules/cjs/loader:1219:37)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:238:24)
+    at Module.require (node:internal/modules/cjs/loader:1493:12)
+    at require (node:internal/modules/helpers:152:16)
+    at Object.<anonymous> (/Users/benbroca/Documents/polsia/services/summary-generator.js:6:19)
+    at Module._compile (node:internal/modules/cjs/loader:1738:14) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [
+    '/Users/benbroca/Documents/polsia/services/summary-generator.js',
+    '/Users/benbroca/Documents/polsia/services/agent-runner.js',
+    '/Users/benbroca/Documents/polsia/routes/module-routes.js',
+    '/Users/benbroca/Documents/polsia/server.js'
+  ]
+}
+
+Node.js v24.6.0
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+[dotenv@17.2.3] injecting env (12) from .env -- tip: ⚙️  suppress all logs with { quiet: true }
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 📡 add observability to secrets: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🔐 encrypt with Dotenvx: https://dotenvx.com
+✅ Slack notifications initialized
+node:internal/modules/cjs/loader:1413
+  throw err;
+  ^
+
+Error: Cannot find module '@anthropic-ai/sdk'
+Require stack:
+- /Users/benbroca/Documents/polsia/services/summary-generator.js
+- /Users/benbroca/Documents/polsia/services/agent-runner.js
+- /Users/benbroca/Documents/polsia/routes/module-routes.js
+- /Users/benbroca/Documents/polsia/server.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1410:15)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1051:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1056:22)
+    at Module._load (node:internal/modules/cjs/loader:1219:37)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:238:24)
+    at Module.require (node:internal/modules/cjs/loader:1493:12)
+    at require (node:internal/modules/helpers:152:16)
+    at Object.<anonymous> (/Users/benbroca/Documents/polsia/services/summary-generator.js:6:19)
+    at Module._compile (node:internal/modules/cjs/loader:1738:14) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [
+    '/Users/benbroca/Documents/polsia/services/summary-generator.js',
+    '/Users/benbroca/Documents/polsia/services/agent-runner.js',
+    '/Users/benbroca/Documents/polsia/routes/module-routes.js',
+    '/Users/benbroca/Documents/polsia/server.js'
+  ]
+}
+
+Node.js v24.6.0
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+[dotenv@17.2.3] injecting env (12) from .env -- tip: ⚙️  write to custom object with { processEnv: myObject }
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🗂️ backup and recover secrets: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🔄 add secrets lifecycle management: https://dotenvx.com/ops
+✅ Slack notifications initialized
+node:internal/modules/cjs/loader:1413
+  throw err;
+  ^
+
+Error: Cannot find module '@anthropic-ai/sdk'
+Require stack:
+- /Users/benbroca/Documents/polsia/services/summary-generator.js
+- /Users/benbroca/Documents/polsia/services/agent-runner.js
+- /Users/benbroca/Documents/polsia/routes/module-routes.js
+- /Users/benbroca/Documents/polsia/server.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1410:15)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1051:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1056:22)
+    at Module._load (node:internal/modules/cjs/loader:1219:37)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:238:24)
+    at Module.require (node:internal/modules/cjs/loader:1493:12)
+    at require (node:internal/modules/helpers:152:16)
+    at Object.<anonymous> (/Users/benbroca/Documents/polsia/services/summary-generator.js:6:19)
+    at Module._compile (node:internal/modules/cjs/loader:1738:14) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [
+    '/Users/benbroca/Documents/polsia/services/summary-generator.js',
+    '/Users/benbroca/Documents/polsia/services/agent-runner.js',
+    '/Users/benbroca/Documents/polsia/routes/module-routes.js',
+    '/Users/benbroca/Documents/polsia/server.js'
+  ]
+}
+
+Node.js v24.6.0
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+[dotenv@17.2.3] injecting env (12) from .env -- tip: 🔑 add access controls to secrets: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env -- tip: ⚙️  override existing env vars with { override: true }
+[32m[nodemon] restarting due to changes...[39m
+[dotenv@17.2.3] injecting env (0) from .env -- tip: ⚙️  write to custom object with { processEnv: myObject }
+✅ Slack notifications initialized
+node:internal/modules/cjs/loader:1413
+  throw err;
+  ^
+
+Error: Cannot find module '@anthropic-ai/sdk'
+Require stack:
+- /Users/benbroca/Documents/polsia/services/summary-generator.js
+- /Users/benbroca/Documents/polsia/services/agent-runner.js
+- /Users/benbroca/Documents/polsia/routes/module-routes.js
+- /Users/benbroca/Documents/polsia/server.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1410:15)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1051:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1056:22)
+    at Module._load (node:internal/modules/cjs/loader:1219:37)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:238:24)
+    at Module.require (node:internal/modules/cjs/loader:1493:12)
+    at require (node:internal/modules/helpers:152:16)
+    at Object.<anonymous> (/Users/benbroca/Documents/polsia/services/summary-generator.js:6:19)
+    at Module._compile (node:internal/modules/cjs/loader:1738:14) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [
+    '/Users/benbroca/Documents/polsia/services/summary-generator.js',
+    '/Users/benbroca/Documents/polsia/services/agent-runner.js',
+    '/Users/benbroca/Documents/polsia/routes/module-routes.js',
+    '/Users/benbroca/Documents/polsia/server.js'
+  ]
+}
+
+Node.js v24.6.0
+[32m[nodemon] starting `node server.js`[39m
+[dotenv@17.2.3] injecting env (12) from .env -- tip: 🔐 prevent committing .env to code: https://dotenvx.com/precommit
+[dotenv@17.2.3] injecting env (0) from .env -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 👥 sync secrets across teammates & machines: https://dotenvx.com/ops
+✅ Slack notifications initialized
+node:internal/modules/cjs/loader:1413
+  throw err;
+  ^
+
+Error: Cannot find module '@anthropic-ai/sdk'
+Require stack:
+- /Users/benbroca/Documents/polsia/services/summary-generator.js
+- /Users/benbroca/Documents/polsia/services/agent-runner.js
+- /Users/benbroca/Documents/polsia/routes/module-routes.js
+- /Users/benbroca/Documents/polsia/server.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1410:15)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1051:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1056:22)
+    at Module._load (node:internal/modules/cjs/loader:1219:37)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:238:24)
+    at Module.require (node:internal/modules/cjs/loader:1493:12)
+    at require (node:internal/modules/helpers:152:16)
+    at Object.<anonymous> (/Users/benbroca/Documents/polsia/services/summary-generator.js:6:19)
+    at Module._compile (node:internal/modules/cjs/loader:1738:14) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [
+    '/Users/benbroca/Documents/polsia/services/summary-generator.js',
+    '/Users/benbroca/Documents/polsia/services/agent-runner.js',
+    '/Users/benbroca/Documents/polsia/routes/module-routes.js',
+    '/Users/benbroca/Documents/polsia/server.js'
+  ]
+}
+
+Node.js v24.6.0
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+[dotenv@17.2.3] injecting env (12) from .env -- tip: 👥 sync secrets across teammates & machines: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🔄 add secrets lifecycle management: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env -- tip: ⚙️  override existing env vars with { override: true }
+✅ Slack notifications initialized
+node:internal/modules/cjs/loader:1413
+  throw err;
+  ^
+
+Error: Cannot find module '@anthropic-ai/sdk'
+Require stack:
+- /Users/benbroca/Documents/polsia/services/summary-generator.js
+- /Users/benbroca/Documents/polsia/services/agent-runner.js
+- /Users/benbroca/Documents/polsia/routes/module-routes.js
+- /Users/benbroca/Documents/polsia/server.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1410:15)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1051:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1056:22)
+    at Module._load (node:internal/modules/cjs/loader:1219:37)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:238:24)
+    at Module.require (node:internal/modules/cjs/loader:1493:12)
+    at require (node:internal/modules/helpers:152:16)
+    at Object.<anonymous> (/Users/benbroca/Documents/polsia/services/summary-generator.js:6:19)
+    at Module._compile (node:internal/modules/cjs/loader:1738:14) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [
+    '/Users/benbroca/Documents/polsia/services/summary-generator.js',
+    '/Users/benbroca/Documents/polsia/services/agent-runner.js',
+    '/Users/benbroca/Documents/polsia/routes/module-routes.js',
+    '/Users/benbroca/Documents/polsia/server.js'
+  ]
+}
+
+Node.js v24.6.0
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+[dotenv@17.2.3] injecting env (12) from .env -- tip: 🔄 add secrets lifecycle management: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env -- tip: ⚙️  write to custom object with { processEnv: myObject }
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🔑 add access controls to secrets: https://dotenvx.com/ops
+✅ Slack notifications initialized
+✅ Database configured
+[Scheduler] Starting module scheduler
+[Scheduler] Scheduler started successfully
+node:events:486
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at app.listen (/Users/benbroca/Documents/polsia/node_modules/express/lib/application.js:635:24)
+    at startServer (/Users/benbroca/Documents/polsia/server.js:363:13)
+    at Object.<anonymous> (/Users/benbroca/Documents/polsia/server.js:376:1)
+    at Module._compile (node:internal/modules/cjs/loader:1738:14)
+    at Object..js (node:internal/modules/cjs/loader:1871:10)
+    at Module.load (node:internal/modules/cjs/loader:1470:32)
+    at Module._load (node:internal/modules/cjs/loader:1290:12)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}
+
+Node.js v24.6.0
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+[dotenv@17.2.3] injecting env (12) from .env -- tip: 🗂️ backup and recover secrets: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 👥 sync secrets across teammates & machines: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🗂️ backup and recover secrets: https://dotenvx.com/ops
+✅ Slack notifications initialized
+✅ Database configured
+[Scheduler] Starting module scheduler
+[32m[nodemon] restarting due to changes...[39m
+[Scheduler] Scheduler started successfully
+🚀 Polsia server running on http://localhost:3000
+[Scheduler] Running initial module check
+✅ Connected to PostgreSQL database
+[Scheduler] Found 1 active modules
+[32m[nodemon] starting `node server.js`[39m
+[dotenv@17.2.3] injecting env (12) from .env -- tip: ✅ audit secrets and track compliance: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env -- tip: ⚙️  override existing env vars with { override: true }
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🗂️ backup and recover secrets: https://dotenvx.com/ops
+✅ Slack notifications initialized
+✅ Database configured
+[Scheduler] Starting module scheduler
+[Scheduler] Scheduler started successfully
+🚀 Polsia server running on http://localhost:3000
+[Scheduler] Running initial module check
+✅ Connected to PostgreSQL database
+[Scheduler] Found 1 active modules
+[Scheduler] Module 1 is due to run (last run: 28851.648s ago)
+[Scheduler] Triggering module: Security Patcher (ID: 1)
+[Agent Runner] Starting module execution: 1 for user 1
+[Agent Runner] Module found: Security Patcher
+[Agent Runner] Execution record created: 38
+[Agent Runner] Configured GitHub MCP server
+[Agent Runner] Context prepared with 1 MCP servers
+[Agent Runner] Workspace created: /Users/benbroca/Documents/polsia/temp/module-executions/38-525a3119
+[Agent Runner] 🤖 Starting AI execution...
+[Agent Runner] Prompt: Review the repository for outdated dependencies, known vulnerabilities, and insecure patterns. Use G...
+[Claude Agent] Starting task execution
+[Claude Agent] Prompt: Review the repository for outdated dependencies, known vulnerabilities, and insecure patterns. Use G...
+[Claude Agent] Working directory: /Users/benbroca/Documents/polsia/temp/module-executions/38-525a3119
+[Claude Agent] SDK initialized successfully
+[Claude Agent] MCP servers configured: github
+[Claude Agent] Executing query...
+[Claude Agent] Session initialized with model: claude-sonnet-4-5-20250929
+[Agent Runner] ✓ Session initialized with model: claude-sonnet-4-5-20250929
+[Claude Agent] Assistant: I'll help you review the repository for outdated dependencies, vulnerabilities, and insecure pattern...
+[Agent Runner] 💭 AI thinking: I'll help you review the repository for outdated dependencies, vulnerabilities, and insecure patterns, then create fixes using GitHub MCP tools.
+
+Let me start by examining the repository structure and dependencies:
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 1)
+[Claude Agent] Assistant: Now let me fetch the key dependency files from both frontend and backend:...
+[Agent Runner] 💭 AI thinking: Now let me fetch the key dependency files from both frontend and backend:
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 2)
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 3)
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 4)
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 5)
+[Claude Agent] Assistant: Let me create a comprehensive security audit by examining the codebase for vulnerabilities, outdated...
+[Agent Runner] 💭 AI thinking: Let me create a comprehensive security audit by examining the codebase for vulnerabilities, outdated dependencies, and insecure patterns. I'll create a todo list to track this work.
+[Claude Agent] Tool use: TodoWrite
+[Agent Runner] 🔧 Using tool: TodoWrite (turn 6)
+[Claude Agent] Assistant: Now let me search for configuration files and code patterns that might reveal security issues:...
+[Agent Runner] 💭 AI thinking: Now let me search for configuration files and code patterns that might reveal security issues:
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 7)
+[Claude Agent] Tool use: mcp__github__search_code
+[Agent Runner] 🔧 Using tool: mcp__github__search_code (turn 8)
+[Claude Agent] Tool use: mcp__github__search_code
+[Agent Runner] 🔧 Using tool: mcp__github__search_code (turn 9)
+[Claude Agent] Tool use: mcp__github__search_code
+[Agent Runner] 🔧 Using tool: mcp__github__search_code (turn 10)
+[Claude Agent] Assistant: Let me examine key backend files for security issues:...
+[Agent Runner] 💭 AI thinking: Let me examine key backend files for security issues:
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 11)
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 12)
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 13)
+[Claude Agent] Assistant: Now let me analyze the security configuration and authentication middleware files:...
+[Agent Runner] 💭 AI thinking: Now let me analyze the security configuration and authentication middleware files:
+[Claude Agent] Tool use: TodoWrite
+[Agent Runner] 🔧 Using tool: TodoWrite (turn 14)
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 15)
+[Claude Agent] Tool use: mcp__github__search_code
+[Agent Runner] 🔧 Using tool: mcp__github__search_code (turn 16)
+[Claude Agent] Tool use: mcp__github__search_code
+[Agent Runner] 🔧 Using tool: mcp__github__search_code (turn 17)
+[Claude Agent] Assistant: Now let me compile my findings and create a comprehensive security report with fixes. Let me update ...
+[Agent Runner] 💭 AI thinking: Now let me compile my findings and create a comprehensive security report with fixes. Let me update the todos:
+[Claude Agent] Tool use: TodoWrite
+[Agent Runner] 🔧 Using tool: TodoWrite (turn 18)
+[Claude Agent] Assistant: Now I'll create a comprehensive security audit report and PR with fixes:...
+[Agent Runner] 💭 AI thinking: Now I'll create a comprehensive security audit report and PR with fixes:
+[Claude Agent] Tool use: mcp__github__create_branch
+[Agent Runner] 🔧 Using tool: mcp__github__create_branch (turn 19)
+[Claude Agent] Assistant: Now let me create the security audit report and fixes:...
+[Agent Runner] 💭 AI thinking: Now let me create the security audit report and fixes:
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+[dotenv@17.2.3] injecting env (12) from .env -- tip: 👥 sync secrets across teammates & machines: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
+[dotenv@17.2.3] injecting env (0) from .env -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
+✅ Slack notifications initialized
+✅ Database configured
+[Scheduler] Starting module scheduler
+[Scheduler] Scheduler started successfully
+node:events:486
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at app.listen (/Users/benbroca/Documents/polsia/node_modules/express/lib/application.js:635:24)
+    at startServer (/Users/benbroca/Documents/polsia/server.js:363:13)
+    at Object.<anonymous> (/Users/benbroca/Documents/polsia/server.js:376:1)
+    at Module._compile (node:internal/modules/cjs/loader:1738:14)
+    at Object..js (node:internal/modules/cjs/loader:1871:10)
+    at Module.load (node:internal/modules/cjs/loader:1470:32)
+    at Module._load (node:internal/modules/cjs/loader:1290:12)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}
+
+Node.js v24.6.0
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+[dotenv@17.2.3] injecting env (12) from .env -- tip: ⚙️  load multiple .env files with { path: ['.env.local', '.env'] }
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🔄 add secrets lifecycle management: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🛠️  run anywhere with `dotenvx run -- yourcommand`
+✅ Slack notifications initialized
+✅ Database configured
+[Scheduler] Starting module scheduler
+[Scheduler] Scheduler started successfully
+🚀 Polsia server running on http://localhost:3000
+[Scheduler] Running initial module check
+✅ Connected to PostgreSQL database
+[Scheduler] Found 1 active modules
+[Scheduler] Module 1 is due to run (last run: 28804.351s ago)
+[Scheduler] Triggering module: Security Patcher (ID: 1)
+[Agent Runner] Starting module execution: 1 for user 1
+[Agent Runner] Module found: Security Patcher
+[Agent Runner] Execution record created: 40
+[Agent Runner] Configured GitHub MCP server
+[Agent Runner] Context prepared with 1 MCP servers
+[Agent Runner] Workspace created: /Users/benbroca/Documents/polsia/temp/module-executions/40-87f90959
+[Agent Runner] 🤖 Starting AI execution...
+[Agent Runner] Prompt: Review the repository for outdated dependencies, known vulnerabilities, and insecure patterns. Use G...
+[Claude Agent] Starting task execution
+[Claude Agent] Prompt: Review the repository for outdated dependencies, known vulnerabilities, and insecure patterns. Use G...
+[Claude Agent] Working directory: /Users/benbroca/Documents/polsia/temp/module-executions/40-87f90959
+[Claude Agent] SDK initialized successfully
+[Claude Agent] MCP servers configured: github
+[Claude Agent] Executing query...
+[Claude Agent] Session initialized with model: claude-sonnet-4-5-20250929
+[Agent Runner] ✓ Session initialized with model: claude-sonnet-4-5-20250929
+[Claude Agent] Assistant: I'll help you review the repository for security issues and create fixes. Let me start by examining ...
+[Agent Runner] 💭 AI thinking: I'll help you review the repository for security issues and create fixes. Let me start by examining the repository structure and dependencies.
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 1)
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+[dotenv@17.2.3] injecting env (12) from .env -- tip: 🔑 add access controls to secrets: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🔐 prevent building .env in docker: https://dotenvx.com/prebuild
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🛠️  run anywhere with `dotenvx run -- yourcommand`
+✅ Slack notifications initialized
+✅ Database configured
+[Scheduler] Starting module scheduler
+[Scheduler] Scheduler started successfully
+🚀 Polsia server running on http://localhost:3000
+[Scheduler] Running initial module check
+✅ Connected to PostgreSQL database
+[Scheduler] Found 1 active modules
+[Scheduler] Module 1 is due to run (last run: 29439.544s ago)
+[Scheduler] Triggering module: Security Patcher (ID: 1)
+[Agent Runner] Starting module execution: 1 for user 1
+[Agent Runner] Module found: Security Patcher
+[Agent Runner] Execution record created: 43
+[Agent Runner] Configured GitHub MCP server
+[Agent Runner] Context prepared with 1 MCP servers
+[Agent Runner] Workspace created: /Users/benbroca/Documents/polsia/temp/module-executions/43-97af2095
+[Agent Runner] 🤖 Starting AI execution...
+[Agent Runner] Prompt: Review the repository for outdated dependencies, known vulnerabilities, and insecure patterns. Use G...
+[Claude Agent] Starting task execution
+[Claude Agent] Prompt: Review the repository for outdated dependencies, known vulnerabilities, and insecure patterns. Use G...
+[Claude Agent] Working directory: /Users/benbroca/Documents/polsia/temp/module-executions/43-97af2095
+[Claude Agent] SDK initialized successfully
+[Claude Agent] MCP servers configured: github
+[Claude Agent] Executing query...
+[Claude Agent] Session initialized with model: claude-sonnet-4-5-20250929
+[Agent Runner] ✓ Session initialized with model: claude-sonnet-4-5-20250929
+[Claude Agent] Assistant: I'll help you review the repository for outdated dependencies, vulnerabilities, and insecure pattern...
+[Agent Runner] 💭 AI thinking: I'll help you review the repository for outdated dependencies, vulnerabilities, and insecure patterns, then create fixes using GitHub MCP tools.
+
+Let me start by examining the repository structure and key files:
+[Claude Agent] Tool use: mcp__github__get_file_contents
+[Agent Runner] 🔧 Using tool: mcp__github__get_file_contents (turn 1)
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+[dotenv@17.2.3] injecting env (12) from .env -- tip: 🔐 encrypt with Dotenvx: https://dotenvx.com
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🔄 add secrets lifecycle management: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 👥 sync secrets across teammates & machines: https://dotenvx.com/ops
+✅ Slack notifications initialized
+✅ Database configured
+[Scheduler] Starting module scheduler
+[Scheduler] Scheduler started successfully
+node:events:486
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at app.listen (/Users/benbroca/Documents/polsia/node_modules/express/lib/application.js:635:24)
+    at startServer (/Users/benbroca/Documents/polsia/server.js:363:13)
+    at Object.<anonymous> (/Users/benbroca/Documents/polsia/server.js:376:1)
+    at Module._compile (node:internal/modules/cjs/loader:1738:14)
+    at Object..js (node:internal/modules/cjs/loader:1871:10)
+    at Module.load (node:internal/modules/cjs/loader:1470:32)
+    at Module._load (node:internal/modules/cjs/loader:1290:12)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}
+
+Node.js v24.6.0
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+[dotenv@17.2.3] injecting env (12) from .env -- tip: 🗂️ backup and recover secrets: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env -- tip: ✅ audit secrets and track compliance: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env -- tip: ⚙️  write to custom object with { processEnv: myObject }
+✅ Slack notifications initialized
+✅ Database configured
+[Scheduler] Starting module scheduler
+[Scheduler] Scheduler started successfully
+node:events:486
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at app.listen (/Users/benbroca/Documents/polsia/node_modules/express/lib/application.js:635:24)
+    at startServer (/Users/benbroca/Documents/polsia/server.js:363:13)
+    at Object.<anonymous> (/Users/benbroca/Documents/polsia/server.js:376:1)
+    at Module._compile (node:internal/modules/cjs/loader:1738:14)
+    at Object..js (node:internal/modules/cjs/loader:1871:10)
+    at Module.load (node:internal/modules/cjs/loader:1470:32)
+    at Module._load (node:internal/modules/cjs/loader:1290:12)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}
+
+Node.js v24.6.0
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+[dotenv@17.2.3] injecting env (12) from .env -- tip: 🔑 add access controls to secrets: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🔐 encrypt with Dotenvx: https://dotenvx.com
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🔄 add secrets lifecycle management: https://dotenvx.com/ops
+✅ Slack notifications initialized
+✅ Database configured
+[Scheduler] Starting module scheduler
+[Scheduler] Scheduler started successfully
+node:events:486
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at app.listen (/Users/benbroca/Documents/polsia/node_modules/express/lib/application.js:635:24)
+    at startServer (/Users/benbroca/Documents/polsia/server.js:363:13)
+    at Object.<anonymous> (/Users/benbroca/Documents/polsia/server.js:376:1)
+    at Module._compile (node:internal/modules/cjs/loader:1738:14)
+    at Object..js (node:internal/modules/cjs/loader:1871:10)
+    at Module.load (node:internal/modules/cjs/loader:1470:32)
+    at Module._load (node:internal/modules/cjs/loader:1290:12)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}
+
+Node.js v24.6.0
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+[dotenv@17.2.3] injecting env (12) from .env -- tip: 🔐 encrypt with Dotenvx: https://dotenvx.com
+[dotenv@17.2.3] injecting env (0) from .env -- tip: ⚙️  enable debug logging with { debug: true }
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🔐 encrypt with Dotenvx: https://dotenvx.com
+✅ Slack notifications initialized
+✅ Database configured
+[Scheduler] Starting module scheduler
+[Scheduler] Scheduler started successfully
+node:events:486
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at app.listen (/Users/benbroca/Documents/polsia/node_modules/express/lib/application.js:635:24)
+    at startServer (/Users/benbroca/Documents/polsia/server.js:363:13)
+    at Object.<anonymous> (/Users/benbroca/Documents/polsia/server.js:376:1)
+    at Module._compile (node:internal/modules/cjs/loader:1738:14)
+    at Object..js (node:internal/modules/cjs/loader:1871:10)
+    at Module.load (node:internal/modules/cjs/loader:1470:32)
+    at Module._load (node:internal/modules/cjs/loader:1290:12)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}
+
+Node.js v24.6.0
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+[dotenv@17.2.3] injecting env (12) from .env -- tip: ⚙️  suppress all logs with { quiet: true }
+[dotenv@17.2.3] injecting env (0) from .env -- tip: ⚙️  write to custom object with { processEnv: myObject }
+[dotenv@17.2.3] injecting env (0) from .env -- tip: ⚙️  write to custom object with { processEnv: myObject }
+✅ Slack notifications initialized
+✅ Database configured
+[Scheduler] Starting module scheduler
+[Scheduler] Scheduler started successfully
+node:events:486
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at app.listen (/Users/benbroca/Documents/polsia/node_modules/express/lib/application.js:635:24)
+    at startServer (/Users/benbroca/Documents/polsia/server.js:363:13)
+    at Object.<anonymous> (/Users/benbroca/Documents/polsia/server.js:376:1)
+    at Module._compile (node:internal/modules/cjs/loader:1738:14)
+    at Object..js (node:internal/modules/cjs/loader:1871:10)
+    at Module.load (node:internal/modules/cjs/loader:1470:32)
+    at Module._load (node:internal/modules/cjs/loader:1290:12)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}
+
+Node.js v24.6.0
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+[dotenv@17.2.3] injecting env (12) from .env -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🔐 encrypt with Dotenvx: https://dotenvx.com
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🔐 prevent committing .env to code: https://dotenvx.com/precommit
+✅ Slack notifications initialized
+✅ Database configured
+[Scheduler] Starting module scheduler
+[Scheduler] Scheduler started successfully
+node:events:486
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at app.listen (/Users/benbroca/Documents/polsia/node_modules/express/lib/application.js:635:24)
+    at startServer (/Users/benbroca/Documents/polsia/server.js:363:13)
+    at Object.<anonymous> (/Users/benbroca/Documents/polsia/server.js:376:1)
+    at Module._compile (node:internal/modules/cjs/loader:1738:14)
+    at Object..js (node:internal/modules/cjs/loader:1871:10)
+    at Module.load (node:internal/modules/cjs/loader:1470:32)
+    at Module._load (node:internal/modules/cjs/loader:1290:12)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}
+
+Node.js v24.6.0
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+[dotenv@17.2.3] injecting env (12) from .env -- tip: ⚙️  override existing env vars with { override: true }
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 📡 add observability to secrets: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 👥 sync secrets across teammates & machines: https://dotenvx.com/ops
+✅ Slack notifications initialized
+✅ Database configured
+[Scheduler] Starting module scheduler
+[Scheduler] Scheduler started successfully
+🚀 Polsia server running on http://localhost:3000
+[Scheduler] Running initial module check
+✅ Connected to PostgreSQL database
+[Scheduler] Found 2 active modules
+[Scheduler] Checking for modules to execute
+✅ Connected to PostgreSQL database
+[Scheduler] Found 2 active modules
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+[dotenv@17.2.3] injecting env (12) from .env -- tip: 🔐 prevent committing .env to code: https://dotenvx.com/precommit
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🔄 add secrets lifecycle management: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🛠️  run anywhere with `dotenvx run -- yourcommand`
+✅ Slack notifications initialized
+✅ Database configured
+[Scheduler] Starting module scheduler
+[Scheduler] Scheduler started successfully
+🚀 Polsia server running on http://localhost:3000
+[Scheduler] Running initial module check
+✅ Connected to PostgreSQL database
+[Scheduler] Found 2 active modules
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server.js`[39m
+[dotenv@17.2.3] injecting env (12) from .env -- tip: 🔄 add secrets lifecycle management: https://dotenvx.com/ops
+[dotenv@17.2.3] injecting env (0) from .env -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
+[dotenv@17.2.3] injecting env (0) from .env -- tip: ⚙️  override existing env vars with { override: true }
+✅ Slack notifications initialized
+✅ Database configured
+[Scheduler] Starting module scheduler
+[Scheduler] Scheduler started successfully
+node:events:486
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at app.listen (/Users/benbroca/Documents/polsia/node_modules/express/lib/application.js:635:24)
+    at startServer (/Users/benbroca/Documents/polsia/server.js:363:13)
+    at Object.<anonymous> (/Users/benbroca/Documents/polsia/server.js:376:1)
+    at Module._compile (node:internal/modules/cjs/loader:1738:14)
+    at Object..js (node:internal/modules/cjs/loader:1871:10)
+    at Module.load (node:internal/modules/cjs/loader:1470:32)
+    at Module._load (node:internal/modules/cjs/loader:1290:12)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}
+
+Node.js v24.6.0
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
