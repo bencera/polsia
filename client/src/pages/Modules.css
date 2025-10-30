@@ -272,7 +272,7 @@ input:checked + .toggle-slider:before {
 }
 
 .footer p {
-  font-size: 11px;
+  font-size: 13px;
   color: #666;
   margin: 4px 0;
 }
