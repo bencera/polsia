@@ -173,9 +173,17 @@ module.exports = (authenticateTokenFromQuery, authenticateToken) => {
       }
 
       // Calculate token expiry date (expires_in is in seconds, typically 5184000 = 60 days)
-      const expiryDate = new Date(Date.now() + (expires_in * 1000));
+      // Default to 60 days if expires_in is not provided
+      const expiresInSeconds = expires_in || 5184000; // 60 days default
+      const expiryDate = new Date(Date.now() + (expiresInSeconds * 1000));
 
-      console.log(`[Meta Ads OAuth] Long-lived token received, expires in ${expires_in / 86400} days`);
+      // Validate the date is valid
+      if (isNaN(expiryDate.getTime())) {
+        console.error('[Meta Ads OAuth] Invalid expiry date calculated');
+        return res.redirect(`${FRONTEND_URL}/connections?error=invalid_token_expiry`);
+      }
+
+      console.log(`[Meta Ads OAuth] Long-lived token received, expires in ${expiresInSeconds / 86400} days`);
 
       // Fetch user info from Meta
       const userResponse = await axios.get(
@@ -382,7 +390,14 @@ module.exports = (authenticateTokenFromQuery, authenticateToken) => {
       }
 
       // Calculate new expiry date
-      const expiryDate = new Date(Date.now() + (expires_in * 1000));
+      // Default to 60 days if expires_in is not provided
+      const expiresInSeconds = expires_in || 5184000; // 60 days default
+      const expiryDate = new Date(Date.now() + (expiresInSeconds * 1000));
+
+      // Validate the date is valid
+      if (isNaN(expiryDate.getTime())) {
+        throw new Error('Invalid expiry date calculated');
+      }
 
       // Encrypt new token
       const encryptedNewToken = encryptToken(newToken);
