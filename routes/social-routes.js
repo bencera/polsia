@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const syncService = require('../services/sync-service');
 const postingService = require('../services/posting-service');
+const { handleMediaUpload } = require('../middleware/upload-middleware');
+const { uploadMediaToR2 } = require('../services/r2-media-service');
 const {
   getProfilesByUserId,
   getSocialAccountsByUserId,
@@ -11,7 +13,9 @@ const {
   getContentById,
   getSocialAccountById,
   createContent,
-  updateContent
+  updateContent,
+  createMediaWithR2Data,
+  getMediaByContentId
 } = require('../db');
 
 // Sync with Late.dev - Manual trigger
@@ -144,9 +148,13 @@ router.get('/content/:id', async (req, res) => {
       });
     }
 
+    // Also fetch associated media
+    const media = await getMediaByContentId(contentId);
+
     res.json({
       success: true,
-      content
+      content,
+      media
     });
   } catch (error) {
     console.error('Error getting content:', error);
@@ -158,8 +166,39 @@ router.get('/content/:id', async (req, res) => {
   }
 });
 
-// Create content (and optionally post immediately)
-router.post('/content', async (req, res) => {
+// Get media for specific content
+router.get('/content/:id/media', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const contentId = parseInt(req.params.id);
+
+    // Verify content exists and belongs to user
+    const content = await getContentById(contentId, userId);
+    if (!content) {
+      return res.status(404).json({
+        success: false,
+        message: 'Content not found'
+      });
+    }
+
+    const media = await getMediaByContentId(contentId);
+
+    res.json({
+      success: true,
+      media
+    });
+  } catch (error) {
+    console.error('Error getting media:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get media',
+      error: error.message
+    });
+  }
+});
+
+// Create content (and optionally post immediately) with media upload support
+router.post('/content', handleMediaUpload, async (req, res) => {
   try {
     const userId = req.user.id;
     const { accountId, content_data, status, scheduled_for, post_now } = req.body;
@@ -180,12 +219,54 @@ router.post('/content', async (req, res) => {
       });
     }
 
-    // Create content
+    // Parse content_data if it's a string (from multipart/form-data)
+    let parsedContentData;
+    try {
+      parsedContentData = typeof content_data === 'string' ? JSON.parse(content_data) : content_data;
+    } catch (parseError) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid content_data format. Must be valid JSON.'
+      });
+    }
+
+    // Create content first (without media URLs yet)
     const newContent = await createContent(accountId, {
-      content_data,
+      content_data: parsedContentData,
       status: post_now ? 'QUEUED' : (status || 'DRAFT'),
       scheduled_for: scheduled_for || null
     });
+
+    // Upload files to R2 if any were provided
+    const uploadedMedia = [];
+    if (req.files && req.files.length > 0) {
+      console.log(`Uploading ${req.files.length} file(s) to R2...`);
+
+      for (const file of req.files) {
+        try {
+          // Upload to R2
+          const r2Result = await uploadMediaToR2(
+            file.buffer,
+            file.originalname,
+            file.mimetype,
+            {
+              userId: userId,
+              accountId: accountId,
+              contentId: newContent.id
+            }
+          );
+
+          // Save media record to database
+          const mediaRecord = await createMediaWithR2Data(newContent.id, r2Result);
+          uploadedMedia.push(mediaRecord);
+
+          console.log(`Successfully uploaded ${file.originalname} to R2: ${r2Result.url}`);
+        } catch (uploadError) {
+          console.error(`Failed to upload ${file.originalname}:`, uploadError);
+          // Continue with other files, but log the error
+        }
+      }
+    }
 
     // Post immediately if requested
     if (post_now) {
@@ -194,6 +275,7 @@ router.post('/content', async (req, res) => {
         return res.json({
           success: true,
           content: newContent,
+          media: uploadedMedia,
           posted: true,
           postResult
         });
@@ -201,6 +283,7 @@ router.post('/content', async (req, res) => {
         return res.json({
           success: true,
           content: newContent,
+          media: uploadedMedia,
           posted: false,
           postError: postError.message
         });
@@ -209,7 +292,8 @@ router.post('/content', async (req, res) => {
 
     res.json({
       success: true,
-      content: newContent
+      content: newContent,
+      media: uploadedMedia
     });
   } catch (error) {
     console.error('Error creating content:', error);

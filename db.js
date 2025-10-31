@@ -1378,6 +1378,50 @@ async function createMedia(contentId, mediaData) {
     }
 }
 
+// Create media with R2 data
+async function createMediaWithR2Data(contentId, r2UploadResult) {
+    const client = await pool.connect();
+    try {
+        const {
+            url,
+            type,
+            key,
+            bucket,
+            size,
+            mimeType,
+            filename,
+            thumbnailUrl
+        } = r2UploadResult;
+
+        const result = await client.query(
+            `INSERT INTO media (
+                content_id, url, type, r2_key, r2_bucket,
+                size, mime_type, filename, thumbnail_url, metadata
+            )
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+             RETURNING *`,
+            [
+                contentId,
+                url,
+                type,
+                key || null,
+                bucket || null,
+                size || null,
+                mimeType || null,
+                filename || null,
+                thumbnailUrl || null,
+                { uploaded_to_r2: true } // Basic metadata
+            ]
+        );
+        return result.rows[0];
+    } catch (err) {
+        console.error('Error creating media with R2 data:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
 module.exports = {
     pool,
     initDatabase,
@@ -1438,4 +1482,5 @@ module.exports = {
     // Media functions
     getMediaByContentId,
     createMedia,
+    createMediaWithR2Data,
 };

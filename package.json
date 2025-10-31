@@ -27,6 +27,7 @@
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.1.28",
     "@anthropic-ai/sdk": "^0.68.0",
+    "@aws-sdk/client-s3": "^3.921.0",
     "@gongrzhe/server-gmail-autoauth-mcp": "^1.1.11",
     "@modelcontextprotocol/server-github": "^2025.4.8",
     "@slack/webhook": "^7.0.6",
@@ -38,9 +39,11 @@
     "googleapis": "^164.1.0",
     "http-proxy-middleware": "^3.0.5",
     "jsonwebtoken": "^9.0.2",
+    "multer": "^2.0.2",
     "node-cron": "^4.2.1",
     "node-pg-migrate": "^8.0.3",
-    "pg": "^8.16.3"
+    "pg": "^8.16.3",
+    "uuid": "^13.0.0"
   },
   "engines": {
     "node": ">=18.0.0"
