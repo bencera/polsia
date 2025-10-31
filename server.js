@@ -252,6 +252,11 @@ app.use('/api/auth/github', githubOAuthRoutes);
 const gmailOAuthRoutes = require('./routes/gmail-oauth')(authenticateTokenFromQuery, authenticateToken);
 app.use('/api/auth/gmail', gmailOAuthRoutes);
 
+// Instagram OAuth Routes (via Late.dev)
+// Pass middleware functions to the router so it can apply them conditionally
+const instagramOAuthRoutes = require('./routes/instagram-oauth')(authenticateTokenFromQuery, authenticateToken);
+app.use('/api/auth/instagram', instagramOAuthRoutes);
+
 // MCP Routes - Host third-party MCP servers
 const mcpRoutes = require('./routes/mcp-routes');
 app.use('/mcp', authenticateToken, mcpRoutes);
@@ -351,6 +356,10 @@ app.get('/api/modules/:id/executions/:executionId/logs/stream', authenticateToke
 // Module Routes - Autonomous module management (registered after SSE route)
 const moduleRoutes = require('./routes/module-routes');
 app.use('/api/modules', authenticateToken, moduleRoutes);
+
+// Social Media Routes - Late.dev integration for social media management
+const socialRoutes = require('./routes/social-routes');
+app.use('/api/social', authenticateToken, socialRoutes);
 
 // 404 for any other routes
 app.get('*', (req, res) => {

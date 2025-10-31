@@ -809,6 +809,83 @@ async function updateGmailTokens(userId, encryptedTokens) {
     }
 }
 
+// ===== INSTAGRAM CONNECTION FUNCTIONS =====
+
+// Store Instagram connection
+async function storeInstagramConnection(userId, instagramData) {
+    const client = await pool.connect();
+    try {
+        const metadata = {
+            username: instagramData.username,
+            late_profile_id: instagramData.late_profile_id,
+            late_account_id: instagramData.late_account_id || null,
+            platform: 'instagram',
+            connected_at: new Date().toISOString()
+        };
+
+        // Check if user already has an Instagram connection
+        const existingResult = await client.query(
+            'SELECT id FROM service_connections WHERE user_id = $1 AND service_name = $2',
+            [userId, 'instagram']
+        );
+
+        if (existingResult.rows.length > 0) {
+            // Update existing connection
+            const result = await client.query(
+                'UPDATE service_connections SET status = $1, metadata = $2 WHERE id = $3 RETURNING *',
+                ['connected', metadata, existingResult.rows[0].id]
+            );
+            return result.rows[0];
+        } else {
+            // Create new connection
+            const result = await client.query(
+                'INSERT INTO service_connections (user_id, service_name, status, metadata) VALUES ($1, $2, $3, $4) RETURNING *',
+                [userId, 'instagram', 'connected', metadata]
+            );
+            return result.rows[0];
+        }
+    } catch (err) {
+        console.error('Error storing Instagram connection:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Delete Instagram connection
+async function deleteInstagramConnection(connectionId, userId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            'DELETE FROM service_connections WHERE id = $1 AND user_id = $2 AND service_name = $3 RETURNING *',
+            [connectionId, userId, 'instagram']
+        );
+        return result.rows.length > 0;
+    } catch (err) {
+        console.error('Error deleting Instagram connection:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Get Instagram connection for a user
+async function getInstagramConnection(userId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            'SELECT * FROM service_connections WHERE user_id = $1 AND service_name = $2 AND status = $3',
+            [userId, 'instagram', 'connected']
+        );
+        return result.rows[0] || null;
+    } catch (err) {
+        console.error('Error getting Instagram connection:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
 // ===== TASK SUMMARY FUNCTIONS =====
 
 // Create a task summary for a completed module execution
@@ -874,6 +951,433 @@ async function createTaskSummary(userId, taskData) {
     }
 }
 
+// ===== SOCIAL MEDIA PROFILE FUNCTIONS =====
+
+// Get all profiles for a user
+async function getProfilesByUserId(userId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            'SELECT * FROM profiles WHERE user_id = $1 ORDER BY created_at DESC',
+            [userId]
+        );
+        return result.rows;
+    } catch (err) {
+        console.error('Error getting profiles:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Get a profile by ID
+async function getProfileById(profileId, userId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            'SELECT * FROM profiles WHERE id = $1 AND user_id = $2',
+            [profileId, userId]
+        );
+        return result.rows[0] || null;
+    } catch (err) {
+        console.error('Error getting profile by ID:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Create a new profile
+async function createProfile(userId, profileData) {
+    const client = await pool.connect();
+    try {
+        const { name, description, late_profile_id } = profileData;
+        const result = await client.query(
+            `INSERT INTO profiles (user_id, name, description, late_profile_id)
+             VALUES ($1, $2, $3, $4)
+             RETURNING *`,
+            [userId, name, description || null, late_profile_id || null]
+        );
+        return result.rows[0];
+    } catch (err) {
+        console.error('Error creating profile:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Update a profile
+async function updateProfile(profileId, userId, updates) {
+    const client = await pool.connect();
+    try {
+        const setClauses = [];
+        const values = [];
+        let paramCount = 1;
+
+        if (updates.name !== undefined) {
+            setClauses.push(`name = $${paramCount++}`);
+            values.push(updates.name);
+        }
+        if (updates.description !== undefined) {
+            setClauses.push(`description = $${paramCount++}`);
+            values.push(updates.description);
+        }
+        if (updates.late_profile_id !== undefined) {
+            setClauses.push(`late_profile_id = $${paramCount++}`);
+            values.push(updates.late_profile_id);
+        }
+
+        setClauses.push(`updated_at = CURRENT_TIMESTAMP`);
+        values.push(profileId, userId);
+
+        const query = `UPDATE profiles SET ${setClauses.join(', ')}
+                       WHERE id = $${paramCount++} AND user_id = $${paramCount++}
+                       RETURNING *`;
+
+        const result = await client.query(query, values);
+        return result.rows[0] || null;
+    } catch (err) {
+        console.error('Error updating profile:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Find profile by Late profile ID
+async function findProfileByLateId(userId, lateProfileId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            'SELECT * FROM profiles WHERE user_id = $1 AND late_profile_id = $2',
+            [userId, lateProfileId]
+        );
+        return result.rows[0] || null;
+    } catch (err) {
+        console.error('Error finding profile by Late ID:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// ===== SOCIAL ACCOUNT FUNCTIONS =====
+
+// Get all social accounts for a user (across all profiles)
+async function getSocialAccountsByUserId(userId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            `SELECT sa.*, p.name as profile_name
+             FROM social_accounts sa
+             JOIN profiles p ON sa.profile_id = p.id
+             WHERE p.user_id = $1
+             ORDER BY sa.created_at DESC`,
+            [userId]
+        );
+        return result.rows;
+    } catch (err) {
+        console.error('Error getting social accounts:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Get social accounts by profile ID
+async function getSocialAccountsByProfileId(profileId, userId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            `SELECT sa.*
+             FROM social_accounts sa
+             JOIN profiles p ON sa.profile_id = p.id
+             WHERE sa.profile_id = $1 AND p.user_id = $2
+             ORDER BY sa.created_at DESC`,
+            [profileId, userId]
+        );
+        return result.rows;
+    } catch (err) {
+        console.error('Error getting social accounts by profile:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Get social account by ID
+async function getSocialAccountById(accountId, userId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            `SELECT sa.*, p.name as profile_name
+             FROM social_accounts sa
+             JOIN profiles p ON sa.profile_id = p.id
+             WHERE sa.id = $1 AND p.user_id = $2`,
+            [accountId, userId]
+        );
+        return result.rows[0] || null;
+    } catch (err) {
+        console.error('Error getting social account by ID:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Create a social account
+async function createSocialAccount(profileId, accountData) {
+    const client = await pool.connect();
+    try {
+        const { platform, account_handle, late_account_id, is_active } = accountData;
+        const result = await client.query(
+            `INSERT INTO social_accounts (profile_id, platform, account_handle, late_account_id, is_active)
+             VALUES ($1, $2, $3, $4, $5)
+             RETURNING *`,
+            [profileId, platform, account_handle, late_account_id || null, is_active !== undefined ? is_active : true]
+        );
+        return result.rows[0];
+    } catch (err) {
+        console.error('Error creating social account:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Update a social account
+async function updateSocialAccount(accountId, updates) {
+    const client = await pool.connect();
+    try {
+        const setClauses = [];
+        const values = [];
+        let paramCount = 1;
+
+        if (updates.platform !== undefined) {
+            setClauses.push(`platform = $${paramCount++}`);
+            values.push(updates.platform);
+        }
+        if (updates.account_handle !== undefined) {
+            setClauses.push(`account_handle = $${paramCount++}`);
+            values.push(updates.account_handle);
+        }
+        if (updates.late_account_id !== undefined) {
+            setClauses.push(`late_account_id = $${paramCount++}`);
+            values.push(updates.late_account_id);
+        }
+        if (updates.is_active !== undefined) {
+            setClauses.push(`is_active = $${paramCount++}`);
+            values.push(updates.is_active);
+        }
+
+        setClauses.push(`updated_at = CURRENT_TIMESTAMP`);
+        values.push(accountId);
+
+        const query = `UPDATE social_accounts SET ${setClauses.join(', ')}
+                       WHERE id = $${paramCount++}
+                       RETURNING *`;
+
+        const result = await client.query(query, values);
+        return result.rows[0] || null;
+    } catch (err) {
+        console.error('Error updating social account:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Find social account by Late account ID
+async function findSocialAccountByLateId(lateAccountId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            'SELECT * FROM social_accounts WHERE late_account_id = $1',
+            [lateAccountId]
+        );
+        return result.rows[0] || null;
+    } catch (err) {
+        console.error('Error finding social account by Late ID:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// ===== CONTENT FUNCTIONS =====
+
+// Get content by user (across all accounts)
+async function getContentByUserId(userId, limit = 50) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            `SELECT c.*, sa.platform, sa.account_handle, p.name as profile_name
+             FROM content c
+             JOIN social_accounts sa ON c.account_id = sa.id
+             JOIN profiles p ON sa.profile_id = p.id
+             WHERE p.user_id = $1
+             ORDER BY c.created_at DESC
+             LIMIT $2`,
+            [userId, limit]
+        );
+        return result.rows;
+    } catch (err) {
+        console.error('Error getting content by user:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Get content by account
+async function getContentByAccountId(accountId, userId, limit = 50) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            `SELECT c.*
+             FROM content c
+             JOIN social_accounts sa ON c.account_id = sa.id
+             JOIN profiles p ON sa.profile_id = p.id
+             WHERE c.account_id = $1 AND p.user_id = $2
+             ORDER BY c.created_at DESC
+             LIMIT $3`,
+            [accountId, userId, limit]
+        );
+        return result.rows;
+    } catch (err) {
+        console.error('Error getting content by account:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Get content by ID
+async function getContentById(contentId, userId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            `SELECT c.*, sa.platform, sa.account_handle, sa.late_account_id, p.name as profile_name
+             FROM content c
+             JOIN social_accounts sa ON c.account_id = sa.id
+             JOIN profiles p ON sa.profile_id = p.id
+             WHERE c.id = $1 AND p.user_id = $2`,
+            [contentId, userId]
+        );
+        return result.rows[0] || null;
+    } catch (err) {
+        console.error('Error getting content by ID:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Create content
+async function createContent(accountId, contentData) {
+    const client = await pool.connect();
+    try {
+        const { content_data, status, scheduled_for } = contentData;
+        const result = await client.query(
+            `INSERT INTO content (account_id, content_data, status, scheduled_for)
+             VALUES ($1, $2, $3, $4)
+             RETURNING *`,
+            [accountId, content_data, status || 'DRAFT', scheduled_for || null]
+        );
+        return result.rows[0];
+    } catch (err) {
+        console.error('Error creating content:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Update content
+async function updateContent(contentId, updates) {
+    const client = await pool.connect();
+    try {
+        const setClauses = [];
+        const values = [];
+        let paramCount = 1;
+
+        if (updates.content_data !== undefined) {
+            setClauses.push(`content_data = $${paramCount++}`);
+            values.push(updates.content_data);
+        }
+        if (updates.status !== undefined) {
+            setClauses.push(`status = $${paramCount++}`);
+            values.push(updates.status);
+        }
+        if (updates.scheduled_for !== undefined) {
+            setClauses.push(`scheduled_for = $${paramCount++}`);
+            values.push(updates.scheduled_for);
+        }
+        if (updates.posted_at !== undefined) {
+            setClauses.push(`posted_at = $${paramCount++}`);
+            values.push(updates.posted_at);
+        }
+        if (updates.late_post_id !== undefined) {
+            setClauses.push(`late_post_id = $${paramCount++}`);
+            values.push(updates.late_post_id);
+        }
+
+        values.push(contentId);
+
+        const query = `UPDATE content SET ${setClauses.join(', ')}
+                       WHERE id = $${paramCount++}
+                       RETURNING *`;
+
+        const result = await client.query(query, values);
+        return result.rows[0] || null;
+    } catch (err) {
+        console.error('Error updating content:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// ===== MEDIA FUNCTIONS =====
+
+// Get media by content ID
+async function getMediaByContentId(contentId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            'SELECT * FROM media WHERE content_id = $1 ORDER BY created_at ASC',
+            [contentId]
+        );
+        return result.rows;
+    } catch (err) {
+        console.error('Error getting media by content:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Create media
+async function createMedia(contentId, mediaData) {
+    const client = await pool.connect();
+    try {
+        const { url, type, metadata } = mediaData;
+        const result = await client.query(
+            `INSERT INTO media (content_id, url, type, metadata)
+             VALUES ($1, $2, $3, $4)
+             RETURNING *`,
+            [contentId, url, type, metadata || null]
+        );
+        return result.rows[0];
+    } catch (err) {
+        console.error('Error creating media:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
 module.exports = {
     pool,
     initDatabase,
@@ -892,6 +1396,10 @@ module.exports = {
     getGmailToken,
     deleteGmailConnection,
     updateGmailTokens,
+    // Instagram connection functions
+    storeInstagramConnection,
+    deleteInstagramConnection,
+    getInstagramConnection,
     // Module functions
     getModulesByUserId,
     getModuleById,
@@ -908,4 +1416,26 @@ module.exports = {
     getExecutionLogsSince,
     // Task summary functions
     createTaskSummary,
+    // Profile functions
+    getProfilesByUserId,
+    getProfileById,
+    createProfile,
+    updateProfile,
+    findProfileByLateId,
+    // Social account functions
+    getSocialAccountsByUserId,
+    getSocialAccountsByProfileId,
+    getSocialAccountById,
+    createSocialAccount,
+    updateSocialAccount,
+    findSocialAccountByLateId,
+    // Content functions
+    getContentByUserId,
+    getContentByAccountId,
+    getContentById,
+    createContent,
+    updateContent,
+    // Media functions
+    getMediaByContentId,
+    createMedia,
 };
