@@ -648,6 +648,167 @@ async function getExecutionLogsSince(executionId, sinceLogId) {
     }
 }
 
+// ===== GMAIL CONNECTION FUNCTIONS =====
+
+// Store Gmail connection with encrypted tokens
+async function storeGmailConnection(userId, googleData, encryptedTokens) {
+    const client = await pool.connect();
+    try {
+        // Combine Google user data with encrypted tokens in metadata
+        const metadata = {
+            ...googleData,
+            encrypted_access_token: encryptedTokens.accessToken.encrypted,
+            access_token_iv: encryptedTokens.accessToken.iv,
+            access_token_auth_tag: encryptedTokens.accessToken.authTag
+        };
+
+        // Add refresh token if available
+        if (encryptedTokens.refreshToken) {
+            metadata.encrypted_refresh_token = encryptedTokens.refreshToken.encrypted;
+            metadata.refresh_token_iv = encryptedTokens.refreshToken.iv;
+            metadata.refresh_token_auth_tag = encryptedTokens.refreshToken.authTag;
+        }
+
+        // Check if user already has a Gmail connection
+        const existingResult = await client.query(
+            'SELECT id FROM service_connections WHERE user_id = $1 AND service_name = $2',
+            [userId, 'gmail']
+        );
+
+        if (existingResult.rows.length > 0) {
+            // Update existing connection
+            const result = await client.query(
+                'UPDATE service_connections SET status = $1, metadata = $2 WHERE id = $3 RETURNING *',
+                ['connected', metadata, existingResult.rows[0].id]
+            );
+            return result.rows[0];
+        } else {
+            // Create new connection
+            const result = await client.query(
+                'INSERT INTO service_connections (user_id, service_name, status, metadata) VALUES ($1, $2, $3, $4) RETURNING *',
+                [userId, 'gmail', 'connected', metadata]
+            );
+            return result.rows[0];
+        }
+    } catch (err) {
+        console.error('Error storing Gmail connection:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Get decrypted Gmail tokens for a user
+async function getGmailToken(userId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            'SELECT metadata FROM service_connections WHERE user_id = $1 AND service_name = $2 AND status = $3',
+            [userId, 'gmail', 'connected']
+        );
+
+        if (result.rows.length === 0) {
+            return null;
+        }
+
+        const metadata = result.rows[0].metadata;
+
+        // Check if encrypted token data exists
+        if (!metadata || !metadata.encrypted_access_token || !metadata.access_token_iv || !metadata.access_token_auth_tag) {
+            console.error('Gmail connection exists but encrypted token data is missing');
+            return null;
+        }
+
+        // Return encrypted token data (decryption will be done by the caller)
+        const tokens = {
+            accessToken: {
+                encrypted: metadata.encrypted_access_token,
+                iv: metadata.access_token_iv,
+                authTag: metadata.access_token_auth_tag
+            }
+        };
+
+        // Include refresh token if available
+        if (metadata.encrypted_refresh_token && metadata.refresh_token_iv && metadata.refresh_token_auth_tag) {
+            tokens.refreshToken = {
+                encrypted: metadata.encrypted_refresh_token,
+                iv: metadata.refresh_token_iv,
+                authTag: metadata.refresh_token_auth_tag
+            };
+        }
+
+        return tokens;
+    } catch (err) {
+        console.error('Error getting Gmail token:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Delete Gmail connection
+async function deleteGmailConnection(connectionId, userId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            'DELETE FROM service_connections WHERE id = $1 AND user_id = $2 AND service_name = $3 RETURNING *',
+            [connectionId, userId, 'gmail']
+        );
+        return result.rows.length > 0;
+    } catch (err) {
+        console.error('Error deleting Gmail connection:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Update Gmail tokens (for refresh)
+async function updateGmailTokens(userId, encryptedTokens) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            'SELECT id, metadata FROM service_connections WHERE user_id = $1 AND service_name = $2',
+            [userId, 'gmail']
+        );
+
+        if (result.rows.length === 0) {
+            throw new Error('Gmail connection not found');
+        }
+
+        const connectionId = result.rows[0].id;
+        const metadata = result.rows[0].metadata || {};
+
+        // Update tokens in metadata
+        metadata.encrypted_access_token = encryptedTokens.accessToken.encrypted;
+        metadata.access_token_iv = encryptedTokens.accessToken.iv;
+        metadata.access_token_auth_tag = encryptedTokens.accessToken.authTag;
+
+        if (encryptedTokens.refreshToken) {
+            metadata.encrypted_refresh_token = encryptedTokens.refreshToken.encrypted;
+            metadata.refresh_token_iv = encryptedTokens.refreshToken.iv;
+            metadata.refresh_token_auth_tag = encryptedTokens.refreshToken.authTag;
+        }
+
+        // Update token expiry if provided
+        if (encryptedTokens.expiry) {
+            metadata.token_expiry = encryptedTokens.expiry;
+        }
+
+        await client.query(
+            'UPDATE service_connections SET metadata = $1 WHERE id = $2',
+            [metadata, connectionId]
+        );
+
+        return true;
+    } catch (err) {
+        console.error('Error updating Gmail tokens:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
 // ===== TASK SUMMARY FUNCTIONS =====
 
 // Create a task summary for a completed module execution
@@ -726,6 +887,11 @@ module.exports = {
     storeGitHubConnection,
     getGitHubToken,
     deleteGitHubConnection,
+    // Gmail connection functions
+    storeGmailConnection,
+    getGmailToken,
+    deleteGmailConnection,
+    updateGmailTokens,
     // Module functions
     getModulesByUserId,
     getModuleById,

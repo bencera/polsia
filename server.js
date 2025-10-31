@@ -235,14 +235,22 @@ app.get('/api/waitlist/count', async (req, res) => {
 
 // Agent API Routes
 const agentRoutes = require('./routes/agent-routes');
+const gmailRoutes = require('./routes/gmail-routes');
 // Apply authentication middleware to GitHub-specific agent routes
 app.use('/api/agent/github', authenticateToken);
+// Apply authentication middleware to Gmail-specific agent routes
+app.use('/api/agent/gmail', authenticateToken, gmailRoutes);
 app.use('/api/agent', agentRoutes);
 
 // GitHub OAuth Routes
 // Pass middleware functions to the router so it can apply them conditionally
 const githubOAuthRoutes = require('./routes/github-oauth')(authenticateTokenFromQuery, authenticateToken);
 app.use('/api/auth/github', githubOAuthRoutes);
+
+// Gmail OAuth Routes
+// Pass middleware functions to the router so it can apply them conditionally
+const gmailOAuthRoutes = require('./routes/gmail-oauth')(authenticateTokenFromQuery, authenticateToken);
+app.use('/api/auth/gmail', gmailOAuthRoutes);
 
 // MCP Routes - Host third-party MCP servers
 const mcpRoutes = require('./routes/mcp-routes');

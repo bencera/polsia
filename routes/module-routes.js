@@ -73,6 +73,39 @@ router.post('/', async (req, res) => {
 });
 
 /**
+ * POST /api/modules/email-summarizer
+ * Quick-create an email summarizer module
+ */
+router.post('/email-summarizer', async (req, res) => {
+    try {
+        const { name, maxEmails, query } = req.body;
+
+        const moduleData = {
+            name: name || 'Email Summarizer',
+            description: 'Automatically fetches and summarizes your recent emails',
+            type: 'email_summarizer',
+            status: 'active',
+            frequency: 'manual', // Can be changed to 'auto' for scheduled runs
+            config: {
+                maxEmails: maxEmails || 5,
+                query: query || 'in:inbox'
+            },
+        };
+
+        const module = await createModule(req.user.id, moduleData);
+
+        res.json({
+            success: true,
+            module,
+            message: 'Email summarizer module created successfully',
+        });
+    } catch (error) {
+        console.error('Error creating email summarizer module:', error);
+        res.status(500).json({ success: false, message: 'Failed to create email summarizer module' });
+    }
+});
+
+/**
  * GET /api/modules/:id
  * Get a specific module by ID
  */

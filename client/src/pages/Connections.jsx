@@ -30,14 +30,23 @@ function Connections() {
         fetchConnections();
         setSuccessMessage('');
       }, 3000);
+    } else if (success === 'gmail_connected') {
+      setSuccessMessage('Gmail account connected successfully!');
+      // Clear URL parameters
+      window.history.replaceState({}, '', '/connections');
+      // Refresh connections after a brief delay
+      setTimeout(() => {
+        fetchConnections();
+        setSuccessMessage('');
+      }, 3000);
     } else if (errorParam) {
       const errorMessages = {
         'invalid_state': 'OAuth security validation failed. Please try again.',
-        'no_code': 'GitHub authorization failed. Please try again.',
-        'no_token': 'Failed to obtain GitHub access token.',
-        'oauth_failed': 'GitHub OAuth process failed. Please try again.'
+        'no_code': 'Authorization failed. Please try again.',
+        'no_token': 'Failed to obtain access token.',
+        'oauth_failed': 'OAuth process failed. Please try again.'
       };
-      setError(errorMessages[errorParam] || 'An error occurred during GitHub connection.');
+      setError(errorMessages[errorParam] || 'An error occurred during connection.');
     }
   }, []);
 
@@ -74,6 +83,17 @@ function Connections() {
     window.location.href = `${backendUrl}/api/auth/github?token=${token}`;
   };
 
+  const connectGmail = () => {
+    // Redirect to Gmail OAuth flow
+    // Auto-detect backend URL based on current domain
+    const isProduction = window.location.hostname !== 'localhost';
+    const backendUrl = isProduction
+      ? window.location.origin // Use same domain in production (https://polsia.ai)
+      : (import.meta.env.VITE_API_URL || 'http://localhost:3000'); // Use env var or localhost in dev
+
+    window.location.href = `${backendUrl}/api/auth/gmail?token=${token}`;
+  };
+
   const disconnectGitHub = async (connectionId) => {
     if (!confirm('Are you sure you want to disconnect your GitHub account?')) {
       return;
@@ -101,6 +121,38 @@ function Connections() {
       }
     } catch (err) {
       alert('Failed to disconnect GitHub. Please try again.');
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const disconnectGmail = async (connectionId) => {
+    if (!confirm('Are you sure you want to disconnect your Gmail account?')) {
+      return;
+    }
+
+    setUpdating(connectionId);
+
+    try {
+      const response = await fetch(`/api/auth/gmail/${connectionId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Remove the connection from the list
+        setConnections(connections.filter(conn => conn.id !== connectionId));
+        setSuccessMessage('Gmail account disconnected successfully!');
+        setTimeout(() => setSuccessMessage(''), 3000);
+      } else {
+        alert(data.error || 'Failed to disconnect Gmail');
+      }
+    } catch (err) {
+      alert('Failed to disconnect Gmail. Please try again.');
     } finally {
       setUpdating(null);
     }
@@ -139,6 +191,7 @@ function Connections() {
   const getServiceIcon = (serviceName) => {
     const icons = {
       github: '🐙',
+      gmail: '📧',
       notion: '📝',
       slack: '💬',
       default: '🔗'
@@ -229,7 +282,29 @@ function Connections() {
           </div>
         )}
 
-        {!loading && !error && connections.length === 0 && !connections.find(c => c.service_name === 'github') && (
+        {/* Gmail Connect Button (show if not connected) */}
+        {!loading && !connections.find(c => c.service_name === 'gmail') && (
+          <div className="connection-card gmail-connect-card">
+            <div className="connection-header">
+              <div className="service-info">
+                <span className="service-icon">📧</span>
+                <div>
+                  <h3>Gmail</h3>
+                  <p className="service-description">Connect your Gmail account to read, send, and manage emails</p>
+                </div>
+              </div>
+            </div>
+            <button
+              className="connect-button"
+              onClick={connectGmail}
+              disabled={updating === 'gmail'}
+            >
+              {updating === 'gmail' ? 'Connecting...' : 'Connect Gmail'}
+            </button>
+          </div>
+        )}
+
+        {!loading && !error && connections.length === 0 && !connections.find(c => c.service_name === 'github') && !connections.find(c => c.service_name === 'gmail') && (
           <div className="empty-state">
             <p>No other service connections found.</p>
           </div>
@@ -252,10 +327,10 @@ function Connections() {
                     </div>
                   </div>
 
-                  {connection.service_name === 'github' ? (
+                  {connection.service_name === 'github' || connection.service_name === 'gmail' ? (
                     <button
                       className="disconnect-button"
-                      onClick={() => disconnectGitHub(connection.id)}
+                      onClick={() => connection.service_name === 'github' ? disconnectGitHub(connection.id) : disconnectGmail(connection.id)}
                       disabled={updating === connection.id}
                     >
                       {updating === connection.id ? 'Disconnecting...' : 'Disconnect'}
@@ -319,8 +394,46 @@ function Connections() {
                   </div>
                 )}
 
+                {/* Gmail-specific metadata */}
+                {connection.service_name === 'gmail' && connection.metadata && (
+                  <div className="connection-metadata gmail-metadata">
+                    {connection.metadata.picture && (
+                      <div className="gmail-avatar">
+                        <img
+                          src={connection.metadata.picture}
+                          alt={connection.metadata.email}
+                        />
+                      </div>
+                    )}
+                    <div className="metadata-details">
+                      {connection.metadata.email && (
+                        <div className="metadata-item">
+                          <p className="metadata-label">Email:</p>
+                          <p className="metadata-value">{connection.metadata.email}</p>
+                        </div>
+                      )}
+                      {connection.metadata.name && (
+                        <div className="metadata-item">
+                          <p className="metadata-label">Name:</p>
+                          <p className="metadata-value">{connection.metadata.name}</p>
+                        </div>
+                      )}
+                      <div className="metadata-item">
+                        <p className="metadata-label">Connected since:</p>
+                        <p className="metadata-value">
+                          {new Date(connection.created_at).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Standard metadata for other services */}
-                {connection.service_name !== 'github' && connection.metadata && (
+                {connection.service_name !== 'github' && connection.service_name !== 'gmail' && connection.metadata && (
                   <div className="connection-metadata">
                     <p className="metadata-label">Connected since:</p>
                     <p className="metadata-value">

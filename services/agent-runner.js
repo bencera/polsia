@@ -16,9 +16,11 @@ const {
     createTaskSummary,
     getExecutionLogs,
 } = require('../db');
-const { getGitHubToken } = require('../db');
+const { getGitHubToken, getGmailToken } = require('../db');
 const { decryptToken } = require('../utils/encryption');
 const { generateTaskSummary } = require('./summary-generator');
+const { summarizeRecentEmails } = require('./email-summarizer');
+const { setupGmailMCPCredentials, cleanupGmailMCPCredentials } = require('./gmail-mcp-setup');
 
 /**
  * Run a module and track its execution
@@ -35,6 +37,7 @@ async function runModule(moduleId, userId, options = {}) {
     console.log(`[Agent Runner] Starting module execution: ${moduleId} for user ${userId}`);
 
     let executionRecord = null;
+    let mcpMounts = [];
 
     try {
         // 1. Fetch module configuration
@@ -58,10 +61,26 @@ async function runModule(moduleId, userId, options = {}) {
             status: 'running',
         });
 
-        // 3. Prepare execution context
+        // 3. Check if this is a special module type (email summarizer)
+        if (module.type === 'email_summarizer') {
+            return await runEmailSummarizerModule(module, userId, executionRecord, startTime);
+        }
+
+        // 4. Prepare execution context for regular modules
         const context = await prepareModuleContext(module, userId);
 
         console.log(`[Agent Runner] Context prepared with ${Object.keys(context.mcpServers || {}).length} MCP servers`);
+
+        // 5. If using Gmail MCP, seed credentials first
+        const config = module.config || {};
+        mcpMounts = config.mcpMounts || [];
+        if (mcpMounts.includes('gmail')) {
+            console.log('[Agent Runner] Setting up Gmail MCP credentials...');
+            const setupSuccess = await setupGmailMCPCredentials(userId);
+            if (!setupSuccess) {
+                throw new Error('Failed to set up Gmail MCP credentials');
+            }
+        }
 
         // 4. Create workspace directory
         const workspace = path.join(
@@ -124,9 +143,14 @@ async function runModule(moduleId, userId, options = {}) {
 
         console.log(`[Agent Runner] ✓ AI execution completed. Success: ${result.success}`);
 
-        // 6. Cleanup workspace
+        // 6. Cleanup workspace and Gmail MCP credentials
         console.log(`[Agent Runner] 🧹 Cleaning up workspace...`);
         await fs.rm(workspace, { recursive: true, force: true });
+
+        // Cleanup Gmail MCP credentials if they were used
+        if (mcpMounts.includes('gmail')) {
+            await cleanupGmailMCPCredentials();
+        }
 
         // 7. Update execution record with results
         const duration = Date.now() - startTime;
@@ -207,6 +231,11 @@ async function runModule(moduleId, userId, options = {}) {
     } catch (error) {
         console.error(`[Agent Runner] ❌ Error executing module ${moduleId}:`, error.message);
         console.error(`[Agent Runner] Stack trace:`, error.stack);
+
+        // Cleanup Gmail MCP credentials if they were used
+        if (mcpMounts.includes('gmail')) {
+            await cleanupGmailMCPCredentials();
+        }
 
         // Update execution record with error
         if (executionRecord) {
@@ -305,11 +334,152 @@ async function configureMCPServers(module, userId, config) {
             } else {
                 console.warn('[Agent Runner] GitHub MCP requested but user has no GitHub connection');
             }
+        } else if (mcpName === 'gmail') {
+            // Gmail MCP uses credentials from ~/.gmail-mcp/credentials.json
+            // These are seeded by setupGmailMCPCredentials() before execution
+            const encryptedTokens = await getGmailToken(userId);
+            if (encryptedTokens) {
+                mcpServers.gmail = {
+                    command: 'npx',
+                    args: ['-y', '@gongrzhe/server-gmail-autoauth-mcp'],
+                };
+                console.log('[Agent Runner] Configured Gmail MCP server (credentials pre-seeded)');
+            } else {
+                console.warn('[Agent Runner] Gmail MCP requested but user has no Gmail connection');
+            }
         }
         // Add more MCP server types here (notion, slack, etc.)
     }
 
     return mcpServers;
+}
+
+/**
+ * Run email summarizer module (specialized handler)
+ * @param {Object} module - Module configuration
+ * @param {number} userId - User ID
+ * @param {Object} executionRecord - Execution record
+ * @param {number} startTime - Start timestamp
+ * @returns {Promise<Object>} Execution result
+ */
+async function runEmailSummarizerModule(module, userId, executionRecord, startTime) {
+    try {
+        console.log(`[Agent Runner] 📧 Running email summarizer module`);
+
+        // Log start
+        await saveExecutionLog(executionRecord.id, {
+            log_level: 'info',
+            stage: 'started',
+            message: 'Starting email summarization',
+        });
+
+        // Get configuration
+        const config = module.config || {};
+        const maxEmails = config.maxEmails || 5;
+        const query = config.query || 'in:inbox';
+
+        console.log(`[Agent Runner] Fetching ${maxEmails} emails with query: "${query}"`);
+
+        // Log fetching
+        await saveExecutionLog(executionRecord.id, {
+            log_level: 'info',
+            stage: 'fetching',
+            message: `Fetching ${maxEmails} most recent emails`,
+        });
+
+        // Execute email summarizer
+        const result = await summarizeRecentEmails(userId, {
+            maxEmails,
+            query
+        });
+
+        // Log completion
+        await saveExecutionLog(executionRecord.id, {
+            log_level: 'info',
+            stage: 'summarizing',
+            message: `Generating AI summary of ${result.summary.emailCount} emails`,
+        });
+
+        await saveExecutionLog(executionRecord.id, {
+            log_level: 'info',
+            stage: 'completed',
+            message: `Email summarization completed: "${result.summary.title}"`,
+        });
+
+        // Calculate metrics
+        const duration = Date.now() - startTime;
+        const cost = 0.002; // Approximate cost for Claude API call
+
+        console.log(`[Agent Runner] ✓ Email summarizer completed`);
+        console.log(`   - Duration: ${(duration / 1000).toFixed(2)}s`);
+        console.log(`   - Emails: ${result.summary.emailCount}`);
+
+        // Update execution record
+        await updateModuleExecution(executionRecord.id, {
+            status: 'completed',
+            completed_at: new Date(),
+            duration_ms: duration,
+            cost_usd: cost,
+            metadata: {
+                emailCount: result.summary.emailCount,
+                actionItems: result.summary.actionItems?.length || 0,
+            },
+        });
+
+        // Create task summary
+        const usedServices = await getServiceConnectionsByUserId(userId);
+        const gmailService = usedServices.find(s => s.service_name === 'gmail');
+        const serviceIds = gmailService ? [gmailService.id] : [];
+
+        await createTaskSummary(userId, {
+            title: result.summary.title,
+            description: result.summary.description,
+            status: 'completed',
+            serviceIds: serviceIds,
+            execution_id: executionRecord.id,
+            module_id: module.id,
+            cost_usd: cost,
+            duration_ms: duration,
+            num_turns: 1,
+            completed_at: new Date(),
+        });
+
+        console.log(`[Agent Runner] ✅ Task summary created for email summarizer`);
+
+        return {
+            success: true,
+            execution_id: executionRecord.id,
+            duration_ms: duration,
+            cost_usd: cost,
+            summary: result.summary,
+        };
+
+    } catch (error) {
+        console.error(`[Agent Runner] ❌ Error in email summarizer:`, error.message);
+
+        const duration = Date.now() - startTime;
+
+        // Log error
+        await saveExecutionLog(executionRecord.id, {
+            log_level: 'error',
+            stage: 'failed',
+            message: `Email summarizer failed: ${error.message}`,
+        });
+
+        // Update execution record with error
+        await updateModuleExecution(executionRecord.id, {
+            status: 'failed',
+            completed_at: new Date(),
+            duration_ms: duration,
+            error_message: error.message,
+        });
+
+        return {
+            success: false,
+            error: error.message,
+            execution_id: executionRecord.id,
+        };
+    }
 }
 
 module.exports = {
