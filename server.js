@@ -361,6 +361,10 @@ app.use('/api/modules', authenticateToken, moduleRoutes);
 const socialRoutes = require('./routes/social-routes');
 app.use('/api/social', authenticateToken, socialRoutes);
 
+// AI Generation Routes - Fal.ai integration for AI content generation
+const aiGenerationRoutes = require('./routes/ai-generation-routes');
+app.use('/api/ai', authenticateToken, aiGenerationRoutes);
+
 // 404 for any other routes
 app.get('*', (req, res) => {
     res.status(404).json({ success: false, message: 'Not found' });

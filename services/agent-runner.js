@@ -294,15 +294,44 @@ async function prepareModuleContext(module, userId) {
 function buildModulePrompt(module, config) {
     const goal = config.goal || `You are ${module.name}. ${module.description}`;
     const inputs = config.inputs || {};
+    const mcpMounts = config.mcpMounts || [];
 
-    return `
+    let prompt = `
 ${goal}
 
 Context:
 ${JSON.stringify(inputs, null, 2)}
 
-Please execute this task autonomously using the available MCP tools.
-`.trim();
+Please execute this task autonomously using the available MCP tools.`;
+
+    // Add fal.ai capabilities if enabled
+    if (mcpMounts.includes('fal-ai')) {
+        prompt += `
+
+## AI Content Generation (fal.ai)
+
+You have access to AI content generation via the Polsia backend API. You can generate images and videos programmatically.
+
+**Available API Endpoints:**
+
+1. **Generate Image** - POST /api/ai/generate/image
+   Body: { "prompt": "your image description", "options": { "model": "flux-pro" | "nano-banana", "width": 1024, "height": 1024 } }
+
+2. **Generate Video** - POST /api/ai/generate/video
+   Body: { "source_type": "text" | "image", "source": "prompt or image URL", "prompt": "motion description", "options": { "model": "veo3-fast", "duration": 5, "aspect_ratio": "16:9" } }
+
+3. **Create Social Content with AI Media** - POST /api/ai/generate/content
+   Body: { "account_id": 123, "text": "post text", "media_type": "image" | "video", "generation_prompt": "what to generate" }
+
+**Available Models:**
+- Images: flux-pro (high quality), nano-banana (fast/cheap)
+- Text-to-Video: veo3-fast, kling-text-to-video, sora2-text, wan-v2.2
+- Image-to-Video: minimax-hailuo, veo3-image, kling-video, sora2-image
+
+Use the \`mcp__http__fetch\` tool or similar to call these endpoints. All media is automatically backed up to R2 if enabled.`;
+    }
+
+    return prompt.trim();
 }
 
 /**
@@ -349,6 +378,8 @@ async function configureMCPServers(module, userId, config) {
             }
         }
         // Add more MCP server types here (notion, slack, etc.)
+        // Note: 'fal-ai' is handled via prompt augmentation in buildModulePrompt(),
+        // not as a true MCP server. Modules call Polsia's /api/ai endpoints directly.
     }
 
     return mcpServers;

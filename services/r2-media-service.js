@@ -76,24 +76,30 @@ async function uploadMediaToR2(buffer, filename, mimeType, metadata = {}) {
   console.info(`Attempting to upload ${folder} to R2 bucket ${bucketName} with key ${objectKey}`);
 
   try {
+    // Build metadata object with all values as strings
+    const s3Metadata = {
+      original_filename: filename || '',
+      uploaded_at: new Date().toISOString(),
+      user_id: metadata.userId ? String(metadata.userId) : '',
+      account_id: metadata.accountId ? String(metadata.accountId) : '',
+      content_id: metadata.contentId ? String(metadata.contentId) : ''
+    };
+
+    // Add any additional metadata, ensuring all values are strings
+    Object.entries(metadata).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && !['userId', 'accountId', 'contentId'].includes(key)) {
+        const sanitizedKey = key.replace(/-/g, '_');
+        s3Metadata[sanitizedKey] = String(value);
+      }
+    });
+
     await s3.send(
       new PutObjectCommand({
         Bucket: bucketName,
         Key: objectKey,
         Body: buffer,
         ContentType: mimeType,
-        Metadata: {
-          original_filename: filename,
-          uploaded_at: new Date().toISOString(),
-          user_id: metadata.userId || '',
-          account_id: metadata.accountId || '',
-          content_id: metadata.contentId || '',
-          ...Object.entries(metadata).reduce((acc, [key, value]) => {
-            // R2/S3 metadata values must be strings
-            acc[key.replace(/-/g, '_')] = String(value);
-            return acc;
-          }, {})
-        }
+        Metadata: s3Metadata
       })
     );
 

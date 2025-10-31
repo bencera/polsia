@@ -1422,6 +1422,300 @@ async function createMediaWithR2Data(contentId, r2UploadResult) {
     }
 }
 
+/**
+ * AI Generation Functions
+ * Functions for managing AI-generated content (images, videos, etc.)
+ */
+
+/**
+ * Create a new AI generation record
+ * @param {number} userId - User ID
+ * @param {Object} generationData - Generation data
+ * @returns {Promise<Object>} Created generation record
+ */
+async function createAIGeneration(userId, generationData) {
+    const client = await pool.connect();
+    try {
+        const {
+            module_id,
+            content_id,
+            generation_type,
+            model,
+            prompt,
+            input_params,
+            output_url,
+            r2_url,
+            r2_key,
+            r2_bucket,
+            status = 'pending',
+            cost_usd,
+            duration_ms,
+            metadata,
+            error_message,
+            completed_at
+        } = generationData;
+
+        const result = await client.query(
+            `INSERT INTO ai_generations (
+                user_id, module_id, content_id, generation_type, model, prompt,
+                input_params, output_url, r2_url, r2_key, r2_bucket,
+                status, cost_usd, duration_ms, metadata, error_message, completed_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+            RETURNING *`,
+            [
+                userId, module_id || null, content_id || null, generation_type, model, prompt,
+                input_params || null, output_url || null, r2_url || null, r2_key || null, r2_bucket || null,
+                status, cost_usd || null, duration_ms || null, metadata || null, error_message || null, completed_at || null
+            ]
+        );
+        return result.rows[0];
+    } catch (err) {
+        console.error('Error creating AI generation:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+/**
+ * Update an AI generation record
+ * @param {number} generationId - Generation ID
+ * @param {Object} updates - Fields to update
+ * @returns {Promise<Object>} Updated generation record
+ */
+async function updateAIGeneration(generationId, updates) {
+    const client = await pool.connect();
+    try {
+        const allowedFields = [
+            'output_url', 'r2_url', 'r2_key', 'r2_bucket',
+            'status', 'cost_usd', 'duration_ms', 'metadata',
+            'error_message', 'completed_at'
+        ];
+
+        const setClauses = [];
+        const values = [];
+        let paramCount = 1;
+
+        for (const [key, value] of Object.entries(updates)) {
+            if (allowedFields.includes(key)) {
+                setClauses.push(`${key} = $${paramCount}`);
+                values.push(value);
+                paramCount++;
+            }
+        }
+
+        if (setClauses.length === 0) {
+            throw new Error('No valid fields to update');
+        }
+
+        values.push(generationId);
+
+        const result = await client.query(
+            `UPDATE ai_generations
+             SET ${setClauses.join(', ')}
+             WHERE id = $${paramCount}
+             RETURNING *`,
+            values
+        );
+
+        return result.rows[0];
+    } catch (err) {
+        console.error('Error updating AI generation:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+/**
+ * Get AI generation by ID
+ * @param {number} generationId - Generation ID
+ * @param {number} userId - User ID (for authorization)
+ * @returns {Promise<Object|null>} Generation record or null
+ */
+async function getAIGenerationById(generationId, userId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            'SELECT * FROM ai_generations WHERE id = $1 AND user_id = $2',
+            [generationId, userId]
+        );
+        return result.rows[0] || null;
+    } catch (err) {
+        console.error('Error getting AI generation by ID:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+/**
+ * Get AI generations by user ID with optional filters
+ * @param {number} userId - User ID
+ * @param {Object} filters - Optional filters
+ * @param {number} limit - Maximum number of results
+ * @returns {Promise<Array>} Array of generation records
+ */
+async function getAIGenerationsByUserId(userId, filters = {}, limit = 50) {
+    const client = await pool.connect();
+    try {
+        const {
+            generation_type,
+            status,
+            module_id,
+            content_id
+        } = filters;
+
+        let query = 'SELECT * FROM ai_generations WHERE user_id = $1';
+        const values = [userId];
+        let paramCount = 2;
+
+        if (generation_type) {
+            query += ` AND generation_type = $${paramCount}`;
+            values.push(generation_type);
+            paramCount++;
+        }
+
+        if (status) {
+            query += ` AND status = $${paramCount}`;
+            values.push(status);
+            paramCount++;
+        }
+
+        if (module_id !== undefined) {
+            query += ` AND module_id = $${paramCount}`;
+            values.push(module_id);
+            paramCount++;
+        }
+
+        if (content_id !== undefined) {
+            query += ` AND content_id = $${paramCount}`;
+            values.push(content_id);
+            paramCount++;
+        }
+
+        query += ` ORDER BY created_at DESC LIMIT $${paramCount}`;
+        values.push(limit);
+
+        const result = await client.query(query, values);
+        return result.rows;
+    } catch (err) {
+        console.error('Error getting AI generations by user ID:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+/**
+ * Link a media record to an AI generation
+ * @param {number} mediaId - Media ID
+ * @param {number} generationId - AI generation ID
+ * @returns {Promise<Object>} Updated media record
+ */
+async function linkMediaToGeneration(mediaId, generationId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            `UPDATE media
+             SET ai_generation_id = $1
+             WHERE id = $2
+             RETURNING *`,
+            [generationId, mediaId]
+        );
+        return result.rows[0];
+    } catch (err) {
+        console.error('Error linking media to generation:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+/**
+ * Get AI generation usage statistics for a user
+ * @param {number} userId - User ID
+ * @param {Object} options - Optional filters (startDate, endDate)
+ * @returns {Promise<Object>} Usage statistics
+ */
+async function getAIGenerationStats(userId, options = {}) {
+    const client = await pool.connect();
+    try {
+        const { startDate, endDate } = options;
+
+        let query = `
+            SELECT
+                COUNT(*) as total_generations,
+                COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_generations,
+                COUNT(CASE WHEN status = 'failed' THEN 1 END) as failed_generations,
+                SUM(cost_usd) as total_cost,
+                AVG(duration_ms) as avg_duration_ms,
+                generation_type,
+                COUNT(*) as count_by_type
+            FROM ai_generations
+            WHERE user_id = $1
+        `;
+
+        const values = [userId];
+        let paramCount = 2;
+
+        if (startDate) {
+            query += ` AND created_at >= $${paramCount}`;
+            values.push(startDate);
+            paramCount++;
+        }
+
+        if (endDate) {
+            query += ` AND created_at <= $${paramCount}`;
+            values.push(endDate);
+            paramCount++;
+        }
+
+        query += ' GROUP BY generation_type';
+
+        const result = await client.query(query, values);
+
+        // Also get overall stats
+        let overallQuery = `
+            SELECT
+                COUNT(*) as total_generations,
+                COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_generations,
+                COUNT(CASE WHEN status = 'failed' THEN 1 END) as failed_generations,
+                SUM(cost_usd) as total_cost,
+                AVG(duration_ms) as avg_duration_ms
+            FROM ai_generations
+            WHERE user_id = $1
+        `;
+
+        const overallValues = [userId];
+        let overallParamCount = 2;
+
+        if (startDate) {
+            overallQuery += ` AND created_at >= $${overallParamCount}`;
+            overallValues.push(startDate);
+            overallParamCount++;
+        }
+
+        if (endDate) {
+            overallQuery += ` AND created_at <= $${overallParamCount}`;
+            overallValues.push(endDate);
+            overallParamCount++;
+        }
+
+        const overallResult = await client.query(overallQuery, overallValues);
+
+        return {
+            overall: overallResult.rows[0],
+            by_type: result.rows
+        };
+    } catch (err) {
+        console.error('Error getting AI generation stats:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
 module.exports = {
     pool,
     initDatabase,
@@ -1483,4 +1777,11 @@ module.exports = {
     getMediaByContentId,
     createMedia,
     createMediaWithR2Data,
+    // AI Generation functions
+    createAIGeneration,
+    updateAIGeneration,
+    getAIGenerationById,
+    getAIGenerationsByUserId,
+    linkMediaToGeneration,
+    getAIGenerationStats,
 };
