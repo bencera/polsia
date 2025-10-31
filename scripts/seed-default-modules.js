@@ -37,6 +37,43 @@ const ESSENTIAL_MODULES = [
             maxTurns: 30,
         },
     },
+    {
+        name: 'Email Summarizer',
+        description: 'Automatically fetches and summarizes your 5 most recent emails',
+        type: 'email_summarizer',
+        frequency: 'manual',
+        config: {
+            maxEmails: 5,
+            query: 'in:inbox',
+        },
+    },
+    {
+        name: 'Email MCP Spam Archiver',
+        description: 'Analyzes recent emails and archives promotional spam using Gmail MCP',
+        type: 'autonomous',
+        frequency: 'manual',
+        config: {
+            maxTurns: 30,
+            mcpMounts: ['gmail'],
+            goal: `You are an email spam archiver. Your job is to:
+
+1. Use the search_emails tool to find the 10 most recent emails in the inbox
+2. For each email, use read_email to analyze its content
+3. Determine if the email is clearly promotional/marketing/spam by looking for:
+   - Unsubscribe links
+   - Marketing language (Sale!, Discount!, Limited time offer!)
+   - Newsletter-style content
+   - Promotional headers
+4. For any email that is promotional, use modify_email to archive it by removing the INBOX label
+5. Keep track of how many emails you archived
+6. At the end, provide a summary of:
+   - Total emails checked
+   - How many were archived
+   - Subject lines of archived emails
+
+Important: Only archive emails that are CLEARLY promotional. When in doubt, leave it in the inbox.`,
+        },
+    },
 ];
 
 /**
