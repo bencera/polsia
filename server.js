@@ -257,6 +257,11 @@ app.use('/api/auth/gmail', gmailOAuthRoutes);
 const instagramOAuthRoutes = require('./routes/instagram-oauth')(authenticateTokenFromQuery, authenticateToken);
 app.use('/api/auth/instagram', instagramOAuthRoutes);
 
+// Meta Ads OAuth Routes
+// Pass middleware functions to the router so it can apply them conditionally
+const metaAdsOAuthRoutes = require('./routes/meta-ads-oauth')(authenticateTokenFromQuery, authenticateToken);
+app.use('/api/auth/meta-ads', metaAdsOAuthRoutes);
+
 // MCP Routes - Host third-party MCP servers
 const mcpRoutes = require('./routes/mcp-routes');
 app.use('/mcp', authenticateToken, mcpRoutes);

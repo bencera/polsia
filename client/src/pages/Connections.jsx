@@ -49,6 +49,15 @@ function Connections() {
         fetchConnections();
         setSuccessMessage('');
       }, 3000);
+    } else if (success === 'meta_ads_connected') {
+      setSuccessMessage('Meta Ads account connected successfully!');
+      // Clear URL parameters
+      window.history.replaceState({}, '', '/connections');
+      // Refresh connections after a brief delay
+      setTimeout(() => {
+        fetchConnections();
+        setSuccessMessage('');
+      }, 3000);
     } else if (errorParam) {
       const errorMessages = {
         'invalid_state': 'OAuth security validation failed. Please try again.',
@@ -59,7 +68,11 @@ function Connections() {
         'instagram_connection_failed': 'Instagram connection failed. Make sure you have an Instagram Business or Creator account connected to a Facebook Page, and that you granted all required permissions.',
         'instagram_invalid_callback': 'Invalid Instagram callback. Please try again.',
         'instagram_failed': 'Instagram connection failed. Please try again.',
-        'invalid_callback': 'Invalid callback parameters. Please try again.'
+        'invalid_callback': 'Invalid callback parameters. Please try again.',
+        'meta_ads_access_denied': 'Meta Ads access denied. Please grant all required permissions.',
+        'meta_ads_token_exchange_failed': 'Failed to exchange token for long-lived access. Please try again.',
+        'meta_ads_invalid_callback': 'Invalid Meta Ads callback. Please try again.',
+        'meta_ads_failed': 'Meta Ads connection failed. Please try again.'
       };
       setError(errorMessages[errorParam] || 'An error occurred during connection.');
     }
@@ -118,6 +131,17 @@ function Connections() {
       : (import.meta.env.VITE_API_URL || 'http://localhost:3000'); // Use env var or localhost in dev
 
     window.location.href = `${backendUrl}/api/auth/instagram?token=${token}`;
+  };
+
+  const connectMetaAds = () => {
+    // Redirect to Meta Ads OAuth flow
+    // Auto-detect backend URL based on current domain
+    const isProduction = window.location.hostname !== 'localhost';
+    const backendUrl = isProduction
+      ? window.location.origin // Use same domain in production (https://polsia.ai)
+      : (import.meta.env.VITE_API_URL || 'http://localhost:3000'); // Use env var or localhost in dev
+
+    window.location.href = `${backendUrl}/api/auth/meta-ads?token=${token}`;
   };
 
   const disconnectGitHub = async (connectionId) => {
@@ -216,6 +240,38 @@ function Connections() {
     }
   };
 
+  const disconnectMetaAds = async (connectionId) => {
+    if (!confirm('Are you sure you want to disconnect your Meta Ads account?')) {
+      return;
+    }
+
+    setUpdating(connectionId);
+
+    try {
+      const response = await fetch(`/api/auth/meta-ads/${connectionId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Remove the connection from the list
+        setConnections(connections.filter(conn => conn.id !== connectionId));
+        setSuccessMessage('Meta Ads account disconnected successfully!');
+        setTimeout(() => setSuccessMessage(''), 3000);
+      } else {
+        alert(data.error || 'Failed to disconnect Meta Ads');
+      }
+    } catch (err) {
+      alert('Failed to disconnect Meta Ads. Please try again.');
+    } finally {
+      setUpdating(null);
+    }
+  };
+
   const toggleConnection = async (connectionId, currentStatus) => {
     setUpdating(connectionId);
     const newStatus = currentStatus === 'connected' ? 'disconnected' : 'connected';
@@ -251,6 +307,7 @@ function Connections() {
       github: '🐙',
       gmail: '📧',
       instagram: '📷',
+      'meta-ads': '📊',
       notion: '📝',
       slack: '💬',
       default: '🔗'
@@ -385,7 +442,29 @@ function Connections() {
           </div>
         )}
 
-        {!loading && !error && connections.length === 0 && !connections.find(c => c.service_name === 'github') && !connections.find(c => c.service_name === 'gmail') && !connections.find(c => c.service_name === 'instagram') && (
+        {/* Meta Ads Connect Button (show if not connected) */}
+        {!loading && !connections.find(c => c.service_name === 'meta-ads') && (
+          <div className="connection-card meta-ads-connect-card">
+            <div className="connection-header">
+              <div className="service-info">
+                <span className="service-icon">📊</span>
+                <div>
+                  <h3>Meta Ads</h3>
+                  <p className="service-description">Connect your Meta (Facebook) Ads account to manage campaigns and track performance</p>
+                </div>
+              </div>
+            </div>
+            <button
+              className="connect-button"
+              onClick={connectMetaAds}
+              disabled={updating === 'meta-ads'}
+            >
+              {updating === 'meta-ads' ? 'Connecting...' : 'Connect Meta Ads'}
+            </button>
+          </div>
+        )}
+
+        {!loading && !error && connections.length === 0 && !connections.find(c => c.service_name === 'github') && !connections.find(c => c.service_name === 'gmail') && !connections.find(c => c.service_name === 'instagram') && !connections.find(c => c.service_name === 'meta-ads') && (
           <div className="empty-state">
             <p>No other service connections found.</p>
           </div>
@@ -408,13 +487,14 @@ function Connections() {
                     </div>
                   </div>
 
-                  {connection.service_name === 'github' || connection.service_name === 'gmail' || connection.service_name === 'instagram' ? (
+                  {connection.service_name === 'github' || connection.service_name === 'gmail' || connection.service_name === 'instagram' || connection.service_name === 'meta-ads' ? (
                     <button
                       className="disconnect-button"
                       onClick={() => {
                         if (connection.service_name === 'github') disconnectGitHub(connection.id);
                         else if (connection.service_name === 'gmail') disconnectGmail(connection.id);
                         else if (connection.service_name === 'instagram') disconnectInstagram(connection.id);
+                        else if (connection.service_name === 'meta-ads') disconnectMetaAds(connection.id);
                       }}
                       disabled={updating === connection.id}
                     >
@@ -547,8 +627,77 @@ function Connections() {
                   </div>
                 )}
 
+                {/* Meta Ads-specific metadata */}
+                {connection.service_name === 'meta-ads' && connection.metadata && (
+                  <div className="connection-metadata meta-ads-metadata">
+                    <div className="metadata-details">
+                      {connection.metadata.name && (
+                        <div className="metadata-item">
+                          <p className="metadata-label">Name:</p>
+                          <p className="metadata-value">{connection.metadata.name}</p>
+                        </div>
+                      )}
+                      {connection.metadata.email && (
+                        <div className="metadata-item">
+                          <p className="metadata-label">Email:</p>
+                          <p className="metadata-value">{connection.metadata.email}</p>
+                        </div>
+                      )}
+                      {connection.metadata.ad_accounts && connection.metadata.ad_accounts.length > 0 && (
+                        <div className="metadata-item">
+                          <p className="metadata-label">Ad Accounts:</p>
+                          <p className="metadata-value">
+                            {connection.metadata.ad_accounts.length} account{connection.metadata.ad_accounts.length !== 1 ? 's' : ''}
+                            {connection.metadata.ad_accounts.length > 0 && connection.metadata.ad_accounts[0].name && (
+                              <span> ({connection.metadata.ad_accounts[0].name}{connection.metadata.ad_accounts.length > 1 ? `, +${connection.metadata.ad_accounts.length - 1} more` : ''})</span>
+                            )}
+                          </p>
+                        </div>
+                      )}
+                      {connection.metadata.businesses && connection.metadata.businesses.length > 0 && (
+                        <div className="metadata-item">
+                          <p className="metadata-label">Businesses:</p>
+                          <p className="metadata-value">
+                            {connection.metadata.businesses.length} business{connection.metadata.businesses.length !== 1 ? 'es' : ''}
+                          </p>
+                        </div>
+                      )}
+                      {connection.metadata.pages && connection.metadata.pages.length > 0 && (
+                        <div className="metadata-item">
+                          <p className="metadata-label">Pages:</p>
+                          <p className="metadata-value">
+                            {connection.metadata.pages.length} page{connection.metadata.pages.length !== 1 ? 's' : ''}
+                          </p>
+                        </div>
+                      )}
+                      {connection.metadata.token_expiry && (
+                        <div className="metadata-item">
+                          <p className="metadata-label">Token Expires:</p>
+                          <p className="metadata-value">
+                            {new Date(connection.metadata.token_expiry).toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric'
+                            })}
+                          </p>
+                        </div>
+                      )}
+                      <div className="metadata-item">
+                        <p className="metadata-label">Connected since:</p>
+                        <p className="metadata-value">
+                          {new Date(connection.created_at).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Standard metadata for other services */}
-                {connection.service_name !== 'github' && connection.service_name !== 'gmail' && connection.service_name !== 'instagram' && connection.metadata && (
+                {connection.service_name !== 'github' && connection.service_name !== 'gmail' && connection.service_name !== 'instagram' && connection.service_name !== 'meta-ads' && connection.metadata && (
                   <div className="connection-metadata">
                     <p className="metadata-label">Connected since:</p>
                     <p className="metadata-value">
