@@ -388,14 +388,18 @@ async function configureMCPServers(module, userId, config) {
             }
         } else if (mcpName === 'sentry') {
             // Sentry MCP uses user's OAuth access token
+            // Official @sentry/mcp-server with OpenAI for AI-powered search
             const encryptedToken = await getSentryToken(userId);
             if (encryptedToken) {
                 const token = decryptToken(encryptedToken);
                 mcpServers.sentry = {
                     command: 'npx',
                     args: ['-y', '@sentry/mcp-server@latest', '--access-token', token],
+                    env: {
+                        OPENAI_API_KEY: process.env.OPENAI_API_KEY || '',
+                    },
                 };
-                console.log('[Agent Runner] Configured Sentry MCP server');
+                console.log('[Agent Runner] Configured official Sentry MCP server with OpenAI key');
             } else {
                 console.warn('[Agent Runner] Sentry MCP requested but user has no Sentry connection');
             }
