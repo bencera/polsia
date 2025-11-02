@@ -5,7 +5,7 @@
   background-color: #fff;
   color: #000;
   line-height: 1.6;
-  padding: 40px 20px;
+  padding: 0;
   min-height: 100vh;
   max-width: 850px;
   margin: 0 auto;
@@ -16,12 +16,15 @@
   background-color: #000;
   color: #fff;
   font-family: 'Courier New', Courier, monospace;
-  padding: 10px 15px;
-  margin-bottom: 30px;
+  padding: 10px 20px;
+  margin: 0 0 30px 0;
   font-size: 13px;
   line-height: 1.4;
   height: 82px; /* Fixed height for exactly 4 lines (13px * 1.4 * 4 + 20px padding) */
   overflow: hidden;
+  width: 100vw;
+  margin-left: calc(-50vw + 50%);
+  box-sizing: border-box;
 }
 
 .terminal div {
@@ -33,6 +36,7 @@
 /* Dashboard Content */
 .dashboard-content {
   margin-bottom: 30px;
+  padding: 0 20px 40px 20px;
 }
 
 .dashboard-content h1 {
@@ -58,6 +62,99 @@
 .status-message.error {
   background-color: #f8d7da;
   color: #721c24;
+}
+
+/* Brain Status Preview */
+.brain-status-preview {
+  padding: 20px;
+  border: 2px solid #000;
+  margin: 30px 0;
+  background-color: #f9f9f9;
+}
+
+.brain-status-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.brain-status-header h3 {
+  margin: 0;
+  font-size: 1.3em;
+  font-weight: 700;
+}
+
+.view-brain-link {
+  color: #000;
+  text-decoration: none;
+  border-bottom: 1px solid #000;
+  font-size: 0.9em;
+}
+
+.view-brain-link:hover {
+  color: #333;
+  border-bottom-color: #333;
+}
+
+.brain-status-text {
+  font-size: 1em;
+  margin: 0;
+  line-height: 1.7;
+}
+
+.brain-status-text a {
+  color: #000;
+  text-decoration: none;
+  border-bottom: 1px solid #000;
+  font-weight: 700;
+}
+
+.brain-status-text a:hover {
+  color: #333;
+  border-bottom-color: #333;
+}
+
+.brain-status-content p {
+  margin: 8px 0;
+  font-size: 1em;
+  line-height: 1.6;
+}
+
+.brain-last-run {
+  color: #666;
+  font-style: italic;
+  font-size: 0.9em;
+}
+
+.brain-last-action {
+  margin-top: 12px;
+}
+
+.brain-execution-status {
+  margin-top: 8px;
+}
+
+.status-badge {
+  padding: 2px 8px;
+  font-weight: 700;
+  font-size: 0.85em;
+  text-transform: uppercase;
+}
+
+.status-badge.status-completed {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.status-badge.status-failed {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.status-badge.status-running {
+  background-color: #fff3cd;
+  color: #856404;
 }
 
 /* Tasks Feed */

@@ -6,6 +6,7 @@
 require('dotenv').config();
 const bcrypt = require('bcrypt');
 const { Pool } = require('pg');
+const { initializeDocumentStore } = require('./services/document-store');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL
@@ -41,11 +42,17 @@ async function createTestUser() {
       [email, passwordHash, name]
     );
 
+    const userId = result.rows[0].id;
+
+    // Initialize document store for the new user
+    await initializeDocumentStore(userId);
+
     console.log('✅ Test user created successfully!');
+    console.log('✅ Document store initialized!');
     console.log('\nCredentials:');
     console.log('Email:', email);
     console.log('Password:', password);
-    console.log('\nUser ID:', result.rows[0].id);
+    console.log('\nUser ID:', userId);
     console.log('\n🔗 Login at: http://localhost:5173/login');
     console.log('🔗 Production: https://polsia.ai/login');
 

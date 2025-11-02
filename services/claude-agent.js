@@ -39,6 +39,7 @@ async function initializeSDK() {
  * @param {Object} options.mcpServers - MCP server configurations
  * @param {Function} options.onMessage - Callback for streaming messages
  * @param {Function} options.onProgress - Callback for progress updates
+ * @param {boolean} options.skipFileCollection - Skip collecting files after execution (default: false)
  * @returns {Promise<Object>} Result with files, messages, and metadata
  */
 async function executeTask(prompt, options = {}) {
@@ -49,7 +50,8 @@ async function executeTask(prompt, options = {}) {
     model,
     mcpServers,
     onMessage,
-    onProgress
+    onProgress,
+    skipFileCollection = false
   } = options;
 
   try {
@@ -161,8 +163,13 @@ async function executeTask(prompt, options = {}) {
       }
     }
 
-    // Collect generated files
-    const generatedFiles = await collectFiles(cwd);
+    // Collect generated files (skip if not needed for performance)
+    let generatedFiles = {};
+    if (!skipFileCollection) {
+      generatedFiles = await collectFiles(cwd);
+    } else {
+      console.log('[Claude Agent] Skipping file collection (not needed for this task)');
+    }
 
     const duration = Date.now() - startTime;
 

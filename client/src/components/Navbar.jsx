@@ -19,6 +19,14 @@ function Navbar() {
     navigate('/modules');
   };
 
+  const handleBrain = () => {
+    navigate('/brain');
+  };
+
+  const handleDocuments = () => {
+    navigate('/documents');
+  };
+
   return (
     <nav className="navbar">
       <Link to="/dashboard" className="navbar-brand">
@@ -26,6 +34,12 @@ function Navbar() {
       </Link>
       <div className="navbar-actions">
         <span className="user-info">{user?.email}</span>
+        <button onClick={handleBrain} className="nav-button">
+          🧠 Brain
+        </button>
+        <button onClick={handleDocuments} className="nav-button">
+          📄 Docs
+        </button>
         <button onClick={handleModules} className="nav-button">
           Modules
         </button>

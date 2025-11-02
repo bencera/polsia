@@ -62,6 +62,15 @@ function Connections() {
         fetchConnections();
         setSuccessMessage('');
       }, 3000);
+    } else if (success === 'sentry_connected') {
+      setSuccessMessage('Sentry account connected successfully!');
+      // Clear URL parameters
+      window.history.replaceState({}, '', '/connections');
+      // Refresh connections after a brief delay
+      setTimeout(() => {
+        fetchConnections();
+        setSuccessMessage('');
+      }, 3000);
     } else if (errorParam) {
       const errorMessages = {
         'invalid_state': 'OAuth security validation failed. Please try again.',
@@ -76,7 +85,11 @@ function Connections() {
         'meta_ads_access_denied': 'Meta Ads access denied. Please grant all required permissions.',
         'meta_ads_token_exchange_failed': 'Failed to exchange token for long-lived access. Please try again.',
         'meta_ads_invalid_callback': 'Invalid Meta Ads callback. Please try again.',
-        'meta_ads_failed': 'Meta Ads connection failed. Please try again.'
+        'meta_ads_failed': 'Meta Ads connection failed. Please try again.',
+        'sentry_access_denied': 'Sentry access denied. Please grant all required permissions.',
+        'sentry_invalid_token_expiry': 'Invalid token expiry received from Sentry. Please try again.',
+        'sentry_invalid_callback': 'Invalid Sentry callback. Please try again.',
+        'sentry_failed': 'Sentry connection failed. Please try again.'
       };
       setError(errorMessages[errorParam] || 'An error occurred during connection.');
     }
@@ -271,6 +284,49 @@ function Connections() {
       }
     } catch (err) {
       alert('Failed to disconnect Meta Ads. Please try again.');
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const connectSentry = () => {
+    // Redirect to Sentry OAuth flow
+    // Auto-detect backend URL based on current domain
+    const isProduction = window.location.hostname !== 'localhost';
+    const backendUrl = isProduction
+      ? window.location.origin // Use same domain in production
+      : (import.meta.env.VITE_API_URL || 'http://localhost:3000'); // Use env var or localhost in dev
+
+    window.location.href = `${backendUrl}/api/auth/sentry?token=${token}`;
+  };
+
+  const disconnectSentry = async (connectionId) => {
+    if (!confirm('Are you sure you want to disconnect your Sentry account?')) {
+      return;
+    }
+
+    setUpdating(connectionId);
+
+    try {
+      const response = await fetch(`/api/auth/sentry/${connectionId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Remove the connection from the list
+        setConnections(connections.filter(conn => conn.id !== connectionId));
+        setSuccessMessage('Sentry account disconnected successfully!');
+        setTimeout(() => setSuccessMessage(''), 3000);
+      } else {
+        alert(data.error || 'Failed to disconnect Sentry');
+      }
+    } catch (err) {
+      alert('Failed to disconnect Sentry. Please try again.');
     } finally {
       setUpdating(null);
     }
@@ -542,7 +598,27 @@ function Connections() {
           </div>
         )}
 
-        {!loading && !error && connections.length === 0 && !connections.find(c => c.service_name === 'github') && !connections.find(c => c.service_name === 'gmail') && !connections.find(c => c.service_name === 'instagram') && !connections.find(c => c.service_name === 'meta-ads') && (
+        {!loading && !connections.find(c => c.service_name === 'sentry') && (
+          <div className="connection-card sentry-connect-card">
+            <div className="connection-header">
+              <div className="service-info">
+                <div>
+                  <h3>Sentry</h3>
+                  <p className="service-description">Connect Sentry to monitor errors and performance issues in real-time</p>
+                </div>
+              </div>
+            </div>
+            <button
+              className="connect-button"
+              onClick={connectSentry}
+              disabled={updating === 'sentry'}
+            >
+              {updating === 'sentry' ? 'Connecting...' : 'Connect Sentry'}
+            </button>
+          </div>
+        )}
+
+        {!loading && !error && connections.length === 0 && !connections.find(c => c.service_name === 'github') && !connections.find(c => c.service_name === 'gmail') && !connections.find(c => c.service_name === 'instagram') && !connections.find(c => c.service_name === 'meta-ads') && !connections.find(c => c.service_name === 'sentry') && (
           <div className="empty-state">
             <p>No other service connections found.</p>
           </div>
@@ -562,7 +638,7 @@ function Connections() {
                     </div>
                   </div>
 
-                  {connection.service_name === 'github' || connection.service_name === 'gmail' || connection.service_name === 'instagram' || connection.service_name === 'meta-ads' ? (
+                  {connection.service_name === 'github' || connection.service_name === 'gmail' || connection.service_name === 'instagram' || connection.service_name === 'meta-ads' || connection.service_name === 'sentry' ? (
                     <button
                       className="disconnect-button"
                       onClick={() => {
@@ -570,6 +646,7 @@ function Connections() {
                         else if (connection.service_name === 'gmail') disconnectGmail(connection.id);
                         else if (connection.service_name === 'instagram') disconnectInstagram(connection.id);
                         else if (connection.service_name === 'meta-ads') disconnectMetaAds(connection.id);
+                        else if (connection.service_name === 'sentry') disconnectSentry(connection.id);
                       }}
                       disabled={updating === connection.id}
                     >

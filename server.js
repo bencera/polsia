@@ -262,6 +262,11 @@ app.use('/api/auth/instagram', instagramOAuthRoutes);
 const metaAdsOAuthRoutes = require('./routes/meta-ads-oauth')(authenticateTokenFromQuery, authenticateToken);
 app.use('/api/auth/meta-ads', metaAdsOAuthRoutes);
 
+// Sentry OAuth Routes
+// Pass middleware functions to the router so it can apply them conditionally
+const sentryOAuthRoutes = require('./routes/sentry-oauth')(authenticateTokenFromQuery, authenticateToken);
+app.use('/api/auth/sentry', sentryOAuthRoutes);
+
 // MCP Routes - Host third-party MCP servers
 const mcpRoutes = require('./routes/mcp-routes');
 app.use('/mcp', authenticateToken, mcpRoutes);

@@ -4,8 +4,9 @@
  */
 
 const cron = require('node-cron');
-const { getActiveModulesForScheduling, getModuleExecutions } = require('../db');
+const { getActiveModulesForScheduling, getModuleExecutions, pool } = require('../db');
 const { runModule } = require('./agent-runner');
+const { runBrainCycle, getLastBrainDecision } = require('./brain-orchestrator');
 
 // Track scheduled tasks
 const scheduledTasks = new Map();
@@ -13,17 +14,26 @@ const scheduledTasks = new Map();
 /**
  * Start the module scheduler
  * Checks every hour for modules that need to run
+ * Checks daily for Brain cycles
  */
 function startScheduler() {
     console.log('[Scheduler] Starting module scheduler');
 
-    // Run every hour
-    const task = cron.schedule('0 * * * *', async () => {
+    // Run module checks every hour
+    const moduleTask = cron.schedule('0 * * * *', async () => {
         console.log('[Scheduler] Checking for modules to execute');
         await checkAndRunModules();
     });
 
-    scheduledTasks.set('main', task);
+    scheduledTasks.set('modules', moduleTask);
+
+    // Run Brain cycle checks once per day at 9 AM
+    const brainTask = cron.schedule('0 9 * * *', async () => {
+        console.log('[Scheduler] Checking for Brain cycles to execute');
+        await checkAndRunBrainCycles();
+    });
+
+    scheduledTasks.set('brain', brainTask);
 
     // Also run immediately on startup
     setImmediate(async () => {
@@ -135,8 +145,84 @@ async function shouldModuleRun(module) {
     return shouldRun;
 }
 
+/**
+ * Check for users that should have Brain cycles run and execute them
+ */
+async function checkAndRunBrainCycles() {
+    const client = await pool.connect();
+    try {
+        // Get all users with document store (meaning they're set up for Brain)
+        const result = await client.query(
+            `SELECT DISTINCT u.id, u.email, u.name
+             FROM users u
+             INNER JOIN document_store ds ON u.id = ds.user_id
+             ORDER BY u.id`
+        );
+
+        const users = result.rows;
+        console.log(`[Scheduler] Found ${users.length} users eligible for Brain cycles`);
+
+        for (const user of users) {
+            try {
+                const shouldRun = await shouldBrainCycleRun(user.id);
+
+                if (shouldRun) {
+                    console.log(`[Scheduler] Triggering Brain cycle for user: ${user.email} (ID: ${user.id})`);
+
+                    // Run Brain cycle asynchronously (don't await to prevent blocking)
+                    runBrainCycle(user.id).catch((error) => {
+                        console.error(`[Scheduler] Error running Brain cycle for user ${user.id}:`, error);
+                    });
+                }
+            } catch (error) {
+                console.error(`[Scheduler] Error processing Brain cycle for user ${user.id}:`, error);
+            }
+        }
+    } catch (error) {
+        console.error('[Scheduler] Error checking Brain cycles:', error);
+    } finally {
+        client.release();
+    }
+}
+
+/**
+ * Determine if a Brain cycle should run for a user
+ * @param {number} userId - User ID
+ * @returns {Promise<boolean>} Whether the Brain should run
+ */
+async function shouldBrainCycleRun(userId) {
+    try {
+        // Get last Brain decision
+        const lastDecision = await getLastBrainDecision(userId);
+
+        // If never run before, run it
+        if (!lastDecision) {
+            console.log(`[Scheduler] Brain has never run for user ${userId}`);
+            return true;
+        }
+
+        // Check if enough time has passed (default: 24 hours)
+        const now = Date.now();
+        const lastRunTime = new Date(lastDecision.created_at).getTime();
+        const timeSinceLastRun = now - lastRunTime;
+
+        // Run once per day (24 hours)
+        const shouldRun = timeSinceLastRun >= 24 * 60 * 60 * 1000;
+
+        if (shouldRun) {
+            console.log(`[Scheduler] Brain cycle is due for user ${userId} (last run: ${(timeSinceLastRun / 1000 / 60 / 60).toFixed(1)} hours ago)`);
+        }
+
+        return shouldRun;
+    } catch (error) {
+        console.error(`[Scheduler] Error checking if Brain should run for user ${userId}:`, error);
+        return false;
+    }
+}
+
 module.exports = {
     startScheduler,
     stopScheduler,
     checkAndRunModules,
+    checkAndRunBrainCycles,
 };

@@ -7,6 +7,8 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Modules from './pages/Modules';
 import Connections from './pages/Connections';
+import Brain from './pages/Brain';
+import Documents from './pages/Documents';
 import './App.css'
 
 // Component that redirects to dashboard if already logged in
@@ -74,6 +76,22 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Connections />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/brain"
+              element={
+                <ProtectedRoute>
+                  <Brain />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/documents"
+              element={
+                <ProtectedRoute>
+                  <Documents />
                 </ProtectedRoute>
               }
             />

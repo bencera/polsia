@@ -1570,6 +1570,159 @@ async function getMetaAdsConnection(userId) {
     }
 }
 
+// Sentry connection functions
+async function storeSentryConnection(userId, sentryData, encryptedToken) {
+    const client = await pool.connect();
+    try {
+        // Combine Sentry user data with encrypted token in metadata
+        const metadata = {
+            ...sentryData,
+            encrypted_token: encryptedToken.encrypted,
+            token_iv: encryptedToken.iv,
+            token_auth_tag: encryptedToken.authTag
+        };
+
+        // Check if user already has a Sentry connection
+        const existingResult = await client.query(
+            'SELECT id FROM service_connections WHERE user_id = $1 AND service_name = $2',
+            [userId, 'sentry']
+        );
+
+        if (existingResult.rows.length > 0) {
+            // Update existing connection
+            const result = await client.query(
+                'UPDATE service_connections SET status = $1, metadata = $2 WHERE id = $3 RETURNING *',
+                ['connected', metadata, existingResult.rows[0].id]
+            );
+            return result.rows[0];
+        } else {
+            // Create new connection
+            const result = await client.query(
+                'INSERT INTO service_connections (user_id, service_name, status, metadata) VALUES ($1, $2, $3, $4) RETURNING *',
+                [userId, 'sentry', 'connected', metadata]
+            );
+            return result.rows[0];
+        }
+    } catch (err) {
+        console.error('Error storing Sentry connection:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Get decrypted Sentry token for a user
+async function getSentryToken(userId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            'SELECT metadata FROM service_connections WHERE user_id = $1 AND service_name = $2 AND status = $3',
+            [userId, 'sentry', 'connected']
+        );
+
+        if (result.rows.length === 0) {
+            return null;
+        }
+
+        const metadata = result.rows[0].metadata;
+
+        // Check if encrypted token data exists
+        if (!metadata || !metadata.encrypted_token || !metadata.token_iv || !metadata.token_auth_tag) {
+            console.error('Sentry connection exists but encrypted token data is missing');
+            return null;
+        }
+
+        // Return encrypted token data (decryption will be done by the caller)
+        return {
+            encrypted: metadata.encrypted_token,
+            iv: metadata.token_iv,
+            authTag: metadata.token_auth_tag
+        };
+    } catch (err) {
+        console.error('Error getting Sentry token:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Delete Sentry connection
+async function deleteSentryConnection(connectionId, userId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            'DELETE FROM service_connections WHERE id = $1 AND user_id = $2 AND service_name = $3 RETURNING *',
+            [connectionId, userId, 'sentry']
+        );
+        return result.rows.length > 0;
+    } catch (err) {
+        console.error('Error deleting Sentry connection:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Update Sentry tokens (for refresh after 8-hour expiry)
+async function updateSentryTokens(userId, encryptedToken, tokenExpiry, encryptedRefreshToken) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            'SELECT id, metadata FROM service_connections WHERE user_id = $1 AND service_name = $2',
+            [userId, 'sentry']
+        );
+
+        if (result.rows.length === 0) {
+            throw new Error('Sentry connection not found');
+        }
+
+        const connectionId = result.rows[0].id;
+        const metadata = result.rows[0].metadata || {};
+
+        // Update access token in metadata
+        metadata.encrypted_token = encryptedToken.encrypted;
+        metadata.token_iv = encryptedToken.iv;
+        metadata.token_auth_tag = encryptedToken.authTag;
+        metadata.token_expiry = tokenExpiry;
+
+        // Update refresh token if provided
+        if (encryptedRefreshToken) {
+            metadata.encrypted_refresh_token = encryptedRefreshToken.encrypted;
+            metadata.refresh_token_iv = encryptedRefreshToken.iv;
+            metadata.refresh_token_auth_tag = encryptedRefreshToken.authTag;
+        }
+
+        await client.query(
+            'UPDATE service_connections SET metadata = $1 WHERE id = $2',
+            [metadata, connectionId]
+        );
+
+        return true;
+    } catch (err) {
+        console.error('Error updating Sentry tokens:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Get Sentry connection for a user
+async function getSentryConnection(userId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            'SELECT * FROM service_connections WHERE user_id = $1 AND service_name = $2 AND status = $3',
+            [userId, 'sentry', 'connected']
+        );
+        return result.rows[0] || null;
+    } catch (err) {
+        console.error('Error getting Sentry connection:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
 /**
  * AI Generation Functions
  * Functions for managing AI-generated content (images, videos, etc.)
@@ -1928,6 +2081,12 @@ module.exports = {
     deleteMetaAdsConnection,
     updateMetaAdsTokens,
     getMetaAdsConnection,
+    // Sentry connection functions
+    storeSentryConnection,
+    getSentryToken,
+    deleteSentryConnection,
+    updateSentryTokens,
+    getSentryConnection,
     // Module functions
     getModulesByUserId,
     getModuleById,
