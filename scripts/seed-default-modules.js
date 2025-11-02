@@ -131,6 +131,63 @@ IMPORTANT:
             maxTurns: 30,
         },
     },
+    {
+        name: 'Sentry Bug Checker',
+        description: 'Scans your Sentry projects for pending bugs and errors that need attention',
+        type: 'autonomous',
+        frequency: 'manual',
+        config: {
+            maxTurns: 40,
+            mcpMounts: ['sentry'],
+            goal: `You are a Sentry bug checker. Your job is to:
+
+1. Use Sentry MCP tools to retrieve a list of all your Sentry organizations and projects
+2. For each project, search for unresolved issues (errors and bugs)
+3. Analyze the issues and categorize them by:
+   - **Critical**: High frequency errors (100+ events), recently occurring, affecting many users
+   - **High Priority**: Moderate frequency (20-100 events), recurring issues
+   - **Medium Priority**: Low frequency (5-20 events), sporadic errors
+   - **Low Priority**: Very low frequency (<5 events), edge cases
+
+4. For each category, provide:
+   - Issue title and brief description
+   - Error type and stacktrace snippet (first few lines)
+   - Number of events and users affected
+   - First and last seen timestamps
+   - Sentry issue URL for reference
+
+5. At the end, provide a comprehensive report in this format:
+
+## Sentry Bug Report
+
+**Total Issues Found:** [number]
+**Projects Scanned:** [project names]
+
+### Critical Issues (requires immediate attention)
+1. [Issue Title]
+   - Type: [error type]
+   - Events: [count] | Users: [count]
+   - Last Seen: [timestamp]
+   - URL: [Sentry link]
+   - Error: [brief stacktrace]
+
+### High Priority Issues
+[same format]
+
+### Medium Priority Issues
+[same format]
+
+### Low Priority Issues
+[same format]
+
+IMPORTANT:
+- Focus on unresolved issues only
+- Read-only analysis - do not modify or resolve issues
+- Provide clear, actionable insights for developers
+- Include Sentry URLs for easy access
+- If no issues found in a category, write "None"`,
+        },
+    },
 ];
 
 /**

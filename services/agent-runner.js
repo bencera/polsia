@@ -17,7 +17,7 @@ const {
     getExecutionLogs,
     getServiceConnectionByName,
 } = require('../db');
-const { getGitHubToken, getGmailToken } = require('../db');
+const { getGitHubToken, getGmailToken, getSentryToken } = require('../db');
 const { decryptToken } = require('../utils/encryption');
 const { generateTaskSummary } = require('./summary-generator');
 const { summarizeRecentEmails } = require('./email-summarizer');
@@ -385,6 +385,19 @@ async function configureMCPServers(module, userId, config) {
                 console.log('[Agent Runner] Configured Gmail MCP server (credentials pre-seeded)');
             } else {
                 console.warn('[Agent Runner] Gmail MCP requested but user has no Gmail connection');
+            }
+        } else if (mcpName === 'sentry') {
+            // Sentry MCP uses user's OAuth access token
+            const encryptedToken = await getSentryToken(userId);
+            if (encryptedToken) {
+                const token = decryptToken(encryptedToken);
+                mcpServers.sentry = {
+                    command: 'npx',
+                    args: ['-y', '@sentry/mcp-server@latest', '--access-token', token],
+                };
+                console.log('[Agent Runner] Configured Sentry MCP server');
+            } else {
+                console.warn('[Agent Runner] Sentry MCP requested but user has no Sentry connection');
             }
         }
         // Add more MCP server types here (notion, slack, etc.)
