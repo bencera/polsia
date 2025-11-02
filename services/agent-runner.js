@@ -15,12 +15,14 @@ const {
     saveExecutionLog,
     createTaskSummary,
     getExecutionLogs,
+    getServiceConnectionByName,
 } = require('../db');
 const { getGitHubToken, getGmailToken } = require('../db');
 const { decryptToken } = require('../utils/encryption');
 const { generateTaskSummary } = require('./summary-generator');
 const { summarizeRecentEmails } = require('./email-summarizer');
 const { setupGmailMCPCredentials, cleanupGmailMCPCredentials } = require('./gmail-mcp-setup');
+const { runDataAgent } = require('./data-agent');
 
 /**
  * Run a module and track its execution
@@ -61,9 +63,17 @@ async function runModule(moduleId, userId, options = {}) {
             status: 'running',
         });
 
-        // 3. Check if this is a special module type (email summarizer)
+        // 3. Check if this is a special module type (email summarizer, data agent, vision gatherer)
         if (module.type === 'email_summarizer') {
             return await runEmailSummarizerModule(module, userId, executionRecord, startTime);
+        }
+
+        if (module.type === 'data_agent') {
+            return await runDataAgentModule(module, userId, executionRecord, startTime);
+        }
+
+        if (module.type === 'vision_gatherer') {
+            return await runVisionGathererModule(module, userId, executionRecord, startTime);
         }
 
         // 4. Prepare execution context for regular modules
@@ -511,6 +521,371 @@ async function runEmailSummarizerModule(module, userId, executionRecord, startTi
             execution_id: executionRecord.id,
         };
     }
+}
+
+/**
+ * Run Data Agent module - collects metrics and updates analytics
+ * @param {Object} module - Module configuration
+ * @param {number} userId - User ID
+ * @param {Object} executionRecord - Execution record
+ * @param {number} startTime - Start timestamp
+ * @returns {Promise<Object>} Execution result
+ */
+async function runDataAgentModule(module, userId, executionRecord, startTime) {
+    try {
+        console.log(`[Agent Runner] 📊 Running data agent module`);
+
+        // Log start
+        await saveExecutionLog(executionRecord.id, {
+            log_level: 'info',
+            stage: 'started',
+            message: 'Starting data collection and analytics update',
+        });
+
+        // Log collecting
+        await saveExecutionLog(executionRecord.id, {
+            log_level: 'info',
+            stage: 'collecting',
+            message: 'Collecting metrics from all integrations',
+        });
+
+        // Execute data agent
+        const result = await runDataAgent(userId);
+
+        // Log completion
+        await saveExecutionLog(executionRecord.id, {
+            log_level: 'info',
+            stage: 'completed',
+            message: `Data agent completed. Analytics updated, anomalies detected: ${result.anomalies_detected}`,
+        });
+
+        // Calculate metrics
+        const duration = Date.now() - startTime;
+        const cost = 0.0; // Data agent doesn't use AI, no cost
+
+        console.log(`[Agent Runner] ✓ Data agent completed`);
+        console.log(`   - Duration: ${(duration / 1000).toFixed(2)}s`);
+        console.log(`   - Anomalies detected: ${result.anomalies_detected}`);
+
+        // Update execution record
+        await updateModuleExecution(executionRecord.id, {
+            status: 'completed',
+            completed_at: new Date(),
+            duration_ms: duration,
+            cost_usd: cost,
+            metadata: {
+                analytics_updated: result.analytics_updated,
+                anomalies_detected: result.anomalies_detected,
+                metrics_collected: {
+                    github: !!result.metrics?.github,
+                    gmail: !!result.metrics?.gmail,
+                    meta_ads: !!result.metrics?.meta_ads,
+                    late_dev: !!result.metrics?.late_dev,
+                    modules: !!result.metrics?.modules,
+                },
+            },
+        });
+
+        // Create task summary
+        await createTaskSummary(userId, {
+            title: 'Data Collection & Analytics Update',
+            description: 'Collected metrics from all integrations and updated analytics documents',
+            status: 'completed',
+            serviceIds: [],
+            execution_id: executionRecord.id,
+            module_id: module.id,
+            cost_usd: cost,
+            duration_ms: duration,
+            num_turns: 0,
+            completed_at: new Date(),
+        });
+
+        console.log(`[Agent Runner] ✅ Task summary created for data agent`);
+
+        return {
+            success: true,
+            execution_id: executionRecord.id,
+            duration_ms: duration,
+            cost_usd: cost,
+            result,
+        };
+
+    } catch (error) {
+        console.error(`[Agent Runner] ❌ Error in data agent:`, error.message);
+
+        const duration = Date.now() - startTime;
+
+        // Log error
+        await saveExecutionLog(executionRecord.id, {
+            log_level: 'error',
+            stage: 'failed',
+            message: `Data agent failed: ${error.message}`,
+        });
+
+        // Update execution record with error
+        await updateModuleExecution(executionRecord.id, {
+            status: 'failed',
+            completed_at: new Date(),
+            duration_ms: duration,
+            error_message: error.message,
+        });
+
+        return {
+            success: false,
+            error: error.message,
+            execution_id: executionRecord.id,
+        };
+    }
+}
+
+/**
+ * Run Vision Gatherer Module
+ * Analyzes GitHub repository to generate product vision document
+ */
+async function runVisionGathererModule(module, userId, executionRecord, startTime) {
+    const crypto = require('crypto');
+    const fs = require('fs').promises;
+
+    try {
+        console.log(`[Agent Runner] 📊 Running Vision Gatherer module`);
+
+        // Get GitHub connection and primary repo
+        const connection = await getServiceConnectionByName(userId, 'github');
+        if (!connection) {
+            throw new Error('GitHub not connected. Please connect your GitHub account first.');
+        }
+
+        const primaryRepo = connection.metadata?.primary_repo;
+        if (!primaryRepo) {
+            throw new Error('No primary repository configured. Please set a primary repository in Connections.');
+        }
+
+        console.log(`[Agent Runner] Analyzing repository: ${primaryRepo.full_name}`);
+
+        // Log start
+        await saveExecutionLog(executionRecord.id, {
+            log_level: 'info',
+            stage: 'started',
+            message: `Starting codebase analysis for ${primaryRepo.full_name}`,
+        });
+
+        // Prepare context with GitHub MCP
+        const context = await prepareModuleContext(module, userId);
+
+        // Enhanced prompt for comprehensive vision analysis
+        const visionPrompt = `You are a product strategist analyzing the ${primaryRepo.full_name} repository.
+
+Your task is to generate a comprehensive Product Vision document by analyzing the codebase.
+
+Using the GitHub MCP tools available to you:
+1. Read the README.md file
+2. Examine package.json or similar dependency files
+3. Browse key source code files to understand architecture
+4. Identify main features and functionality
+5. Understand the technology stack
+
+Generate a detailed vision document covering:
+
+## Product Vision
+
+### What We Do
+[Clear description of the product's purpose and what problem it solves]
+
+### Target Audience
+[Who are the users? What are their needs?]
+
+### Mission
+[The core mission and purpose of this project]
+
+### Current Features
+[List the main features and capabilities currently implemented]
+
+### Technology Stack
+[Languages, frameworks, libraries, and architecture patterns used]
+
+### Code Architecture
+[High-level architecture overview - how the code is organized]
+
+### Tone & Values
+[Based on README and documentation, what is the project's voice and values?]
+
+IMPORTANT: Return ONLY the markdown-formatted vision document. Do not include any explanations or meta-commentary outside the document.`;
+
+        // Create workspace
+        const workspace = path.join(
+            process.cwd(),
+            'temp',
+            'module-executions',
+            `${executionRecord.id}-${crypto.randomBytes(4).toString('hex')}`
+        );
+        await fs.mkdir(workspace, { recursive: true });
+
+        console.log(`[Agent Runner] Workspace created: ${workspace}`);
+
+        // Log analysis start
+        await saveExecutionLog(executionRecord.id, {
+            log_level: 'info',
+            stage: 'analyzing',
+            message: 'Claude is analyzing the codebase with GitHub MCP',
+        });
+
+        // Execute Claude Agent with GitHub MCP
+        const result = await executeTask(visionPrompt, {
+            cwd: workspace,
+            maxTurns: context.maxTurns || 30,
+            mcpServers: context.mcpServers,
+            skipFileCollection: true, // Don't collect workspace files
+            onProgress: async (progress) => {
+                if (progress.stage === 'tool_use') {
+                    await saveExecutionLog(executionRecord.id, {
+                        log_level: 'info',
+                        stage: 'analyzing',
+                        message: `Using GitHub tool: ${progress.tool}`,
+                        metadata: { tool: progress.tool }
+                    });
+                }
+            }
+        });
+
+        // Cleanup workspace
+        await fs.rm(workspace, { recursive: true, force: true });
+
+        if (!result.success) {
+            throw new Error(result.error || 'Vision analysis failed');
+        }
+
+        console.log(`[Agent Runner] Claude analysis complete`);
+
+        // Extract vision from result
+        const visionContent = extractVisionFromMessages(result.messages);
+
+        if (!visionContent) {
+            throw new Error('Failed to extract vision document from Claude response');
+        }
+
+        console.log(`[Agent Runner] Vision document generated (${visionContent.length} characters)`);
+
+        // Save to document store
+        await saveExecutionLog(executionRecord.id, {
+            log_level: 'info',
+            stage: 'saving',
+            message: 'Saving vision document to document store',
+        });
+
+        const { updateDocument } = require('./document-store');
+        await updateDocument(userId, 'vision_md', visionContent);
+
+        console.log(`[Agent Runner] ✓ Vision saved to document store`);
+
+        // Calculate metrics
+        const duration = Date.now() - startTime;
+        const cost = result.metadata?.cost_usd || 0;
+        const turns = result.metadata?.num_turns || 0;
+
+        console.log(`[Agent Runner] ✓ Vision Gatherer completed`);
+        console.log(`   - Repository: ${primaryRepo.full_name}`);
+        console.log(`   - Duration: ${(duration / 1000).toFixed(2)}s`);
+        console.log(`   - Cost: $${cost.toFixed(4)}`);
+        console.log(`   - Turns: ${turns}`);
+
+        // Update execution record
+        await updateModuleExecution(executionRecord.id, {
+            status: 'completed',
+            completed_at: new Date(),
+            duration_ms: duration,
+            cost_usd: cost,
+            metadata: {
+                repository: primaryRepo.full_name,
+                vision_length: visionContent.length,
+                turns,
+            },
+        });
+
+        // Create task summary
+        await createTaskSummary(userId, {
+            title: 'Repository Vision Analysis',
+            description: `Generated comprehensive product vision for ${primaryRepo.full_name}`,
+            status: 'completed',
+            serviceIds: [],
+            execution_id: executionRecord.id,
+            module_id: module.id,
+            cost_usd: cost,
+            duration_ms: duration,
+            num_turns: turns,
+            completed_at: new Date(),
+        });
+
+        console.log(`[Agent Runner] ✅ Task summary created for Vision Gatherer`);
+
+        return {
+            success: true,
+            execution_id: executionRecord.id,
+            duration_ms: duration,
+            cost_usd: cost,
+            vision_length: visionContent.length,
+        };
+
+    } catch (error) {
+        console.error(`[Agent Runner] ❌ Vision Gatherer error:`, error.message);
+
+        const duration = Date.now() - startTime;
+
+        // Log error
+        await saveExecutionLog(executionRecord.id, {
+            log_level: 'error',
+            stage: 'failed',
+            message: `Vision Gatherer failed: ${error.message}`,
+        });
+
+        // Update execution record with error
+        await updateModuleExecution(executionRecord.id, {
+            status: 'failed',
+            completed_at: new Date(),
+            duration_ms: duration,
+            error_message: error.message,
+        });
+
+        return {
+            success: false,
+            error: error.message,
+            execution_id: executionRecord.id,
+        };
+    }
+}
+
+/**
+ * Extract vision document from Claude's response messages
+ */
+function extractVisionFromMessages(messages) {
+    if (!messages || messages.length === 0) return null;
+
+    // Collect all text content from assistant messages
+    let visionText = '';
+
+    const assistantMessages = messages.filter(m => m.type === 'assistant');
+
+    for (const message of assistantMessages) {
+        if (message.message?.content) {
+            for (const content of message.message.content) {
+                if (content.type === 'text' && content.text) {
+                    visionText += content.text + '\n\n';
+                }
+            }
+        }
+    }
+
+    // Clean up the text
+    visionText = visionText.trim();
+
+    // If no text found, check result message
+    if (!visionText) {
+        const resultMessage = messages.find(m => m.type === 'result');
+        if (resultMessage?.result) {
+            visionText = resultMessage.result;
+        }
+    }
+
+    return visionText || null;
 }
 
 module.exports = {

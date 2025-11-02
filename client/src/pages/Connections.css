@@ -221,30 +221,31 @@ input:disabled + .toggle-slider {
 
 .connect-button,
 .disconnect-button {
-  background-color: #000;
-  color: #fff;
-  border: 2px solid #000;
-  padding: 10px 20px;
-  font-family: "Times New Roman", Times, serif;
-  font-size: 1em;
+  background: linear-gradient(top, #ffffff, #888888);
+  background: -webkit-linear-gradient(top, #ffffff, #888888);
+  border: 1px solid #1a1a1a;
+  color: #000000;
+  padding: 4px 12px;
+  font-family: helvetica, serif;
+  font-size: 12px;
   cursor: pointer;
-  transition: background-color 0.2s;
-  font-weight: 700;
+  border-radius: 2px;
+  box-shadow: rgba(255, 255, 255, 0.4) 0 1px 0 0 inset, rgba(255, 255, 255, 0.4) 0 1px 0;
 }
 
-.connect-button:hover:not(:disabled) {
-  background-color: #fff;
-  color: #000;
-}
-
-.disconnect-button {
-  background-color: #fff;
-  color: #000;
-}
-
+.connect-button:hover:not(:disabled),
 .disconnect-button:hover:not(:disabled) {
-  background-color: #000;
-  color: #fff;
+  background: linear-gradient(top, #ffffff, #888888);
+  background: -webkit-linear-gradient(top, #ffffff, #888888);
+}
+
+.connect-button:active:not(:disabled),
+.disconnect-button:active:not(:disabled) {
+  background: linear-gradient(top, #888888, #ffffff);
+  background: -webkit-linear-gradient(top, #888888, #ffffff);
+  box-shadow: rgba(0, 0, 0, 0.4) 0 1px 2px 0 inset;
+  padding-top: 5px;
+  padding-bottom: 3px;
 }
 
 .connect-button:disabled,
@@ -291,6 +292,105 @@ input:disabled + .toggle-slider {
   text-decoration: none;
 }
 
+/* Primary Repo Buttons */
+.change-repo-button,
+.set-repo-button {
+  margin-left: 10px;
+  padding: 4px 12px;
+  font-size: 0.85em;
+  background: #fff;
+  border: 1px solid #000;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.change-repo-button:hover:not(:disabled),
+.set-repo-button:hover:not(:disabled) {
+  background: #f0f0f0;
+}
+
+.change-repo-button:disabled,
+.set-repo-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Repository Selector Modal */
+.repo-selector-modal {
+  margin-top: 15px;
+  border: 2px solid #000;
+  background: #fff;
+  padding: 20px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.repo-selector-modal .modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #000;
+}
+
+.repo-selector-modal .modal-header h4 {
+  margin: 0;
+  font-size: 1.2em;
+  font-weight: 700;
+}
+
+.repo-selector-modal .modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #000;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  line-height: 24px;
+}
+
+.repo-selector-modal .modal-close:hover {
+  color: #666;
+}
+
+.repo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.repo-item {
+  padding: 12px;
+  border: 1px solid #000;
+  cursor: pointer;
+  background: #fff;
+  transition: background-color 0.2s;
+}
+
+.repo-item:hover {
+  background: #f9f9f9;
+}
+
+.repo-item .repo-info strong {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 1em;
+}
+
+.repo-item .repo-info p {
+  margin: 5px 0;
+  font-size: 0.9em;
+  color: #666;
+}
+
+.repo-item .repo-info small {
+  font-size: 0.85em;
+  color: #999;
+}
+
 @media (max-width: 768px) {
   .settings-container {
     padding: 20px 15px;
@@ -302,5 +402,9 @@ input:disabled + .toggle-slider {
 
   .settings-header p {
     font-size: 1em;
+  }
+
+  .repo-selector-modal {
+    max-height: 300px;
   }
 }

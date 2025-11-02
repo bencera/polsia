@@ -74,6 +74,63 @@ const ESSENTIAL_MODULES = [
 Important: Only archive emails that are CLEARLY promotional. When in doubt, leave it in the inbox.`,
         },
     },
+    {
+        name: 'Email Importance Analyzer',
+        description: 'Analyzes unread emails and categorizes them by importance (Urgent, Important, Normal, Low Priority)',
+        type: 'autonomous',
+        frequency: 'manual',
+        config: {
+            maxTurns: 40,
+            mcpMounts: ['gmail'],
+            goal: `You are an email importance analyzer. Your job is to:
+
+1. Use search_emails to find all unread emails in the inbox (up to 100)
+2. For each email, use read_email to analyze its full content
+3. Categorize each email based on importance criteria:
+   - **Urgent**: Time-sensitive (deadlines, meetings, urgent requests)
+   - **Important**: From key contacts, requires action/response, business-critical
+   - **Normal**: Regular work emails, informational
+   - **Low Priority**: Newsletters, promotions, automated notifications
+
+4. Analyze importance using these criteria:
+   - Time-sensitive: Look for deadlines, meeting times, "urgent", "ASAP", expiration dates
+   - Important contacts: Frequent senders, executive emails, client domains
+   - Action required: Questions, requests, "please respond", "need", tasks
+   - Business-related: Work topics vs promotional/newsletter content
+
+5. At the end, provide a categorized report in this exact format:
+
+## Urgent Emails (requires immediate attention)
+1. [Subject] from [Sender]
+   - Why: [Brief reason for urgency]
+
+## Important Emails (requires attention soon)
+1. [Subject] from [Sender]
+   - Why: [Brief reason for importance]
+
+## Normal Emails (standard priority)
+1. [Subject] from [Sender]
+
+## Low Priority Emails (can wait)
+1. [Subject] from [Sender]
+
+IMPORTANT:
+- Analyze up to 100 unread emails
+- Be thorough but efficient
+- Provide clear reasoning for Urgent/Important categorization
+- If no emails in a category, write "None"`,
+        },
+    },
+    {
+        name: 'Vision Gatherer',
+        description: 'Analyzes your primary GitHub repository to generate a comprehensive product vision document',
+        type: 'vision_gatherer',
+        frequency: 'manual',
+        config: {
+            mcpMounts: ['github'],
+            maxTurns: 30,
+        },
+    },
 ];
 
 /**

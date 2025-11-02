@@ -370,6 +370,18 @@ app.use('/api/social', authenticateToken, socialRoutes);
 const aiGenerationRoutes = require('./routes/ai-generation-routes');
 app.use('/api/ai', authenticateToken, aiGenerationRoutes);
 
+// Document Store Routes - Manage company documents (vision, goals, analytics, memory)
+const documentRoutes = require('./routes/document-routes');
+app.use('/api/documents', authenticateToken, documentRoutes);
+
+// Brain Routes - Brain orchestrator status and control
+const brainRoutes = require('./routes/brain-routes');
+app.use('/api/brain', authenticateToken, brainRoutes);
+
+// Connection Routes - Service connection management
+const connectionRoutes = require('./routes/connection-routes');
+app.use('/api/connections', authenticateToken, connectionRoutes);
+
 // 404 for any other routes
 app.get('*', (req, res) => {
     res.status(404).json({ success: false, message: 'Not found' });

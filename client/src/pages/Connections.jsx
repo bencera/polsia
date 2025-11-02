@@ -10,6 +10,10 @@ function Connections() {
   const [error, setError] = useState('');
   const [updating, setUpdating] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
+  const [showRepoSelector, setShowRepoSelector] = useState(false);
+  const [availableRepos, setAvailableRepos] = useState([]);
+  const [loadingRepos, setLoadingRepos] = useState(false);
+  const [primaryRepo, setPrimaryRepo] = useState(null);
   const { token } = useAuth();
   const { terminalLogs } = useTerminal();
 
@@ -290,7 +294,7 @@ function Connections() {
 
       if (response.ok) {
         setConnections(connections.map(conn =>
-          conn.id === connectionId ? { ...conn, status: newStatus } : conn
+          conn.id === connectionId ? { ...conn, status: newStatus} : conn
         ));
       } else {
         alert(data.message || 'Failed to update connection');
@@ -301,6 +305,84 @@ function Connections() {
       setUpdating(null);
     }
   };
+
+  // Fetch GitHub repositories
+  const fetchGitHubRepos = async () => {
+    setLoadingRepos(true);
+    try {
+      const response = await fetch('/api/connections/github/repos', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setAvailableRepos(data.repos);
+        setShowRepoSelector(true);
+      } else {
+        alert(data.message || 'Failed to fetch repositories');
+      }
+    } catch (err) {
+      alert('Failed to fetch repositories. Please try again.');
+    } finally {
+      setLoadingRepos(false);
+    }
+  };
+
+  // Fetch current primary repo
+  const fetchPrimaryRepo = async () => {
+    try {
+      const response = await fetch('/api/connections/github/primary-repo', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.primary_repo) {
+        setPrimaryRepo(data.primary_repo);
+      }
+    } catch (err) {
+      console.error('Failed to fetch primary repo:', err);
+    }
+  };
+
+  // Set primary repository
+  const setPrimaryRepository = async (owner, repo, branch) => {
+    try {
+      const response = await fetch('/api/connections/github/primary-repo', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ owner, repo, branch: branch || 'main' })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setPrimaryRepo(data.primary_repo);
+        setShowRepoSelector(false);
+        setSuccessMessage('Primary repository updated successfully!');
+        setTimeout(() => setSuccessMessage(''), 3000);
+      } else {
+        alert(data.message || 'Failed to set primary repository');
+      }
+    } catch (err) {
+      alert('Failed to set primary repository. Please try again.');
+    }
+  };
+
+  // Load primary repo when connections load
+  useEffect(() => {
+    if (connections.find(c => c.service_name === 'github')) {
+      fetchPrimaryRepo();
+    }
+  }, [connections]);
 
   const getServiceIcon = (serviceName) => {
     const icons = {
@@ -381,7 +463,6 @@ function Connections() {
           <div className="connection-card github-connect-card">
             <div className="connection-header">
               <div className="service-info">
-                <span className="service-icon">🐙</span>
                 <div>
                   <h3>GitHub</h3>
                   <p className="service-description">Connect your GitHub account to enable code reading and pushing</p>
@@ -403,7 +484,6 @@ function Connections() {
           <div className="connection-card gmail-connect-card">
             <div className="connection-header">
               <div className="service-info">
-                <span className="service-icon">📧</span>
                 <div>
                   <h3>Gmail</h3>
                   <p className="service-description">Connect your Gmail account to read, send, and manage emails</p>
@@ -425,7 +505,6 @@ function Connections() {
           <div className="connection-card instagram-connect-card">
             <div className="connection-header">
               <div className="service-info">
-                <span className="service-icon">📷</span>
                 <div>
                   <h3>Instagram</h3>
                   <p className="service-description">Connect your Instagram Business account to post and manage content</p>
@@ -447,7 +526,6 @@ function Connections() {
           <div className="connection-card meta-ads-connect-card">
             <div className="connection-header">
               <div className="service-info">
-                <span className="service-icon">📊</span>
                 <div>
                   <h3>Meta Ads</h3>
                   <p className="service-description">Connect your Meta (Facebook) Ads account to manage campaigns and track performance</p>
@@ -476,9 +554,6 @@ function Connections() {
               <div key={connection.id} className="connection-card">
                 <div className="connection-header">
                   <div className="service-info">
-                    <span className="service-icon">
-                      {getServiceIcon(connection.service_name)}
-                    </span>
                     <div>
                       <h3>{connection.service_name}</h3>
                       <span className={`connection-status ${connection.status}`}>
@@ -546,6 +621,31 @@ function Connections() {
                         </div>
                       )}
                       <div className="metadata-item">
+                        <p className="metadata-label">Primary Repository:</p>
+                        <p className="metadata-value">
+                          {primaryRepo ? (
+                            <span>
+                              {primaryRepo.full_name}
+                              <button
+                                className="change-repo-button"
+                                onClick={fetchGitHubRepos}
+                                disabled={loadingRepos}
+                              >
+                                {loadingRepos ? 'Loading...' : 'Change'}
+                              </button>
+                            </span>
+                          ) : (
+                            <button
+                              className="set-repo-button"
+                              onClick={fetchGitHubRepos}
+                              disabled={loadingRepos}
+                            >
+                              {loadingRepos ? 'Loading...' : 'Set Primary Repo'}
+                            </button>
+                          )}
+                        </p>
+                      </div>
+                      <div className="metadata-item">
                         <p className="metadata-label">Connected since:</p>
                         <p className="metadata-value">
                           {new Date(connection.created_at).toLocaleDateString('en-US', {
@@ -555,6 +655,40 @@ function Connections() {
                           })}
                         </p>
                       </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Repository Selector Modal */}
+                {connection.service_name === 'github' && showRepoSelector && (
+                  <div className="repo-selector-modal">
+                    <div className="modal-header">
+                      <h4>Select Primary Repository</h4>
+                      <button
+                        className="modal-close"
+                        onClick={() => setShowRepoSelector(false)}
+                      >
+                        ×
+                      </button>
+                    </div>
+                    <div className="repo-list">
+                      {availableRepos.length === 0 ? (
+                        <p>No repositories found</p>
+                      ) : (
+                        availableRepos.map((repo) => (
+                          <div
+                            key={repo.id}
+                            className="repo-item"
+                            onClick={() => setPrimaryRepository(repo.owner, repo.name, repo.default_branch)}
+                          >
+                            <div className="repo-info">
+                              <strong>{repo.full_name}</strong>
+                              {repo.description && <p>{repo.description}</p>}
+                              <small>{repo.language || 'No language'} • {repo.private ? 'Private' : 'Public'}</small>
+                            </div>
+                          </div>
+                        ))
+                      )}
                     </div>
                   </div>
                 )}

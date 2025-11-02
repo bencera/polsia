@@ -1864,6 +1864,40 @@ async function getAIGenerationStats(userId, options = {}) {
     }
 }
 
+// Get service connection by service name
+async function getServiceConnectionByName(userId, serviceName) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            'SELECT * FROM service_connections WHERE user_id = $1 AND service_name = $2',
+            [userId, serviceName]
+        );
+        return result.rows[0] || null;
+    } catch (err) {
+        console.error('Error getting service connection by name:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Update service connection metadata
+async function updateServiceConnectionMetadata(userId, serviceName, metadata) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            'UPDATE service_connections SET metadata = $1 WHERE user_id = $2 AND service_name = $3 RETURNING *',
+            [JSON.stringify(metadata), userId, serviceName]
+        );
+        return result.rows[0] || null;
+    } catch (err) {
+        console.error('Error updating service connection metadata:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
 module.exports = {
     pool,
     initDatabase,
@@ -1874,6 +1908,8 @@ module.exports = {
     getTasksByUserId,
     getServiceConnectionsByUserId,
     updateServiceConnectionStatus,
+    getServiceConnectionByName,
+    updateServiceConnectionMetadata,
     storeGitHubConnection,
     getGitHubToken,
     deleteGitHubConnection,
