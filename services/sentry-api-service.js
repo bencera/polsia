@@ -46,28 +46,39 @@ class SentryAPIClient {
     }
 
     /**
-     * List issues for a project
+     * List issues for an organization (filtered by project in results)
      * @param {string} orgSlug - Organization slug
-     * @param {string} projectSlug - Project slug
+     * @param {string} projectSlug - Project slug (used to filter results after retrieval)
      * @param {Object} options - Query options
      * @param {string} options.query - Sentry query string (e.g., 'is:unresolved')
      * @param {number} options.limit - Max results (default: 100)
-     * @param {string} options.statsPeriod - Stats period (default: '24h')
+     * @param {string} options.statsPeriod - Stats period (optional, filters by event activity)
      */
     async listIssues(orgSlug, projectSlug, options = {}) {
         const {
-            query = 'is:unresolved',
+            query = '',
             limit = 100,
-            statsPeriod = '24h'
+            statsPeriod
         } = options;
 
         const params = {
-            query: `${query} project:${projectSlug}`,
-            limit,
-            statsPeriod
+            query: query || '',
+            limit
         };
 
+        // Only include statsPeriod if explicitly provided
+        // Note: statsPeriod filters by when issues had events, not by creation/resolved status
+        if (statsPeriod) {
+            params.statsPeriod = statsPeriod;
+        }
+
         const response = await this.client.get(`/organizations/${orgSlug}/issues/`, { params });
+
+        // Filter by project slug since API doesn't accept slug parameter
+        if (projectSlug) {
+            return response.data.filter(issue => issue.project.slug === projectSlug);
+        }
+
         return response.data;
     }
 
