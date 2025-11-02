@@ -387,19 +387,17 @@ async function configureMCPServers(module, userId, config) {
                 console.warn('[Agent Runner] Gmail MCP requested but user has no Gmail connection');
             }
         } else if (mcpName === 'sentry') {
-            // Sentry MCP uses user's OAuth access token
-            // Official @sentry/mcp-server with OpenAI for AI-powered search
+            // Custom Sentry MCP server - uses direct REST API, no OpenAI required
+            // Built in-house to avoid the official server's OpenAI schema bugs
             const encryptedToken = await getSentryToken(userId);
             if (encryptedToken) {
                 const token = decryptToken(encryptedToken);
+                const serverPath = require('path').join(__dirname, 'sentry-custom-mcp-server.js');
                 mcpServers.sentry = {
-                    command: 'npx',
-                    args: ['-y', '@sentry/mcp-server@latest', '--access-token', token],
-                    env: {
-                        OPENAI_API_KEY: process.env.OPENAI_API_KEY || '',
-                    },
+                    command: 'node',
+                    args: [serverPath, `--access-token=${token}`],
                 };
-                console.log('[Agent Runner] Configured official Sentry MCP server with OpenAI key');
+                console.log('[Agent Runner] Configured custom Sentry MCP server (direct REST API)');
             } else {
                 console.warn('[Agent Runner] Sentry MCP requested but user has no Sentry connection');
             }

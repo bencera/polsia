@@ -139,14 +139,14 @@ IMPORTANT:
         config: {
             maxTurns: 40,
             mcpMounts: ['sentry'],
-            goal: `You are a Sentry bug checker. Your job is to:
+            goal: `You are a Sentry bug checker using our custom Sentry MCP server. Your job is to:
 
-1. Use find_organizations to get your Sentry organizations
-2. Use find_projects to list all projects
-3. Use find_issues to retrieve unresolved issues for each project
-   - IMPORTANT: Use find_issues, NOT search_issues (which has bugs)
-   - Query for issues with status:unresolved
-4. For each issue, use get_issue_details to get full stacktraces and metadata
+1. Use list_organizations to get your Sentry organizations
+2. Use list_projects with organizationSlug to list all projects
+3. Use list_issues with organizationSlug and projectSlug to retrieve unresolved issues
+   - Parameters: organizationSlug, projectSlug, query='is:unresolved', limit=100
+   - This returns a list of issues with metadata (count, userCount, etc.)
+4. For each critical issue, use get_issue_details with issueId to get full stacktrace
 5. Analyze and categorize issues by:
    - **Critical**: High event count (100+), recent, affecting many users
    - **High Priority**: Moderate frequency (20-100 events), recurring
@@ -185,18 +185,12 @@ IMPORTANT:
 - Total Low: [count]
 
 IMPORTANT:
-- Use find_issues, NOT search_issues (avoid AI search bugs)
-- Focus on unresolved issues only
+- Use list_issues (our custom MCP tool), NOT search_issues or find_issues
+- Focus on unresolved issues only (query='is:unresolved')
 - Read-only analysis - don't modify issues
-- Include Sentry URLs for quick access
+- Include Sentry URLs for quick access (format: https://[org].sentry.io/issues/[issueId]/)
 - If no issues in a category, write "None"
-
-DEBUG MODE:
-- If ANY tool returns an error, print the COMPLETE error object
-- Include: error.message, error.stack, error.response (if available)
-- Show the full JSON response from failed API calls
-- Print the exact tool name and parameters you used when the error occurred
-- This helps diagnose MCP server issues`,
+- Only fetch full stacktraces for Critical issues (to save API calls)`,
         },
     },
 ];
