@@ -434,6 +434,16 @@ IMPORTANT:
 - Be data-driven but business-focused`,
         },
     },
+    {
+        name: 'App Store Analytics Integrator',
+        description: 'Fetches App Store Connect analytics and integrates them into the main analytics report',
+        type: 'appstore_analytics',
+        frequency: 'weekly',
+        config: {
+            maxTurns: 50,
+            mcpMounts: ['appstore_connect'],
+        },
+    },
 ];
 
 /**

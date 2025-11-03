@@ -80,6 +80,10 @@ async function runModule(moduleId, userId, options = {}) {
             return await runRenderAnalyticsModule(module, userId, executionRecord, startTime);
         }
 
+        if (module.type === 'appstore_analytics') {
+            return await runAppStoreAnalyticsModule(module, userId, executionRecord, startTime);
+        }
+
         // 4. Prepare execution context for regular modules
         const context = await prepareModuleContext(module, userId);
 
@@ -1388,6 +1392,357 @@ IMPORTANT:
         };
     } finally {
         // Cleanup workspace (happens whether success or failure)
+        try {
+            await fs.rm(workspace, { recursive: true, force: true });
+            console.log(`[Agent Runner] 🧹 Workspace cleaned up`);
+        } catch (cleanupError) {
+            console.warn(`[Agent Runner] Warning: Failed to cleanup workspace: ${cleanupError.message}`);
+        }
+    }
+}
+
+/**
+ * Run App Store Analytics module
+ * Fetches App Store Connect analytics and integrates into analytics.md
+ */
+async function runAppStoreAnalyticsModule(module, userId, executionRecord, startTime) {
+    const crypto = require('crypto');
+    const fs = require('fs').promises;
+
+    try {
+        console.log(`[Agent Runner] 📱 Running App Store Analytics Integrator module`);
+
+        // Get App Store Connect connection
+        const { getAppStoreConnectConnection } = require('../db');
+        const connection = await getAppStoreConnectConnection(userId);
+
+        if (!connection) {
+            throw new Error('App Store Connect not connected. Please connect your App Store Connect account first.');
+        }
+
+        const primaryApp = connection.metadata?.primary_app;
+        if (!primaryApp) {
+            throw new Error('No primary app configured. Please set a primary app in Connections.');
+        }
+
+        console.log(`[Agent Runner] Analyzing app: ${primaryApp.name} (${primaryApp.id})`);
+
+        // Log start
+        await saveExecutionLog(executionRecord.id, {
+            log_level: 'info',
+            stage: 'started',
+            message: `Starting App Store analytics for ${primaryApp.name}`,
+        });
+
+        // Load existing analytics document if available
+        const { getDocumentStore } = require('./document-store');
+        const documents = await getDocumentStore(userId);
+        const existingAnalytics = documents?.analytics_md || '';
+
+        console.log(`[Agent Runner] Existing analytics found: ${existingAnalytics ? 'Yes' : 'No'}`);
+
+        // Prepare context with App Store Connect MCP
+        const context = await prepareModuleContext(module, userId);
+
+        // Create workspace
+        const workspace = path.join(
+            process.cwd(),
+            'temp',
+            'module-executions',
+            `${executionRecord.id}-${crypto.randomBytes(4).toString('hex')}`
+        );
+        await fs.mkdir(workspace, { recursive: true });
+
+        console.log(`[Agent Runner] Workspace created: ${workspace}`);
+
+        // If there's existing analytics, save it to workspace for the agent to read
+        if (existingAnalytics) {
+            await fs.writeFile(path.join(workspace, 'existing-analytics.md'), existingAnalytics);
+            console.log(`[Agent Runner] Existing analytics written to workspace for agent access`);
+        }
+
+        // Build autonomous analytics prompt
+        const analyticsPrompt = `You are an App Store analytics integrator for "${primaryApp.name}".
+
+## Your Mission
+
+Fetch App Store Connect analytics and ${existingAnalytics ? 'integrate them into the existing analytics report' : 'create a comprehensive analytics report'}.
+
+## Available Tools
+
+**App Store Connect MCP:**
+- \`list_apps\` - List your apps (to confirm the app exists)
+- \`get_app_analytics\` - Fetch performance metrics (downloads, sessions, crashes, etc.)
+- \`list_customer_reviews\` - Get recent customer reviews for sentiment analysis
+- \`get_app_details\` - Get app metadata and current version info
+
+## Your Process
+
+**Step 1: Fetch App Store Metrics**
+- Use \`get_app_details\` with appId="${primaryApp.id}" to get current app info
+- Use \`get_app_analytics\` with appId="${primaryApp.id}" to fetch:
+  - Downloads and active devices
+  - Sessions and session duration
+  - Crashes and crash-free rate
+  - User engagement metrics
+- Use \`list_customer_reviews\` with appId="${primaryApp.id}" to analyze:
+  - Recent ratings and reviews
+  - Sentiment trends
+  - Common feedback themes
+
+**Step 2: ${existingAnalytics ? 'Read Existing Analytics' : 'Structure Your Report'}**
+${existingAnalytics ? `- Use the Read tool to read \`existing-analytics.md\` in your workspace
+- Understand the existing report structure
+- Note what data is already present (Render metrics, database analytics, etc.)` : `- Create a new comprehensive analytics report structure`}
+
+**Step 3: ${existingAnalytics ? 'Integrate App Store Data' : 'Create Report'}**
+${existingAnalytics ? `Update the existing report by:
+1. **Executive Summary** - Add App Store highlights (downloads, ratings, key trends)
+2. **App Store Performance** - Add a new section right after Executive Summary with:
+   - App metadata (name, version, bundle ID)
+   - Downloads and active devices
+   - User engagement (sessions, retention)
+   - App Store ratings and reviews
+   - Technical health (crashes, performance)
+   - Recent review sentiment analysis
+3. Keep all existing sections intact (database metrics, Render analytics, etc.)
+4. Ensure the new data flows naturally with existing content` : `Create a new report with:
+1. Main header with app name and timestamp
+2. Executive Summary (key findings from App Store data)
+3. App Store Performance section (detailed metrics)
+4. Trends & Insights
+5. Recommendations`}
+
+**Step 4: Write the Final Report**
+- Write your ${existingAnalytics ? 'updated' : 'new'} report to \`analytics-report.md\`
+- Use professional markdown formatting
+- Include specific numbers, dates, percentages
+- Highlight important trends with emojis: 📈 (growing), 📉 (declining), ⭐ (rating)
+
+## Report Structure
+
+${existingAnalytics ? `**IMPORTANT:** Preserve the existing structure and add App Store data. Your output should include:
+
+# [Existing Title]
+**Generated:** [Update timestamp]
+${existingAnalytics.includes('Analysis Period') ? '**Analysis Period:** [Update if needed]' : ''}
+
+## Executive Summary
+[Existing summary + App Store highlights]
+- **App Store:** [Key App Store metrics - downloads, rating, recent trends]
+- [Keep existing Render/database highlights]
+
+## App Store Performance
+**App:** ${primaryApp.name} (${primaryApp.bundle_id || 'Bundle ID unknown'})
+**Version:** [current version]
+**Last Updated:** [last update date]
+
+### Downloads & Engagement
+- Total Downloads: [number] ([trend] vs last period)
+- Active Devices: [number]
+- Daily Active Users: [number]
+- Sessions: [count] | Avg Duration: [X min]
+
+### App Store Presence
+- Current Rating: [X.X] ⭐ ([total ratings])
+- Recent Reviews: [Positive: X | Negative: X | Neutral: X]
+- Review Highlights: [key themes from reviews]
+
+### Technical Health
+- Crash-Free Rate: [XX%]
+- Average Crash Rate: [X%]
+- Launch Time: [Xms]
+
+[Keep all existing sections below - database metrics, Render analytics, etc.]` : `# ${primaryApp.name} App Store Analytics
+**Generated:** [current timestamp]
+**Analysis Period:** [date range of data]
+
+## Executive Summary
+[3-5 key findings from App Store data]
+
+## App Store Performance
+[Detailed metrics as shown above]
+
+## Trends & Insights
+[Analysis of what's working and what needs attention]
+
+## Recommendations
+[Actionable items based on the data]`}
+
+## Requirements
+
+- **Be specific**: Include exact numbers, dates, percentages
+- **Be insightful**: Identify trends and anomalies
+- **Be actionable**: Provide clear recommendations
+${existingAnalytics ? '- **Preserve existing data**: Keep all current metrics and sections' : ''}
+- **Focus on App Store**: This module is about iOS app performance
+
+## Output
+
+**CRITICAL:** Write your ${existingAnalytics ? 'updated' : 'final'} report to \`analytics-report.md\` using the Write tool.
+
+${existingAnalytics ? `The file should contain:
+1. The original content (Render metrics, database analytics, etc.)
+2. Your new App Store section integrated naturally
+3. Updated Executive Summary with App Store highlights
+
+DO NOT lose any existing data - only add to it!` : ''}
+
+IMPORTANT:
+- Write the report file NOW after gathering all metrics
+- Use markdown formatting
+- Include specific data points from App Store Connect
+- ${existingAnalytics ? 'Merge seamlessly with existing content' : 'Create a comprehensive standalone report'}
+- The report file will be automatically saved to the document store`;
+
+        // Log analysis start
+        await saveExecutionLog(executionRecord.id, {
+            log_level: 'info',
+            stage: 'analyzing',
+            message: 'Fetching App Store analytics with MCP tools',
+        });
+
+        // Execute the agent
+        const result = await executeTask(analyticsPrompt, {
+            cwd: workspace,
+            maxTurns: context.maxTurns || 50,
+            mcpServers: context.mcpServers,
+            onProgress: async (progress) => {
+                if (progress.stage === 'tool_use' && progress.tool) {
+                    console.log(`[Agent Runner] 🔧 Using App Store tool: ${progress.tool}`);
+                    await saveExecutionLog(executionRecord.id, {
+                        log_level: 'info',
+                        stage: 'analyzing',
+                        message: `Using App Store tool: ${progress.tool}`,
+                        metadata: { tool: progress.tool }
+                    });
+                }
+            }
+        });
+
+        if (!result.success) {
+            throw new Error(result.error || 'App Store analytics analysis failed');
+        }
+
+        console.log(`[Agent Runner] Claude analysis complete`);
+
+        // Read the analytics report
+        const reportPath = path.join(workspace, 'analytics-report.md');
+        let analyticsContent = null;
+
+        try {
+            analyticsContent = await fs.readFile(reportPath, 'utf-8');
+            console.log(`[Agent Runner] ✓ Analytics report read from file (${analyticsContent.length} characters)`);
+        } catch (error) {
+            console.error('[Agent Runner] ❌ Failed to read analytics-report.md');
+            throw new Error('Agent did not write analytics-report.md file. The agent must use the Write tool to create this file.');
+        }
+
+        // Validate report content
+        const trimmed = analyticsContent.trim();
+        if (!trimmed.startsWith('# ') || trimmed.length < 500) {
+            throw new Error('Analytics report is invalid. Must start with "# " header and be at least 500 characters.');
+        }
+
+        console.log(`[Agent Runner] ✓ Report validated`);
+
+        // Calculate metrics
+        const duration = Date.now() - startTime;
+        const cost = result.metadata?.cost_usd || 0;
+        const turns = result.metadata?.num_turns || 0;
+
+        // Save to document store (analytics_md)
+        await saveExecutionLog(executionRecord.id, {
+            log_level: 'info',
+            stage: 'saving',
+            message: 'Saving updated analytics report to document store',
+        });
+
+        const { updateDocument } = require('./document-store');
+        await updateDocument(userId, 'analytics_md', analyticsContent);
+
+        console.log(`[Agent Runner] ✓ App Store Analytics integrated into analytics.md`);
+
+        // Extract summary for task summary
+        const extractSummary = (content) => {
+            const execMatch = content.match(/##\s*Executive\s*Summary\s*\n\n?([^\n]+(?:\n(?!##)[^\n]+)*)/i);
+            if (execMatch) {
+                return execMatch[1].trim().substring(0, 300);
+            }
+            return `Integrated App Store analytics for ${primaryApp.name} into analytics report`;
+        };
+
+        const summaryDescription = extractSummary(analyticsContent);
+
+        // Update execution record
+        await updateModuleExecution(executionRecord.id, {
+            status: 'completed',
+            completed_at: new Date(),
+            duration_ms: duration,
+            cost_usd: cost,
+            metadata: {
+                app_name: primaryApp.name,
+                app_id: primaryApp.id,
+                analytics_length: analyticsContent.length,
+                had_existing_analytics: !!existingAnalytics,
+                turns,
+            },
+        });
+
+        // Create task summary
+        await createTaskSummary({
+            user_id: userId,
+            title: `App Store Analytics: ${primaryApp.name}`,
+            summary: summaryDescription,
+            execution_id: executionRecord.id,
+            module_id: module.id,
+            cost_usd: cost,
+            duration_ms: duration,
+            num_turns: turns,
+            completed_at: new Date(),
+        });
+
+        console.log(`[Agent Runner] ✅ App Store Analytics Integrator completed`);
+        console.log(`   - App: ${primaryApp.name}`);
+        console.log(`   - Duration: ${(duration / 1000).toFixed(2)}s`);
+        console.log(`   - Cost: $${cost.toFixed(4)}`);
+        console.log(`   - Turns: ${turns}`);
+
+        return {
+            success: true,
+            execution_id: executionRecord.id,
+            duration_ms: duration,
+            cost_usd: cost,
+            analytics_length: analyticsContent.length,
+        };
+
+    } catch (error) {
+        console.error(`[Agent Runner] ❌ App Store Analytics error:`, error.message);
+
+        const duration = Date.now() - startTime;
+
+        // Log error
+        await saveExecutionLog(executionRecord.id, {
+            log_level: 'error',
+            stage: 'failed',
+            message: `App Store Analytics failed: ${error.message}`,
+        });
+
+        // Update execution record with error
+        await updateModuleExecution(executionRecord.id, {
+            status: 'failed',
+            completed_at: new Date(),
+            duration_ms: duration,
+            error_message: error.message,
+        });
+
+        return {
+            success: false,
+            error: error.message,
+            execution_id: executionRecord.id,
+        };
+    } finally {
+        // Cleanup workspace
         try {
             await fs.rm(workspace, { recursive: true, force: true });
             console.log(`[Agent Runner] 🧹 Workspace cleaned up`);
