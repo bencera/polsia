@@ -22,6 +22,16 @@ function Connections() {
   const [availableRenderServices, setAvailableRenderServices] = useState([]);
   const [loadingRenderServices, setLoadingRenderServices] = useState(false);
   const [primaryRenderService, setPrimaryRenderService] = useState(null);
+  // App Store Connect state
+  const [showAppStoreModal, setShowAppStoreModal] = useState(false);
+  const [appStoreKeyId, setAppStoreKeyId] = useState('');
+  const [appStoreIssuerId, setAppStoreIssuerId] = useState('');
+  const [appStorePrivateKey, setAppStorePrivateKey] = useState('');
+  const [validatingAppStore, setValidatingAppStore] = useState(false);
+  const [showAppStoreAppSelector, setShowAppStoreAppSelector] = useState(false);
+  const [availableAppStoreApps, setAvailableAppStoreApps] = useState([]);
+  const [loadingAppStoreApps, setLoadingAppStoreApps] = useState(false);
+  const [primaryAppStoreApp, setPrimaryAppStoreApp] = useState(null);
   const { token } = useAuth();
   const { terminalLogs } = useTerminal();
 
@@ -102,6 +112,14 @@ function Connections() {
       setError(errorMessages[errorParam] || 'An error occurred during connection.');
     }
   }, []);
+
+  // Extract primary app from App Store Connect connection when connections change
+  useEffect(() => {
+    const appStoreConnection = connections.find(c => c.service_name === 'appstore_connect');
+    if (appStoreConnection && appStoreConnection.metadata && appStoreConnection.metadata.primary_app) {
+      setPrimaryAppStoreApp(appStoreConnection.metadata.primary_app);
+    }
+  }, [connections]);
 
   const fetchConnections = async () => {
     try {
@@ -412,6 +430,154 @@ function Connections() {
       alert('Failed to disconnect Render. Please try again.');
     } finally {
       setUpdating(null);
+    }
+  };
+
+  // App Store Connect connection handlers
+  const connectAppStore = async () => {
+    // Validate inputs
+    if (!appStoreKeyId.trim()) {
+      setError('Please enter your Key ID');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+
+    if (!appStoreIssuerId.trim()) {
+      setError('Please enter your Issuer ID');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+
+    if (!appStorePrivateKey.trim()) {
+      setError('Please enter your Private Key');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+
+    setValidatingAppStore(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/connections/appstore-connect', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          keyId: appStoreKeyId.trim(),
+          issuerId: appStoreIssuerId.trim(),
+          privateKey: appStorePrivateKey.trim()
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSuccessMessage(`App Store Connect credentials connected successfully! Found ${data.data.appCount} app(s).`);
+        setShowAppStoreModal(false);
+        setAppStoreKeyId('');
+        setAppStoreIssuerId('');
+        setAppStorePrivateKey('');
+        setTimeout(() => {
+          fetchConnections();
+          setSuccessMessage('');
+        }, 3000);
+      } else {
+        setError(data.error || 'Failed to connect App Store Connect credentials');
+        setTimeout(() => setError(''), 5000);
+      }
+    } catch (err) {
+      setError('Failed to validate App Store Connect credentials. Please try again.');
+      setTimeout(() => setError(''), 5000);
+    } finally {
+      setValidatingAppStore(false);
+    }
+  };
+
+  const disconnectAppStore = async (connectionId) => {
+    if (!confirm('Are you sure you want to disconnect your App Store Connect account?')) {
+      return;
+    }
+
+    setUpdating(connectionId);
+
+    try {
+      const response = await fetch(`/api/connections/appstore-connect/${connectionId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setConnections(connections.filter(conn => conn.id !== connectionId));
+        setSuccessMessage('App Store Connect account disconnected successfully!');
+        setTimeout(() => setSuccessMessage(''), 3000);
+      } else {
+        alert(data.error || 'Failed to disconnect App Store Connect');
+      }
+    } catch (err) {
+      alert('Failed to disconnect App Store Connect. Please try again.');
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  // Fetch App Store Connect apps
+  const fetchAppStoreApps = async () => {
+    setLoadingAppStoreApps(true);
+    try {
+      const response = await fetch('/api/connections/appstore-connect/apps', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setAvailableAppStoreApps(data.apps);
+        setShowAppStoreAppSelector(true);
+      } else {
+        alert(data.error || 'Failed to fetch apps');
+      }
+    } catch (err) {
+      alert('Failed to fetch App Store Connect apps. Please try again.');
+    } finally {
+      setLoadingAppStoreApps(false);
+    }
+  };
+
+  // Set primary App Store Connect app
+  const setPrimaryAppStoreAppHandler = async (appId, appName, bundleId) => {
+    try {
+      const response = await fetch('/api/connections/appstore-connect/primary-app', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ appId, appName, bundleId })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setPrimaryAppStoreApp(data.primaryApp);
+        setShowAppStoreAppSelector(false);
+        setSuccessMessage('Primary app updated successfully!');
+        setTimeout(() => {
+          fetchConnections();
+          setSuccessMessage('');
+        }, 3000);
+      } else {
+        alert(data.error || 'Failed to set primary app');
+      }
+    } catch (err) {
+      alert('Failed to set primary app. Please try again.');
     }
   };
 
@@ -882,7 +1048,138 @@ function Connections() {
           </div>
         )}
 
-        {!loading && !error && connections.length === 0 && !connections.find(c => c.service_name === 'github') && !connections.find(c => c.service_name === 'gmail') && !connections.find(c => c.service_name === 'instagram') && !connections.find(c => c.service_name === 'meta-ads') && !connections.find(c => c.service_name === 'sentry') && !connections.find(c => c.service_name === 'render') && (
+        {/* App Store Connect Connect Button (show if not connected) */}
+        {!loading && !connections.find(c => c.service_name === 'appstore_connect') && (
+          <div className="connection-card appstore-connect-card">
+            <div className="connection-header">
+              <div className="service-info">
+                <div>
+                  <h3>App Store Connect</h3>
+                  <p className="service-description">Connect your Apple Developer account to manage TestFlight, app submissions, reviews, and analytics</p>
+                </div>
+              </div>
+            </div>
+            <button
+              className="connect-button"
+              onClick={() => setShowAppStoreModal(true)}
+              disabled={updating === 'appstore_connect'}
+            >
+              {updating === 'appstore_connect' ? 'Connecting...' : 'Connect App Store Connect'}
+            </button>
+          </div>
+        )}
+
+        {/* App Store Connect Modal */}
+        {showAppStoreModal && (
+          <div className="modal-overlay" onClick={() => setShowAppStoreModal(false)}>
+            <div className="modal-content appstore-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3>Connect App Store Connect</h3>
+                <button
+                  className="modal-close"
+                  onClick={() => {
+                    setShowAppStoreModal(false);
+                    setAppStoreKeyId('');
+                    setAppStoreIssuerId('');
+                    setAppStorePrivateKey('');
+                    setError('');
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+              <div className="modal-body">
+                <p className="modal-description">
+                  Enter your App Store Connect API credentials. These use JWT authentication (not OAuth).
+                </p>
+                <div className="api-key-instructions">
+                  <p><strong>How to get your credentials:</strong></p>
+                  <ol>
+                    <li>Go to <a href="https://appstoreconnect.apple.com/access/integrations" target="_blank" rel="noopener noreferrer">App Store Connect → Users and Access → Integrations</a></li>
+                    <li>Click "Team Keys" tab</li>
+                    <li>Click "Generate API Key" (or + to add more)</li>
+                    <li>Enter a key name and select access role (Admin, App Manager, etc.)</li>
+                    <li>Copy the <strong>Key ID</strong> and <strong>Issuer ID</strong></li>
+                    <li>Download the <strong>.p8 file</strong> (only shown once!)</li>
+                    <li>Open the .p8 file in a text editor and copy its contents</li>
+                  </ol>
+                </div>
+
+                <div className="form-group">
+                  <label>Key ID (10 characters)</label>
+                  <input
+                    type="text"
+                    className="api-key-input"
+                    placeholder="2X9R4HXF34"
+                    value={appStoreKeyId}
+                    onChange={(e) => setAppStoreKeyId(e.target.value)}
+                    disabled={validatingAppStore}
+                    maxLength={10}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Issuer ID (UUID format)</label>
+                  <input
+                    type="text"
+                    className="api-key-input"
+                    placeholder="57246542-96fe-1a63-e053-0824d011072a"
+                    value={appStoreIssuerId}
+                    onChange={(e) => setAppStoreIssuerId(e.target.value)}
+                    disabled={validatingAppStore}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Private Key (contents of .p8 file)</label>
+                  <textarea
+                    className="api-key-input private-key-textarea"
+                    placeholder="-----BEGIN PRIVATE KEY-----
+MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwd...
+-----END PRIVATE KEY-----"
+                    value={appStorePrivateKey}
+                    onChange={(e) => setAppStorePrivateKey(e.target.value)}
+                    disabled={validatingAppStore}
+                    rows={8}
+                  />
+                </div>
+
+                <p className="security-warning">
+                  ⚠️ Keep your credentials secure. They provide access to your App Store Connect account.
+                </p>
+                {error && (
+                  <div className="modal-error">
+                    {error}
+                  </div>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button
+                  className="modal-cancel"
+                  onClick={() => {
+                    setShowAppStoreModal(false);
+                    setAppStoreKeyId('');
+                    setAppStoreIssuerId('');
+                    setAppStorePrivateKey('');
+                    setError('');
+                  }}
+                  disabled={validatingAppStore}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="modal-submit"
+                  onClick={connectAppStore}
+                  disabled={validatingAppStore || !appStoreKeyId.trim() || !appStoreIssuerId.trim() || !appStorePrivateKey.trim()}
+                >
+                  {validatingAppStore ? 'Validating...' : 'Connect'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {!loading && !error && connections.length === 0 && !connections.find(c => c.service_name === 'github') && !connections.find(c => c.service_name === 'gmail') && !connections.find(c => c.service_name === 'instagram') && !connections.find(c => c.service_name === 'meta-ads') && !connections.find(c => c.service_name === 'sentry') && !connections.find(c => c.service_name === 'render') && !connections.find(c => c.service_name === 'appstore_connect') && (
           <div className="empty-state">
             <p>No other service connections found.</p>
           </div>
@@ -902,7 +1199,7 @@ function Connections() {
                     </div>
                   </div>
 
-                  {connection.service_name === 'github' || connection.service_name === 'gmail' || connection.service_name === 'instagram' || connection.service_name === 'meta-ads' || connection.service_name === 'sentry' || connection.service_name === 'render' ? (
+                  {connection.service_name === 'github' || connection.service_name === 'gmail' || connection.service_name === 'instagram' || connection.service_name === 'meta-ads' || connection.service_name === 'sentry' || connection.service_name === 'render' || connection.service_name === 'appstore_connect' ? (
                     <button
                       className="disconnect-button"
                       onClick={() => {
@@ -912,6 +1209,7 @@ function Connections() {
                         else if (connection.service_name === 'meta-ads') disconnectMetaAds(connection.id);
                         else if (connection.service_name === 'sentry') disconnectSentry(connection.id);
                         else if (connection.service_name === 'render') disconnectRender(connection.id);
+                        else if (connection.service_name === 'appstore_connect') disconnectAppStore(connection.id);
                       }}
                       disabled={updating === connection.id}
                     >
@@ -1233,6 +1531,62 @@ function Connections() {
                   </div>
                 )}
 
+                {/* App Store Connect-specific metadata */}
+                {connection.service_name === 'appstore_connect' && connection.metadata && (
+                  <div className="connection-metadata appstore-metadata">
+                    <div className="metadata-details">
+                      {connection.metadata.key_id && (
+                        <div className="metadata-item">
+                          <p className="metadata-label">Key ID:</p>
+                          <p className="metadata-value">{connection.metadata.key_id}</p>
+                        </div>
+                      )}
+                      {connection.metadata.issuer_id && (
+                        <div className="metadata-item">
+                          <p className="metadata-label">Issuer ID:</p>
+                          <p className="metadata-value">{connection.metadata.issuer_id}</p>
+                        </div>
+                      )}
+                      <div className="metadata-item">
+                        <p className="metadata-label">Primary App:</p>
+                        <p className="metadata-value">
+                          {connection.metadata.primary_app ? (
+                            <span>
+                              {connection.metadata.primary_app.name}
+                              {connection.metadata.primary_app.bundle_id && ` (${connection.metadata.primary_app.bundle_id})`}
+                              <button
+                                className="change-repo-button"
+                                onClick={fetchAppStoreApps}
+                                disabled={loadingAppStoreApps}
+                              >
+                                {loadingAppStoreApps ? 'Loading...' : 'Change'}
+                              </button>
+                            </span>
+                          ) : (
+                            <button
+                              className="set-repo-button"
+                              onClick={fetchAppStoreApps}
+                              disabled={loadingAppStoreApps}
+                            >
+                              {loadingAppStoreApps ? 'Loading...' : 'Set Primary App'}
+                            </button>
+                          )}
+                        </p>
+                      </div>
+                      <div className="metadata-item">
+                        <p className="metadata-label">Connected since:</p>
+                        <p className="metadata-value">
+                          {new Date(connection.metadata.connected_at || connection.created_at).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Render Service Selector Modal */}
                 {connection.service_name === 'render' && showRenderServiceSelector && (
                   <div className="repo-selector-modal">
@@ -1272,8 +1626,45 @@ function Connections() {
                   </div>
                 )}
 
+                {/* App Store Connect App Selector Modal */}
+                {connection.service_name === 'appstore_connect' && showAppStoreAppSelector && (
+                  <div className="repo-selector-modal">
+                    <div className="modal-header">
+                      <h4>Select Primary App</h4>
+                      <button
+                        className="modal-close"
+                        onClick={() => setShowAppStoreAppSelector(false)}
+                      >
+                        ×
+                      </button>
+                    </div>
+                    <div className="repo-list">
+                      {availableAppStoreApps.length === 0 ? (
+                        <p>No apps found</p>
+                      ) : (
+                        availableAppStoreApps.map((app) => (
+                          <div
+                            key={app.id}
+                            className="repo-item"
+                            onClick={() => setPrimaryAppStoreAppHandler(app.id, app.name, app.bundleId)}
+                          >
+                            <div className="repo-info">
+                              <strong>{app.name || 'Unknown App'}</strong>
+                              <p>
+                                {app.bundleId && `Bundle ID: ${app.bundleId}`}
+                                {app.sku && ` • SKU: ${app.sku}`}
+                              </p>
+                              {app.primaryLocale && <small>Locale: {app.primaryLocale}</small>}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* Standard metadata for other services */}
-                {connection.service_name !== 'github' && connection.service_name !== 'gmail' && connection.service_name !== 'instagram' && connection.service_name !== 'meta-ads' && connection.service_name !== 'render' && connection.metadata && (
+                {connection.service_name !== 'github' && connection.service_name !== 'gmail' && connection.service_name !== 'instagram' && connection.service_name !== 'meta-ads' && connection.service_name !== 'render' && connection.service_name !== 'appstore_connect' && connection.metadata && (
                   <div className="connection-metadata">
                     <p className="metadata-label">Connected since:</p>
                     <p className="metadata-value">

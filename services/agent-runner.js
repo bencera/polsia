@@ -17,7 +17,7 @@ const {
     getExecutionLogs,
     getServiceConnectionByName,
 } = require('../db');
-const { getGitHubToken, getGmailToken, getSentryToken, getRenderApiKey, getRenderConnection } = require('../db');
+const { getGitHubToken, getGmailToken, getSentryToken, getAppStoreConnectConnection, getRenderApiKey, getRenderConnection } = require('../db');
 const { decryptToken } = require('../utils/encryption');
 const { generateTaskSummary } = require('./summary-generator');
 const { summarizeRecentEmails } = require('./email-summarizer');
@@ -404,6 +404,30 @@ async function configureMCPServers(module, userId, config) {
                 console.log('[Agent Runner] Configured custom Sentry MCP server (direct REST API)');
             } else {
                 console.warn('[Agent Runner] Sentry MCP requested but user has no Sentry connection');
+            }
+        } else if (mcpName === 'appstore_connect') {
+            // Custom App Store Connect MCP server - uses JWT authentication
+            // Built in-house for App Store Connect API integration
+            const connection = await getAppStoreConnectConnection(userId);
+            if (connection) {
+                const privateKey = decryptToken({
+                    encrypted: connection.encrypted_private_key,
+                    iv: connection.private_key_iv,
+                    authTag: connection.private_key_auth_tag
+                });
+                const serverPath = require('path').join(__dirname, 'appstore-connect-custom-mcp-server.js');
+                mcpServers.appstore_connect = {
+                    command: 'node',
+                    args: [
+                        serverPath,
+                        `--key-id=${connection.key_id}`,
+                        `--issuer-id=${connection.issuer_id}`,
+                        `--private-key=${privateKey}`
+                    ],
+                };
+                console.log('[Agent Runner] Configured custom App Store Connect MCP server (JWT authentication)');
+            } else {
+                console.warn('[Agent Runner] App Store Connect MCP requested but user has no App Store Connect connection');
             }
         } else if (mcpName === 'render') {
             // Render MCP - Official HTTP-based MCP server by Render

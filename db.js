@@ -1723,6 +1723,175 @@ async function getSentryConnection(userId) {
     }
 }
 
+// App Store Connect connection functions
+async function storeAppStoreConnectConnection(userId, connectionData, encryptedPrivateKey) {
+    const client = await pool.connect();
+    try {
+        // Combine connection data with encrypted private key in metadata
+        const metadata = {
+            key_id: connectionData.keyId,
+            issuer_id: connectionData.issuerId,
+            encrypted_private_key: encryptedPrivateKey.encrypted,
+            private_key_iv: encryptedPrivateKey.iv,
+            private_key_auth_tag: encryptedPrivateKey.authTag,
+            connected_at: new Date().toISOString()
+        };
+
+        // Check if user already has an App Store Connect connection
+        const existingResult = await client.query(
+            'SELECT id FROM service_connections WHERE user_id = $1 AND service_name = $2',
+            [userId, 'appstore_connect']
+        );
+
+        if (existingResult.rows.length > 0) {
+            // Update existing connection
+            const result = await client.query(
+                'UPDATE service_connections SET status = $1, metadata = $2 WHERE id = $3 RETURNING *',
+                ['connected', metadata, existingResult.rows[0].id]
+            );
+            return result.rows[0];
+        } else {
+            // Create new connection
+            const result = await client.query(
+                'INSERT INTO service_connections (user_id, service_name, status, metadata) VALUES ($1, $2, $3, $4) RETURNING *',
+                [userId, 'appstore_connect', 'connected', metadata]
+            );
+            return result.rows[0];
+        }
+    } catch (err) {
+        console.error('Error storing App Store Connect connection:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Get App Store Connect connection for a user
+async function getAppStoreConnectConnection(userId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            'SELECT * FROM service_connections WHERE user_id = $1 AND service_name = $2 AND status = $3',
+            [userId, 'appstore_connect', 'connected']
+        );
+
+        if (result.rows.length === 0) {
+            return null;
+        }
+
+        const connection = result.rows[0];
+        const metadata = connection.metadata;
+
+        // Return connection with metadata fields
+        return {
+            id: connection.id,
+            key_id: metadata.key_id,
+            issuer_id: metadata.issuer_id,
+            encrypted_private_key: metadata.encrypted_private_key,
+            private_key_iv: metadata.private_key_iv,
+            private_key_auth_tag: metadata.private_key_auth_tag,
+            connected_at: metadata.connected_at,
+            primary_app: metadata.primary_app, // Include primary app if set
+            created_at: connection.created_at
+        };
+    } catch (err) {
+        console.error('Error getting App Store Connect connection:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Get encrypted private key for App Store Connect
+async function getAppStoreConnectPrivateKey(userId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            'SELECT metadata FROM service_connections WHERE user_id = $1 AND service_name = $2 AND status = $3',
+            [userId, 'appstore_connect', 'connected']
+        );
+
+        if (result.rows.length === 0) {
+            return null;
+        }
+
+        const metadata = result.rows[0].metadata;
+
+        // Check if encrypted private key data exists
+        if (!metadata || !metadata.encrypted_private_key || !metadata.private_key_iv || !metadata.private_key_auth_tag) {
+            console.error('App Store Connect connection exists but encrypted private key data is missing');
+            return null;
+        }
+
+        // Return encrypted private key data (decryption will be done by the caller)
+        return {
+            encrypted: metadata.encrypted_private_key,
+            iv: metadata.private_key_iv,
+            authTag: metadata.private_key_auth_tag
+        };
+    } catch (err) {
+        console.error('Error getting App Store Connect private key:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Delete App Store Connect connection
+async function deleteAppStoreConnectConnection(connectionId, userId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            'DELETE FROM service_connections WHERE id = $1 AND user_id = $2 AND service_name = $3 RETURNING *',
+            [connectionId, userId, 'appstore_connect']
+        );
+        return result.rows.length > 0;
+    } catch (err) {
+        console.error('Error deleting App Store Connect connection:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Update App Store Connect connection
+async function updateAppStoreConnectConnection(userId, connectionData, encryptedPrivateKey) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            'SELECT id, metadata FROM service_connections WHERE user_id = $1 AND service_name = $2',
+            [userId, 'appstore_connect']
+        );
+
+        if (result.rows.length === 0) {
+            throw new Error('App Store Connect connection not found');
+        }
+
+        const connectionId = result.rows[0].id;
+        const metadata = {
+            key_id: connectionData.keyId,
+            issuer_id: connectionData.issuerId,
+            encrypted_private_key: encryptedPrivateKey.encrypted,
+            private_key_iv: encryptedPrivateKey.iv,
+            private_key_auth_tag: encryptedPrivateKey.authTag,
+            connected_at: result.rows[0].metadata.connected_at, // Preserve original connection time
+            updated_at: new Date().toISOString()
+        };
+
+        await client.query(
+            'UPDATE service_connections SET metadata = $1, status = $2 WHERE id = $3',
+            [metadata, 'connected', connectionId]
+        );
+
+        return true;
+    } catch (err) {
+        console.error('Error updating App Store Connect connection:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
 /**
  * AI Generation Functions
  * Functions for managing AI-generated content (images, videos, etc.)
@@ -2199,6 +2368,12 @@ module.exports = {
     deleteSentryConnection,
     updateSentryTokens,
     getSentryConnection,
+    // App Store Connect connection functions
+    storeAppStoreConnectConnection,
+    getAppStoreConnectConnection,
+    getAppStoreConnectPrivateKey,
+    deleteAppStoreConnectConnection,
+    updateAppStoreConnectConnection,
     // Render connection functions
     storeRenderConnection,
     getRenderApiKey,

@@ -272,6 +272,10 @@ app.use('/api/auth/sentry', sentryOAuthRoutes);
 const renderRoutes = require('./routes/render-routes')(authenticateToken);
 app.use('/api/connections/render', renderRoutes);
 
+// App Store Connect Routes (JWT-based authentication, non-OAuth)
+const appStoreConnectRoutes = require('./routes/appstore-connect-routes')(authenticateToken);
+app.use('/api/connections/appstore-connect', appStoreConnectRoutes);
+
 // MCP Routes - Host third-party MCP servers
 const mcpRoutes = require('./routes/mcp-routes');
 app.use('/mcp', authenticateToken, mcpRoutes);
