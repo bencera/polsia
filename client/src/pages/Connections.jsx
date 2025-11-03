@@ -32,6 +32,11 @@ function Connections() {
   const [availableAppStoreApps, setAvailableAppStoreApps] = useState([]);
   const [loadingAppStoreApps, setLoadingAppStoreApps] = useState(false);
   const [primaryAppStoreApp, setPrimaryAppStoreApp] = useState(null);
+  // Meta Ads state
+  const [showMetaAdsAdAccountSelector, setShowMetaAdsAdAccountSelector] = useState(false);
+  const [availableMetaAdsAdAccounts, setAvailableMetaAdsAdAccounts] = useState([]);
+  const [loadingMetaAdsAdAccounts, setLoadingMetaAdsAdAccounts] = useState(false);
+  const [primaryMetaAdsAdAccount, setPrimaryMetaAdsAdAccount] = useState(null);
   const { token } = useAuth();
   const { terminalLogs } = useTerminal();
 
@@ -118,6 +123,14 @@ function Connections() {
     const appStoreConnection = connections.find(c => c.service_name === 'appstore_connect');
     if (appStoreConnection && appStoreConnection.metadata && appStoreConnection.metadata.primary_app) {
       setPrimaryAppStoreApp(appStoreConnection.metadata.primary_app);
+    }
+  }, [connections]);
+
+  // Extract primary ad account from Meta Ads connection when connections change
+  useEffect(() => {
+    const metaAdsConnection = connections.find(c => c.service_name === 'meta-ads');
+    if (metaAdsConnection && metaAdsConnection.metadata && metaAdsConnection.metadata.primary_ad_account) {
+      setPrimaryMetaAdsAdAccount(metaAdsConnection.metadata.primary_ad_account);
     }
   }, [connections]);
 
@@ -578,6 +591,61 @@ function Connections() {
       }
     } catch (err) {
       alert('Failed to set primary app. Please try again.');
+    }
+  };
+
+  // Fetch Meta Ads ad accounts
+  const fetchMetaAdsAdAccounts = async () => {
+    setLoadingMetaAdsAdAccounts(true);
+    try {
+      const response = await fetch('/api/connections/meta-ads/ad-accounts', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setAvailableMetaAdsAdAccounts(data.adAccounts);
+        setShowMetaAdsAdAccountSelector(true);
+      } else {
+        alert(data.error || 'Failed to fetch ad accounts');
+      }
+    } catch (err) {
+      alert('Failed to fetch Meta Ads ad accounts. Please try again.');
+    } finally {
+      setLoadingMetaAdsAdAccounts(false);
+    }
+  };
+
+  // Set primary Meta Ads ad account
+  const setPrimaryMetaAdsAdAccountHandler = async (adAccountId, name, accountId, currency) => {
+    try {
+      const response = await fetch('/api/connections/meta-ads/primary-ad-account', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ adAccountId, name, accountId, currency })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setPrimaryMetaAdsAdAccount(data.primaryAdAccount);
+        setShowMetaAdsAdAccountSelector(false);
+        setSuccessMessage('Primary ad account updated successfully!');
+        setTimeout(() => {
+          fetchConnections();
+          setSuccessMessage('');
+        }, 3000);
+      } else {
+        alert(data.error || 'Failed to set primary ad account');
+      }
+    } catch (err) {
+      alert('Failed to set primary ad account. Please try again.');
     }
   };
 
@@ -1417,14 +1485,43 @@ MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwd...
                           <p className="metadata-value">{connection.metadata.email}</p>
                         </div>
                       )}
+                      {/* Primary Ad Account */}
                       {connection.metadata.ad_accounts && connection.metadata.ad_accounts.length > 0 && (
                         <div className="metadata-item">
-                          <p className="metadata-label">Ad Accounts:</p>
+                          <p className="metadata-label">Primary Ad Account:</p>
+                          {primaryMetaAdsAdAccount ? (
+                            <span>
+                              {primaryMetaAdsAdAccount.name}
+                              {primaryMetaAdsAdAccount.currency && ` (${primaryMetaAdsAdAccount.currency})`}
+                              <button
+                                className="change-repo-button"
+                                onClick={fetchMetaAdsAdAccounts}
+                                disabled={loadingMetaAdsAdAccounts}
+                              >
+                                {loadingMetaAdsAdAccounts ? 'Loading...' : 'Change'}
+                              </button>
+                              {primaryMetaAdsAdAccount.account_id && (
+                                <small style={{ display: 'block', marginTop: '4px', opacity: 0.8 }}>
+                                  Account ID: {primaryMetaAdsAdAccount.account_id}
+                                </small>
+                              )}
+                            </span>
+                          ) : (
+                            <button
+                              className="set-repo-button"
+                              onClick={fetchMetaAdsAdAccounts}
+                              disabled={loadingMetaAdsAdAccounts}
+                            >
+                              {loadingMetaAdsAdAccounts ? 'Loading...' : 'Select Ad Account'}
+                            </button>
+                          )}
+                        </div>
+                      )}
+                      {connection.metadata.ad_accounts && connection.metadata.ad_accounts.length > 0 && (
+                        <div className="metadata-item">
+                          <p className="metadata-label">Total Ad Accounts:</p>
                           <p className="metadata-value">
                             {connection.metadata.ad_accounts.length} account{connection.metadata.ad_accounts.length !== 1 ? 's' : ''}
-                            {connection.metadata.ad_accounts.length > 0 && connection.metadata.ad_accounts[0].name && (
-                              <span> ({connection.metadata.ad_accounts[0].name}{connection.metadata.ad_accounts.length > 1 ? `, +${connection.metadata.ad_accounts.length - 1} more` : ''})</span>
-                            )}
                           </p>
                         </div>
                       )}
@@ -1467,6 +1564,42 @@ MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwd...
                         </p>
                       </div>
                     </div>
+                  </div>
+                )}
+
+                {/* Meta Ads Ad Account Selector Modal */}
+                {connection.service_name === 'meta-ads' && showMetaAdsAdAccountSelector && (
+                  <div className="repo-selector-modal">
+                    <div className="modal-header">
+                      <h4>Select Primary Ad Account</h4>
+                      <button
+                        className="modal-close"
+                        onClick={() => setShowMetaAdsAdAccountSelector(false)}
+                      >×</button>
+                    </div>
+                    {loadingMetaAdsAdAccounts ? (
+                      <div className="modal-loading">Loading ad accounts...</div>
+                    ) : (
+                      availableMetaAdsAdAccounts.map((account) => (
+                        <div
+                          key={account.id}
+                          className="repo-item"
+                          onClick={() => setPrimaryMetaAdsAdAccountHandler(account.id, account.name, account.account_id, account.currency)}
+                        >
+                          <div className="repo-info">
+                            <strong>{account.name || 'Unknown Account'}</strong>
+                            <p>
+                              {account.account_id && `Account ID: ${account.account_id}`}
+                              {account.currency && ` • Currency: ${account.currency}`}
+                              {account.account_status && ` • Status: ${account.account_status}`}
+                            </p>
+                            {account.timezone_name && (
+                              <small>Timezone: {account.timezone_name}</small>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
                 )}
 

@@ -261,6 +261,8 @@ app.use('/api/auth/instagram', instagramOAuthRoutes);
 // Pass middleware functions to the router so it can apply them conditionally
 const metaAdsOAuthRoutes = require('./routes/meta-ads-oauth')(authenticateTokenFromQuery, authenticateToken);
 app.use('/api/auth/meta-ads', metaAdsOAuthRoutes);
+// Also mount at /api/connections/meta-ads for account management (ad account selection)
+app.use('/api/connections/meta-ads', metaAdsOAuthRoutes);
 
 // Sentry OAuth Routes
 // Pass middleware functions to the router so it can apply them conditionally

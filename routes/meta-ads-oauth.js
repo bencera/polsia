@@ -10,6 +10,7 @@ const { encryptToken, decryptToken } = require('../utils/encryption');
 const {
   storeMetaAdsConnection,
   getMetaAdsToken,
+  getMetaAdsConnection,
   deleteMetaAdsConnection,
   updateMetaAdsTokens
 } = require('../db');
@@ -424,6 +425,110 @@ module.exports = (authenticateTokenFromQuery, authenticateToken) => {
       res.status(500).json({
         success: false,
         error: 'Failed to refresh token. Please reconnect your Meta Ads account.'
+      });
+    }
+  });
+
+  /**
+   * GET /api/connections/meta-ads/ad-accounts
+   * Get list of ad accounts for the connected Meta Ads user
+   * Authentication: Required (via Authorization header)
+   */
+  router.get('/ad-accounts', authenticateToken, async (req, res) => {
+    try {
+      console.log(`[Meta Ads OAuth] Fetching ad accounts for user ${req.user.id}`);
+
+      // Get connection
+      const connection = await getMetaAdsConnection(req.user.id);
+
+      if (!connection) {
+        return res.status(404).json({
+          success: false,
+          error: 'No Meta Ads connection found'
+        });
+      }
+
+      // Extract ad accounts from metadata
+      const adAccounts = connection.metadata?.ad_accounts || [];
+
+      console.log(`[Meta Ads OAuth] Returning ${adAccounts.length} ad accounts for user ${req.user.id}`);
+
+      res.json({
+        success: true,
+        adAccounts: adAccounts
+      });
+
+    } catch (error) {
+      console.error('[Meta Ads OAuth] Error fetching ad accounts:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch ad accounts'
+      });
+    }
+  });
+
+  /**
+   * POST /api/connections/meta-ads/primary-ad-account
+   * Set primary ad account for Meta Ads connection
+   * Authentication: Required (via Authorization header)
+   * Body: { adAccountId, name, accountId, currency }
+   */
+  router.post('/primary-ad-account', authenticateToken, async (req, res) => {
+    try {
+      const { adAccountId, name, accountId, currency } = req.body;
+
+      if (!adAccountId || !name) {
+        return res.status(400).json({
+          success: false,
+          error: 'Ad account ID and name are required'
+        });
+      }
+
+      console.log(`[Meta Ads OAuth] Setting primary ad account for user ${req.user.id}: ${name}`);
+
+      // Get connection
+      const connection = await getMetaAdsConnection(req.user.id);
+
+      if (!connection) {
+        return res.status(404).json({
+          success: false,
+          error: 'No Meta Ads connection found'
+        });
+      }
+
+      // Update connection metadata with primary ad account
+      const updatedMetadata = {
+        ...connection.metadata,
+        primary_ad_account: {
+          id: adAccountId,
+          name: name,
+          account_id: accountId,
+          currency: currency
+        }
+      };
+
+      // Update in database
+      const { updateServiceConnectionMetadata } = require('../db');
+      await updateServiceConnectionMetadata(req.user.id, 'meta-ads', updatedMetadata);
+
+      console.log(`[Meta Ads OAuth] Primary ad account set successfully for user ${req.user.id}`);
+
+      res.json({
+        success: true,
+        message: 'Primary ad account set successfully',
+        primaryAdAccount: {
+          id: adAccountId,
+          name: name,
+          accountId: accountId,
+          currency: currency
+        }
+      });
+
+    } catch (error) {
+      console.error('[Meta Ads OAuth] Error setting primary ad account:', error);
+      res.status(500).json({
+        success: false,
+        error: `Failed to set primary ad account: ${error.message}`
       });
     }
   });

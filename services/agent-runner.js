@@ -17,7 +17,7 @@ const {
     getExecutionLogs,
     getServiceConnectionByName,
 } = require('../db');
-const { getGitHubToken, getGmailToken, getSentryToken, getAppStoreConnectConnection, getRenderApiKey, getRenderConnection } = require('../db');
+const { getGitHubToken, getGmailToken, getSentryToken, getAppStoreConnectConnection, getMetaAdsConnection, getRenderApiKey, getRenderConnection } = require('../db');
 const { decryptToken } = require('../utils/encryption');
 const { generateTaskSummary } = require('./summary-generator');
 const { summarizeRecentEmails } = require('./email-summarizer');
@@ -502,6 +502,37 @@ async function configureMCPServers(module, userId, config) {
                 console.log('[Agent Runner] Configured custom App Store Connect MCP server (JWT authentication)');
             } else {
                 console.warn('[Agent Runner] App Store Connect MCP requested but user has no App Store Connect connection');
+            }
+        } else if (mcpName === 'meta_ads') {
+            // Custom Meta Ads MCP server - uses OAuth access token
+            // Built in-house for Meta Marketing API integration
+            const connection = await getMetaAdsConnection(userId);
+            if (connection) {
+                const accessToken = decryptToken({
+                    encrypted: connection.metadata.encrypted_token,
+                    iv: connection.metadata.token_iv,
+                    authTag: connection.metadata.token_auth_tag
+                });
+
+                // Get primary ad account ID (required for API calls)
+                const primaryAdAccount = connection.metadata.primary_ad_account;
+                if (!primaryAdAccount) {
+                    console.warn('[Agent Runner] Meta Ads MCP requested but no primary ad account selected. Please select a primary ad account in Connections.');
+                } else {
+                    const adAccountId = primaryAdAccount.id;
+                    const serverPath = require('path').join(__dirname, 'meta-ads-custom-mcp-server.js');
+                    mcpServers.meta_ads = {
+                        command: 'node',
+                        args: [
+                            serverPath,
+                            `--access-token=${accessToken}`,
+                            `--ad-account-id=${adAccountId}`
+                        ],
+                    };
+                    console.log(`[Agent Runner] Configured custom Meta Ads MCP server (ad account: ${primaryAdAccount.name})`);
+                }
+            } else {
+                console.warn('[Agent Runner] Meta Ads MCP requested but user has no Meta Ads connection');
             }
         } else if (mcpName === 'render') {
             // Render MCP - Official HTTP-based MCP server by Render
