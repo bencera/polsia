@@ -27,6 +27,10 @@ function Navbar() {
     navigate('/documents');
   };
 
+  const handleHome = () => {
+    navigate('/dashboard');
+  };
+
   return (
     <nav className="navbar">
       <Link to="/dashboard" className="navbar-brand">
@@ -34,6 +38,9 @@ function Navbar() {
       </Link>
       <div className="navbar-actions">
         <span className="user-info">{user?.email}</span>
+        <button onClick={handleHome} className="nav-button">
+          Home
+        </button>
         <button onClick={handleBrain} className="nav-button">
           Brain
         </button>

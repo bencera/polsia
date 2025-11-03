@@ -6,6 +6,10 @@
 
 const axios = require('axios');
 const { AppStoreConnectJWT } = require('./appstore-connect-jwt');
+const {
+    storeAppStoreAnalyticsRequest,
+    getAppStoreAnalyticsRequest
+} = require('../db');
 
 /**
  * App Store Connect API Client
@@ -299,15 +303,41 @@ class AppStoreConnectClient {
 
     /**
      * Get app analytics/metrics
+     * NOTE: App Store Connect API v1 does NOT provide download/session/active user data via REST.
+     * Those metrics require async Analytics Reports (create request, wait, download CSV).
+     * This method returns available metadata instead.
      * @param {string} appId - App ID
      * @param {Object} options - Query options
-     * @returns {Promise<Object>} Analytics data
+     * @returns {Promise<Object>} Available app data (not full analytics)
      */
     async getAppMetrics(appId, options = {}) {
-        const response = await this.client.get(`/apps/${appId}/perfPowerMetrics`, {
-            params: options
+        // Get app info with relationships
+        const appResponse = await this.client.get(`/apps/${appId}`, {
+            params: {
+                include: 'appStoreVersions',
+                'fields[appStoreVersions]': 'versionString,createdDate,appStoreState,releaseType'
+            }
         });
-        return response.data.data;
+
+        const app = appResponse.data.data;
+        const versions = appResponse.data.included || [];
+
+        return {
+            limitation: 'App Store Connect API v1 does not provide downloads, active users, or session data via REST endpoints. These metrics require the async Analytics Reports API (create report request, wait for processing, download CSV). Consider using App Store Connect web interface for full analytics.',
+            available_data: {
+                app_name: app.attributes?.name,
+                bundle_id: app.attributes?.bundleId,
+                sku: app.attributes?.sku,
+                primary_locale: app.attributes?.primaryLocale,
+                version_count: versions.length,
+                latest_versions: versions.slice(0, 5).map(v => ({
+                    version: v.attributes?.versionString,
+                    created: v.attributes?.createdDate,
+                    state: v.attributes?.appStoreState
+                }))
+            },
+            recommendation: 'Use list_customer_reviews to get ratings and user feedback, which provides insight into app reception and quality.'
+        };
     }
 
     /**
@@ -324,6 +354,206 @@ class AppStoreConnectClient {
 
         const response = await this.client.get(`/apps/${appId}/customerReviews`, { params });
         return response.data.data;
+    }
+
+    /**
+     * Create an analytics report request
+     * Sets up ONGOING analytics report delivery from Apple
+     * @param {string} appId - The app ID to create report for
+     * @param {Object} options - Report request options
+     * @param {string} options.accessType - Always 'ONGOING' (Apple sends reports continuously)
+     * @returns {Promise<Object>} Created report request with ID
+     */
+    async createAnalyticsReportRequest(appId, options = {}) {
+        const {
+            accessType = 'ONGOING',
+        } = options;
+
+        const response = await this.client.post('/analyticsReportRequests', {
+            data: {
+                type: 'analyticsReportRequests',
+                attributes: {
+                    accessType
+                },
+                relationships: {
+                    app: {
+                        data: {
+                            type: 'apps',
+                            id: appId
+                        }
+                    }
+                }
+            }
+        });
+
+        return response.data.data;
+    }
+
+    /**
+     * Get analytics report request status
+     * Check if report is ready for download
+     * @param {string} requestId - Report request ID
+     * @returns {Promise<Object>} Report request with status and download URL (if ready)
+     */
+    async getAnalyticsReportRequest(requestId) {
+        const response = await this.client.get(`/analyticsReportRequests/${requestId}`, {
+            params: {
+                include: 'reports'
+            }
+        });
+
+        const request = response.data.data;
+        const reports = response.data.included || [];
+
+        return {
+            id: request.id,
+            status: request.attributes?.stoppedDueToInactivity ? 'stopped' : 'processing',
+            accessType: request.attributes?.accessType,
+            reportType: request.attributes?.reportType,
+            reportSubType: request.attributes?.reportSubType,
+            frequency: request.attributes?.frequency,
+            reports: reports.map(r => ({
+                id: r.id,
+                name: r.attributes?.name,
+                category: r.attributes?.category,
+                instanceCount: r.attributes?.instanceCount
+            }))
+        };
+    }
+
+    /**
+     * Get analytics report instances (generated reports ready for download)
+     * @param {string} reportId - Report ID from getAnalyticsReportRequest
+     * @returns {Promise<Array>} Array of report instances with segments containing download URLs
+     */
+    async getAnalyticsReportInstances(reportId) {
+        // Get instances (without include parameter - not supported by API)
+        const response = await this.client.get(`/analyticsReports/${reportId}/instances`, {
+            params: {
+                limit: 100
+            }
+        });
+
+        const instances = response.data.data || [];
+
+        // For each instance, fetch its segments if relationship link exists
+        const instancesWithSegments = await Promise.all(
+            instances.map(async (instance) => {
+                const segmentsLink = instance.relationships?.segments?.links?.related;
+                let segments = [];
+
+                if (segmentsLink) {
+                    try {
+                        // Fetch segments for this instance
+                        const segmentsResponse = await this.client.get(segmentsLink);
+                        segments = (segmentsResponse.data.data || []).map(seg => ({
+                            id: seg.id,
+                            checksum: seg.attributes?.checksum,
+                            sizeInBytes: seg.attributes?.sizeInBytes,
+                            url: seg.attributes?.url, // Download URL for CSV.gz file
+                        }));
+                    } catch (err) {
+                        console.log(`[App Store Connect] Failed to fetch segments for instance ${instance.id}:`, err.message);
+                    }
+                }
+
+                return {
+                    id: instance.id,
+                    granularity: instance.attributes?.granularity,
+                    processingDate: instance.attributes?.processingDate,
+                    segments
+                };
+            })
+        );
+
+        return instancesWithSegments;
+    }
+
+    /**
+     * Download and parse analytics report CSV
+     * Downloads the CSV.gz file from Apple and returns parsed data
+     * @param {string} downloadUrl - URL from segment.url
+     * @returns {Promise<Object>} Parsed CSV data with metrics
+     */
+    async downloadAndParseAnalyticsReport(downloadUrl) {
+        const axios = require('axios');
+        const zlib = require('zlib');
+        const { promisify } = require('util');
+        const gunzip = promisify(zlib.gunzip);
+
+        // Download the .gz file
+        const response = await axios.get(downloadUrl, {
+            responseType: 'arraybuffer',
+            headers: {
+                'Authorization': `Bearer ${this.jwtGenerator.getToken()}`
+            }
+        });
+
+        // Decompress gzip
+        const decompressed = await gunzip(response.data);
+        const csvContent = decompressed.toString('utf-8');
+
+        // Parse CSV (simple parser - could use csv-parse library for production)
+        const lines = csvContent.trim().split('\n');
+        const headers = lines[0].split('\t'); // TSV format
+        const rows = lines.slice(1).map(line => {
+            const values = line.split('\t');
+            const row = {};
+            headers.forEach((header, i) => {
+                row[header] = values[i];
+            });
+            return row;
+        });
+
+        return {
+            headers,
+            rowCount: rows.length,
+            data: rows,
+            summary: this._summarizeAnalyticsData(rows)
+        };
+    }
+
+    /**
+     * Summarize analytics data from CSV rows
+     * @private
+     */
+    _summarizeAnalyticsData(rows) {
+        // Extract key metrics from CSV data
+        // Format varies by report type (SALES, SUBSCRIBERS, etc.)
+
+        const summary = {
+            totalRows: rows.length,
+            dateRange: {
+                start: rows[0]?.Date || rows[0]?.date,
+                end: rows[rows.length - 1]?.Date || rows[rows.length - 1]?.date
+            },
+            metrics: {}
+        };
+
+        // Sum up key metrics if available
+        const numericFields = ['Units', 'Downloads', 'Sessions', 'Active Devices', 'Installations', 'Revenue'];
+
+        numericFields.forEach(field => {
+            const total = rows.reduce((sum, row) => {
+                const value = parseFloat(row[field]) || 0;
+                return sum + value;
+            }, 0);
+
+            if (total > 0) {
+                summary.metrics[field] = total;
+            }
+        });
+
+        return summary;
+    }
+
+    /**
+     * Delete an analytics report request
+     * @param {string} requestId - Report request ID
+     * @returns {Promise<void>}
+     */
+    async deleteAnalyticsReportRequest(requestId) {
+        await this.client.delete(`/analyticsReportRequests/${requestId}`);
     }
 
     /**

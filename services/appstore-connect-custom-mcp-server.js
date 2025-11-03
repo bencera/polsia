@@ -256,7 +256,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             // ========== ANALYTICS & REVIEWS ==========
             {
                 name: 'get_app_analytics',
-                description: 'Get analytics metrics for an app (downloads, sessions, crashes, etc.)',
+                description: 'Get available app data. NOTE: App Store Connect API v1 does NOT provide downloads/sessions/active users via REST. Returns app metadata and version history instead. Use list_customer_reviews for user feedback and ratings.',
                 inputSchema: {
                     type: 'object',
                     properties: {
@@ -308,6 +308,62 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
                         }
                     },
                     required: ['reviewId', 'responseText']
+                }
+            },
+            {
+                name: 'create_analytics_report_request',
+                description: 'Enable ONGOING analytics report delivery from Apple. Sets up continuous report generation that Apple will provide through App Store Connect. Once enabled, reports are available in App Store Connect web interface.',
+                inputSchema: {
+                    type: 'object',
+                    properties: {
+                        appId: {
+                            type: 'string',
+                            description: 'The app ID to enable analytics reports for'
+                        }
+                    },
+                    required: ['appId']
+                }
+            },
+            {
+                name: 'get_analytics_report_status',
+                description: 'Check status of an analytics report request. Returns list of available reports (with report IDs).',
+                inputSchema: {
+                    type: 'object',
+                    properties: {
+                        requestId: {
+                            type: 'string',
+                            description: 'The analytics report request ID from create_analytics_report_request'
+                        }
+                    },
+                    required: ['requestId']
+                }
+            },
+            {
+                name: 'get_analytics_report_instances',
+                description: 'Get generated report instances (ready for download). Returns CSV download URLs for reports that Apple has finished generating.',
+                inputSchema: {
+                    type: 'object',
+                    properties: {
+                        reportId: {
+                            type: 'string',
+                            description: 'The report ID from get_analytics_report_status (e.g., r39-xxx)'
+                        }
+                    },
+                    required: ['reportId']
+                }
+            },
+            {
+                name: 'download_analytics_report',
+                description: 'Download and parse an analytics report CSV. Returns metrics like downloads, revenue, sessions, active users.',
+                inputSchema: {
+                    type: 'object',
+                    properties: {
+                        downloadUrl: {
+                            type: 'string',
+                            description: 'The download URL from get_analytics_report_instances segment.url'
+                        }
+                    },
+                    required: ['downloadUrl']
                 }
             },
 
@@ -520,6 +576,67 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                     content: [{
                         type: 'text',
                         text: JSON.stringify(response, null, 2)
+                    }]
+                };
+            }
+
+            case 'create_analytics_report_request': {
+                const request = await appStoreClient.createAnalyticsReportRequest(args.appId);
+                return {
+                    content: [{
+                        type: 'text',
+                        text: JSON.stringify({
+                            success: true,
+                            message: 'Analytics report delivery enabled! Apple will now generate ONGOING analytics reports for this app. Reports will be available in App Store Connect web interface (App Analytics section). This enables Apple to continuously generate and store analytics data.',
+                            requestId: request.id,
+                            accessType: request.attributes?.accessType,
+                            appId: args.appId,
+                            note: 'Check App Store Connect > App Analytics to view generated reports'
+                        }, null, 2)
+                    }]
+                };
+            }
+
+            case 'get_analytics_report_status': {
+                const status = await appStoreClient.getAnalyticsReportRequest(args.requestId);
+                return {
+                    content: [{
+                        type: 'text',
+                        text: JSON.stringify(status, null, 2)
+                    }]
+                };
+            }
+
+            case 'get_analytics_report_instances': {
+                const instances = await appStoreClient.getAnalyticsReportInstances(args.reportId);
+                return {
+                    content: [{
+                        type: 'text',
+                        text: JSON.stringify({
+                            reportId: args.reportId,
+                            instanceCount: instances.length,
+                            instances: instances,
+                            note: instances.length === 0
+                                ? 'No instances available yet. Apple is still processing reports (typically 24-48 hours after enabling).'
+                                : `Found ${instances.length} report instance(s). Use download_analytics_report with segment URLs to get actual data.`
+                        }, null, 2)
+                    }]
+                };
+            }
+
+            case 'download_analytics_report': {
+                const parsed = await appStoreClient.downloadAndParseAnalyticsReport(args.downloadUrl);
+                return {
+                    content: [{
+                        type: 'text',
+                        text: JSON.stringify({
+                            success: true,
+                            summary: parsed.summary,
+                            headers: parsed.headers,
+                            rowCount: parsed.rowCount,
+                            sampleData: parsed.data.slice(0, 5), // First 5 rows as sample
+                            note: `Successfully parsed ${parsed.rowCount} rows of analytics data. Summary contains aggregated metrics.`
+                        }, null, 2)
                     }]
                 };
             }

@@ -196,6 +196,30 @@ async function runModule(moduleId, userId, options = {}) {
 
         console.log(`[Agent Runner] ✅ Module execution completed: ${moduleId}`);
 
+        // 7.5. Auto-store analytics request ID if this is the Enable module
+        if (result.success && module.name === 'Enable App Store Analytics Reports') {
+            try {
+                const { storeAppStoreAnalyticsRequest } = require('../db');
+
+                // Parse the output for ANALYTICS_REQUEST_ID and ANALYTICS_APP_ID
+                const outputText = result.output || '';
+                const requestIdMatch = outputText.match(/ANALYTICS_REQUEST_ID:\s*([a-f0-9-]+)/i);
+                const appIdMatch = outputText.match(/ANALYTICS_APP_ID:\s*([a-f0-9-]+)/i);
+
+                if (requestIdMatch && appIdMatch) {
+                    const requestId = requestIdMatch[1];
+                    const appId = appIdMatch[1];
+
+                    await storeAppStoreAnalyticsRequest(userId, requestId, appId);
+                    console.log(`[Agent Runner] ✓ Auto-stored analytics request ID: ${requestId}`);
+                } else {
+                    console.log('[Agent Runner] ⚠️  Enable module completed but could not find ANALYTICS_REQUEST_ID in output');
+                }
+            } catch (err) {
+                console.error('[Agent Runner] Failed to auto-store analytics request ID:', err);
+            }
+        }
+
         // 8. Create task summary for the feed if successful
         if (result.success) {
             try {
@@ -287,8 +311,8 @@ async function runModule(moduleId, userId, options = {}) {
 async function prepareModuleContext(module, userId) {
     const config = module.config || {};
 
-    // 1. Build the system prompt
-    const prompt = buildModulePrompt(module, config);
+    // 1. Build the system prompt (now async to support context injection)
+    const prompt = await buildModulePrompt(module, config, userId);
 
     // 2. Configure MCP servers based on module requirements
     const mcpServers = await configureMCPServers(module, userId, config);
@@ -307,15 +331,61 @@ async function prepareModuleContext(module, userId) {
  * Build the prompt for the module
  * @param {Object} module - Module configuration
  * @param {Object} config - Module config JSON
- * @returns {string} System prompt
+ * @param {number} userId - User ID (for context injection)
+ * @returns {Promise<string>} System prompt
  */
-function buildModulePrompt(module, config) {
+async function buildModulePrompt(module, config, userId) {
     const goal = config.goal || `You are ${module.name}. ${module.description}`;
     const inputs = config.inputs || {};
     const mcpMounts = config.mcpMounts || [];
 
+    // Inject stored analytics request ID for Fetch module
+    let additionalContext = '';
+    if (module.name === 'Fetch App Store Analytics Data') {
+        const { getAppStoreAnalyticsRequest } = require('../db');
+        try {
+            const storedRequest = await getAppStoreAnalyticsRequest(userId);
+            if (storedRequest) {
+                additionalContext = `
+
+## IMPORTANT: Stored Analytics Request
+
+You have access to a previously created analytics request:
+- **Request ID:** ${storedRequest.requestId}
+- **App ID:** ${storedRequest.appId}
+- **Enabled At:** ${storedRequest.enabledAt}
+
+**Use this request ID** to check for report instances instead of trying to discover it.
+
+WORKFLOW:
+1. Use \`get_analytics_report_status\` with requestId="${storedRequest.requestId}"
+2. This returns a list of report IDs (e.g., r39-xxx, r154-xxx)
+3. For each report ID, use \`get_analytics_report_instances\` to check for CSV files
+4. Download the LATEST instance only (sort by processingDate)
+5. Parse and integrate the data
+
+If no instances are available yet (empty array), create a status update noting that Apple is still processing (typical 24-48 hours after enabling).`;
+            } else {
+                additionalContext = `
+
+## NOTE: No Stored Analytics Request Found
+
+The "Enable App Store Analytics Reports" module may not have been run yet, or the request ID wasn't stored.
+
+You can try to discover the request ID by:
+1. Using \`list_apps\` to find your app ID
+2. Attempting various report IDs (but this may not work without the request ID)
+
+Or wait for the Enable module to be run first.`;
+            }
+        } catch (err) {
+            console.error('[Agent Runner] Failed to get stored analytics request:', err);
+        }
+    }
+
     let prompt = `
 ${goal}
+${additionalContext}
 
 Context:
 ${JSON.stringify(inputs, null, 2)}
@@ -1421,7 +1491,7 @@ async function runAppStoreAnalyticsModule(module, userId, executionRecord, start
             throw new Error('App Store Connect not connected. Please connect your App Store Connect account first.');
         }
 
-        const primaryApp = connection.metadata?.primary_app;
+        const primaryApp = connection.primary_app;
         if (!primaryApp) {
             throw new Error('No primary app configured. Please set a primary app in Connections.');
         }
@@ -1465,136 +1535,63 @@ async function runAppStoreAnalyticsModule(module, userId, executionRecord, start
         // Build autonomous analytics prompt
         const analyticsPrompt = `You are an App Store analytics integrator for "${primaryApp.name}".
 
-## Your Mission
+## IMPORTANT: API Limitations
 
-Fetch App Store Connect analytics and ${existingAnalytics ? 'integrate them into the existing analytics report' : 'create a comprehensive analytics report'}.
+App Store Connect API v1 does NOT provide downloads, active users, or session data via REST endpoints.
+These metrics require the complex async Analytics Reports workflow (not implemented yet).
 
-## Available Tools
+## What IS Available
 
-**App Store Connect MCP:**
-- \`list_apps\` - List your apps (to confirm the app exists)
-- \`get_app_analytics\` - Fetch performance metrics (downloads, sessions, crashes, etc.)
-- \`list_customer_reviews\` - Get recent customer reviews for sentiment analysis
-- \`get_app_details\` - Get app metadata and current version info
+- App metadata (name, version, bundle ID, release history)
+- Customer reviews and ratings (★ ratings, review text, sentiment)
+- App Store versions and states
 
-## Your Process
+## Your Task
 
-**Step 1: Fetch App Store Metrics**
-- Use \`get_app_details\` with appId="${primaryApp.id}" to get current app info
-- Use \`get_app_analytics\` with appId="${primaryApp.id}" to fetch:
-  - Downloads and active devices
-  - Sessions and session duration
-  - Crashes and crash-free rate
-  - User engagement metrics
-- Use \`list_customer_reviews\` with appId="${primaryApp.id}" to analyze:
-  - Recent ratings and reviews
-  - Sentiment trends
-  - Common feedback themes
+1. Fetch available App Store data:
+   - \`list_apps\` - Confirm app exists
+   - \`get_app_analytics\` with appId="${primaryApp.id}" - Get app metadata and version history (NOT downloads/sessions)
+   - \`list_customer_reviews\` with appId="${primaryApp.id}" and limit=100 - Get ratings and user feedback
 
-**Step 2: ${existingAnalytics ? 'Read Existing Analytics' : 'Structure Your Report'}**
-${existingAnalytics ? `- Use the Read tool to read \`existing-analytics.md\` in your workspace
-- Understand the existing report structure
-- Note what data is already present (Render metrics, database analytics, etc.)` : `- Create a new comprehensive analytics report structure`}
+${existingAnalytics ? `2. Read existing analytics:
+   - Use \`Read\` to read \`existing-analytics.md\`
 
-**Step 3: ${existingAnalytics ? 'Integrate App Store Data' : 'Create Report'}**
-${existingAnalytics ? `Update the existing report by:
-1. **Executive Summary** - Add App Store highlights (downloads, ratings, key trends)
-2. **App Store Performance** - Add a new section right after Executive Summary with:
-   - App metadata (name, version, bundle ID)
-   - Downloads and active devices
-   - User engagement (sessions, retention)
-   - App Store ratings and reviews
-   - Technical health (crashes, performance)
-   - Recent review sentiment analysis
-3. Keep all existing sections intact (database metrics, Render analytics, etc.)
-4. Ensure the new data flows naturally with existing content` : `Create a new report with:
-1. Main header with app name and timestamp
-2. Executive Summary (key findings from App Store data)
-3. App Store Performance section (detailed metrics)
-4. Trends & Insights
-5. Recommendations`}
+3. IMMEDIATELY write updated report to \`analytics-report.md\`:
+   - Copy entire existing content
+   - Update Executive Summary to mention App Store presence
+   - Add "## App Store Performance" section with:
+     - App version history
+     - ⭐ Star rating and review count
+     - Review sentiment analysis (positive/negative themes)
+     - Recent user feedback highlights
+   - Be honest that downloads/sessions aren't available via API` : `2. Write new report to \`analytics-report.md\`:
+   - Executive Summary
+   - App Store Performance section
+   - Focus on ratings, reviews, and version history`}
 
-**Step 4: Write the Final Report**
-- Write your ${existingAnalytics ? 'updated' : 'new'} report to \`analytics-report.md\`
-- Use professional markdown formatting
-- Include specific numbers, dates, percentages
-- Highlight important trends with emojis: 📈 (growing), 📉 (declining), ⭐ (rating)
-
-## Report Structure
-
-${existingAnalytics ? `**IMPORTANT:** Preserve the existing structure and add App Store data. Your output should include:
-
-# [Existing Title]
-**Generated:** [Update timestamp]
-${existingAnalytics.includes('Analysis Period') ? '**Analysis Period:** [Update if needed]' : ''}
-
-## Executive Summary
-[Existing summary + App Store highlights]
-- **App Store:** [Key App Store metrics - downloads, rating, recent trends]
-- [Keep existing Render/database highlights]
+**Format Example:**
 
 ## App Store Performance
-**App:** ${primaryApp.name} (${primaryApp.bundle_id || 'Bundle ID unknown'})
-**Version:** [current version]
-**Last Updated:** [last update date]
+**App:** ${primaryApp.name}
+**Bundle ID:** ${primaryApp.bundle_id || 'N/A'}
+**Latest Version:** [from get_app_analytics version history]
 
-### Downloads & Engagement
-- Total Downloads: [number] ([trend] vs last period)
-- Active Devices: [number]
-- Daily Active Users: [number]
-- Sessions: [count] | Avg Duration: [X min]
+### User Reception
+- **App Store Rating:** [X.X] ⭐ (based on [N] reviews)
+- **Recent Reviews:** [Positive: X% | Negative: X%]
+- **Common Feedback:**
+  - Positive: [themes from 5-star reviews]
+  - Negative: [themes from 1-2 star reviews]
 
-### App Store Presence
-- Current Rating: [X.X] ⭐ ([total ratings])
-- Recent Reviews: [Positive: X | Negative: X | Neutral: X]
-- Review Highlights: [key themes from reviews]
+### Version History
+- [List recent versions with release dates]
 
-### Technical Health
-- Crash-Free Rate: [XX%]
-- Average Crash Rate: [X%]
-- Launch Time: [Xms]
+### API Limitation Note
+Downloads, active users, and session metrics are not available via App Store Connect REST API v1.
+These require the async Analytics Reports workflow. Use App Store Connect web interface for full analytics.
 
-[Keep all existing sections below - database metrics, Render analytics, etc.]` : `# ${primaryApp.name} App Store Analytics
-**Generated:** [current timestamp]
-**Analysis Period:** [date range of data]
+**DO IT NOW - fetch the 3 tools, then write the file immediately.**`;
 
-## Executive Summary
-[3-5 key findings from App Store data]
-
-## App Store Performance
-[Detailed metrics as shown above]
-
-## Trends & Insights
-[Analysis of what's working and what needs attention]
-
-## Recommendations
-[Actionable items based on the data]`}
-
-## Requirements
-
-- **Be specific**: Include exact numbers, dates, percentages
-- **Be insightful**: Identify trends and anomalies
-- **Be actionable**: Provide clear recommendations
-${existingAnalytics ? '- **Preserve existing data**: Keep all current metrics and sections' : ''}
-- **Focus on App Store**: This module is about iOS app performance
-
-## Output
-
-**CRITICAL:** Write your ${existingAnalytics ? 'updated' : 'final'} report to \`analytics-report.md\` using the Write tool.
-
-${existingAnalytics ? `The file should contain:
-1. The original content (Render metrics, database analytics, etc.)
-2. Your new App Store section integrated naturally
-3. Updated Executive Summary with App Store highlights
-
-DO NOT lose any existing data - only add to it!` : ''}
-
-IMPORTANT:
-- Write the report file NOW after gathering all metrics
-- Use markdown formatting
-- Include specific data points from App Store Connect
-- ${existingAnalytics ? 'Merge seamlessly with existing content' : 'Create a comprehensive standalone report'}
-- The report file will be automatically saved to the document store`;
 
         // Log analysis start
         await saveExecutionLog(executionRecord.id, {
@@ -1691,10 +1688,10 @@ IMPORTANT:
         });
 
         // Create task summary
-        await createTaskSummary({
-            user_id: userId,
+        await createTaskSummary(userId, {
             title: `App Store Analytics: ${primaryApp.name}`,
-            summary: summaryDescription,
+            description: summaryDescription,
+            status: 'completed',
             execution_id: executionRecord.id,
             module_id: module.id,
             cost_usd: cost,

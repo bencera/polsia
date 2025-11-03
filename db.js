@@ -1892,6 +1892,76 @@ async function updateAppStoreConnectConnection(userId, connectionData, encrypted
     }
 }
 
+// Store analytics request ID in App Store Connect metadata
+async function storeAppStoreAnalyticsRequest(userId, requestId, appId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            'SELECT id, metadata FROM service_connections WHERE user_id = $1 AND service_name = $2',
+            [userId, 'appstore_connect']
+        );
+
+        if (result.rows.length === 0) {
+            throw new Error('App Store Connect connection not found');
+        }
+
+        const connectionId = result.rows[0].id;
+        const existingMetadata = result.rows[0].metadata || {};
+
+        // Add analytics request data to metadata
+        const updatedMetadata = {
+            ...existingMetadata,
+            analytics_request_id: requestId,
+            analytics_app_id: appId,
+            analytics_enabled_at: new Date().toISOString()
+        };
+
+        await client.query(
+            'UPDATE service_connections SET metadata = $1 WHERE id = $2',
+            [updatedMetadata, connectionId]
+        );
+
+        return true;
+    } catch (err) {
+        console.error('Error storing analytics request ID:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Get stored analytics request ID for App Store Connect
+async function getAppStoreAnalyticsRequest(userId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            'SELECT metadata FROM service_connections WHERE user_id = $1 AND service_name = $2 AND status = $3',
+            [userId, 'appstore_connect', 'connected']
+        );
+
+        if (result.rows.length === 0) {
+            return null;
+        }
+
+        const metadata = result.rows[0].metadata;
+
+        if (!metadata.analytics_request_id) {
+            return null;
+        }
+
+        return {
+            requestId: metadata.analytics_request_id,
+            appId: metadata.analytics_app_id,
+            enabledAt: metadata.analytics_enabled_at
+        };
+    } catch (err) {
+        console.error('Error getting analytics request ID:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
 /**
  * AI Generation Functions
  * Functions for managing AI-generated content (images, videos, etc.)
@@ -2374,6 +2444,8 @@ module.exports = {
     getAppStoreConnectPrivateKey,
     deleteAppStoreConnectConnection,
     updateAppStoreConnectConnection,
+    storeAppStoreAnalyticsRequest,
+    getAppStoreAnalyticsRequest,
     // Render connection functions
     storeRenderConnection,
     getRenderApiKey,

@@ -444,6 +444,193 @@ IMPORTANT:
             mcpMounts: ['appstore_connect'],
         },
     },
+    {
+        name: 'Fetch App Store Analytics Data',
+        description: 'Downloads and parses analytics reports from Apple (downloads, revenue, sessions). Integrates real metrics into analytics.md.',
+        type: 'autonomous',
+        frequency: 'daily',
+        config: {
+            maxTurns: 30,
+            mcpMounts: ['appstore_connect'],
+            goal: `You are an App Store analytics data fetcher. Your job is to download and parse analytics reports from Apple.
+
+## Your Mission
+
+1. Check for available analytics report instances
+2. Download CSV files with real metrics (downloads, revenue, sessions, active users)
+3. Parse the data and integrate it into the analytics report
+
+## Important Context
+
+The "Enable App Store Analytics Reports" module already created analytics report requests.
+Your job is to CHECK if Apple has generated any new report instances and download them.
+
+## Your Process
+
+**Step 1: Get the analytics request**
+- First, use \`list_apps\` to find your app
+- IMPORTANT: You need to know the request ID from when analytics was enabled
+- If you don't have it, this is likely the FIRST TIME running after enabling
+- Try common report IDs or skip to checking specific report types
+
+**Step 2: Check for available report instances**
+- Use \`get_analytics_report_status\` with the request ID (if known)
+- This returns a list of reports (e.g., r39-xxx, r154-xxx)
+- For each report ID, use \`get_analytics_report_instances\` to check if CSV files are ready
+
+**Step 3: Download LATEST reports only**
+- If instances are available, they'll have download URLs in \`segments[].url\`
+- **IMPORTANT:** Only download the MOST RECENT instance (latest date)
+- Each instance has a \`processingDate\` - sort by date and take the newest one
+- Use \`download_analytics_report\` with the latest instance's URL
+- This avoids re-downloading all historical data every day
+
+**Step 4: Summarize the data**
+- Extract key metrics from the LATEST parsed data:
+  - Downloads/Units (for that day or period)
+  - Revenue
+  - Sessions
+  - Active Devices
+  - Date range
+- Create a summary with actual numbers from the latest report
+
+**Step 5: Update analytics report**
+- Read existing analytics.md (if exists)
+- Add or update "App Store Analytics Data" section with:
+  - Total downloads
+  - Total revenue
+  - Active users
+  - Session counts
+  - Date range of data
+- Write updated report back
+
+## Report Format
+
+Add this section to analytics.md:
+
+## App Store Analytics (Latest from Apple)
+**Report Date:** [date of the latest report]
+**Last Fetched:** [current timestamp]
+**Source:** Apple Analytics Reports API (CSV download)
+
+### Latest Period Metrics
+- **Downloads:** [number] (for this period)
+- **Revenue:** $[amount] (if available)
+- **Active Devices:** [number] (if available)
+- **Sessions:** [number] (if available)
+
+### Trend Analysis
+[If you have multiple data points from the CSV, show trends within that report]
+- Data covers: [date range from CSV]
+- Peak performance: [insights from the data]
+
+### Notes
+- Data sourced from Apple's Analytics Reports API
+- Reports typically updated daily by Apple
+- Full data available in downloaded CSV files
+
+## If No Reports Available
+
+If \`get_analytics_report_instances\` returns 0 instances:
+- This is normal if analytics was just enabled (takes 24-48 hours)
+- Create a brief status update instead:
+
+## App Store Analytics Status
+**Status:** Waiting for Apple to generate reports
+**Expected:** Reports typically available 24-48 hours after enabling analytics
+**Next Check:** This module runs daily to check for new data
+
+IMPORTANT:
+- Focus on REAL data from CSV files, not estimates
+- If no data available yet, just create a status update
+- Don't make up numbers - only use actual parsed metrics
+- Be concise and data-focused`,
+        },
+    },
+    {
+        name: 'Enable App Store Analytics Reports',
+        description: 'ONE-TIME SETUP: Enables ongoing analytics report delivery from Apple for your app (downloads, revenue, engagement)',
+        type: 'autonomous',
+        frequency: 'manual',
+        config: {
+            maxTurns: 10,
+            mcpMounts: ['appstore_connect'],
+            goal: `You are an App Store analytics enabler. Your job is to:
+
+1. Get the primary app ID using \`list_apps\`
+2. Enable ONGOING analytics report delivery using \`create_analytics_report_request\` with that app ID
+3. **IMPORTANT:** Store the request ID in a config file for the Fetch module
+4. Explain to the user what this means
+
+## What This Does
+
+The \`create_analytics_report_request\` tool tells Apple to START generating ongoing analytics reports for the app. Once enabled:
+- Apple continuously generates analytics data
+- Reports are available in App Store Connect web interface
+- Data includes: downloads, revenue, user engagement, retention
+- This is a ONE-TIME setup - you don't need to run this repeatedly
+
+## Your Process
+
+1. Use \`list_apps\` to find available apps
+2. Identify the primary app (or use all apps)
+3. For each app, use \`create_analytics_report_request\` with appId
+4. **CRITICAL:** In your summary, clearly output the request ID in this format:
+   \`ANALYTICS_REQUEST_ID: the-request-id-here\`
+   \`ANALYTICS_APP_ID: the-app-id-here\`
+
+   This allows the system to automatically store it in the database for the Fetch module.
+
+5. Explain what was enabled and confirm the request ID is in your output
+
+## Report Format
+
+## App Store Analytics Enabled!
+
+I've enabled ongoing analytics report delivery from Apple for your app:
+
+### App: [App Name]
+- **App ID:** [app ID]
+- **Request ID:** [request ID returned from API]
+- **Status:** Analytics delivery enabled ✅
+
+**STORAGE TAGS (DO NOT REMOVE):**
+\`\`\`
+ANALYTICS_REQUEST_ID: [request-id-here]
+ANALYTICS_APP_ID: [app-id-here]
+\`\`\`
+
+### What This Means
+
+- Apple will now continuously generate analytics reports for this app
+- Reports include: downloads, revenue, active users, engagement, retention
+- **Data will be automatically fetched** by the "Fetch App Store Analytics Data" module (runs daily)
+- **No further action needed** - this is a one-time setup
+
+### Important Notes
+
+- Reports may take 24-48 hours to start appearing
+- Data is updated daily by Apple
+- **Request ID:** [request ID] - saved for automated fetching
+- The "Fetch App Store Analytics Data" module will automatically download and parse reports daily
+
+### Next Steps
+
+1. Wait 24-48 hours for Apple to generate initial reports
+2. The "Fetch App Store Analytics Data" module (runs daily) will automatically:
+   - Check for new report instances
+   - Download CSV files with actual metrics
+   - Parse and integrate data into analytics.md
+   - Provide real downloads, revenue, sessions data
+
+IMPORTANT:
+- This is a ONE-TIME setup per app
+- Once enabled, Apple handles report generation automatically
+- The Fetch module handles downloading data automatically
+- If already enabled, the API will return an error (that's okay)
+- **SAVE THE REQUEST ID** in your summary - the Fetch module needs it`,
+        },
+    },
 ];
 
 /**

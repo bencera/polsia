@@ -10,7 +10,9 @@ const {
   storeAppStoreConnectConnection,
   getAppStoreConnectConnection,
   deleteAppStoreConnectConnection,
-  getAppStoreConnectPrivateKey
+  getAppStoreConnectPrivateKey,
+  storeAppStoreAnalyticsRequest,
+  getAppStoreAnalyticsRequest
 } = require('../db');
 const { AppStoreConnectClient } = require('../services/appstore-connect-service');
 
@@ -396,6 +398,72 @@ router.post('/primary-app', authenticateToken, async (req, res) => {
     res.status(500).json({
       success: false,
       error: `Failed to set primary app: ${error.message}`
+    });
+  }
+});
+
+/**
+ * POST /api/connections/appstore-connect/analytics-request
+ * Store analytics request ID for future retrieval
+ * Authentication: Required (JWT)
+ * Body: { requestId, appId }
+ */
+router.post('/analytics-request', authenticateToken, async (req, res) => {
+  try {
+    const { requestId, appId } = req.body;
+
+    if (!requestId || !appId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: requestId and appId'
+      });
+    }
+
+    await storeAppStoreAnalyticsRequest(req.user.id, requestId, appId);
+
+    console.log(`[App Store Connect] Analytics request ID stored for user ${req.user.id}`);
+
+    res.json({
+      success: true,
+      message: 'Analytics request ID stored successfully',
+      data: { requestId, appId }
+    });
+
+  } catch (error) {
+    console.error('[App Store Connect] Error storing analytics request:', error);
+    res.status(500).json({
+      success: false,
+      error: `Failed to store analytics request: ${error.message}`
+    });
+  }
+});
+
+/**
+ * GET /api/connections/appstore-connect/analytics-request
+ * Get stored analytics request ID
+ * Authentication: Required (JWT)
+ */
+router.get('/analytics-request', authenticateToken, async (req, res) => {
+  try {
+    const storedRequest = await getAppStoreAnalyticsRequest(req.user.id);
+
+    if (!storedRequest) {
+      return res.status(404).json({
+        success: false,
+        error: 'No analytics request found. Please run the Enable module first.'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: storedRequest
+    });
+
+  } catch (error) {
+    console.error('[App Store Connect] Error getting analytics request:', error);
+    res.status(500).json({
+      success: false,
+      error: `Failed to get analytics request: ${error.message}`
     });
   }
 });
