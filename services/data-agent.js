@@ -50,6 +50,11 @@ async function collectMetrics(userId) {
       metrics.late_dev = await collectSocialMediaMetrics(userId);
     }
 
+    // Collect Render metrics
+    if (connectedServices.some(c => c.service_name === 'render')) {
+      metrics.render = await collectRenderMetrics(userId);
+    }
+
     // Collect module execution metrics
     metrics.modules = await collectModuleMetrics(userId);
 
@@ -190,6 +195,56 @@ async function collectSocialMediaMetrics(userId) {
 }
 
 /**
+ * Collect Render metrics (service status and analytics runs)
+ */
+async function collectRenderMetrics(userId) {
+  try {
+    // Get Render connection
+    const connection = await db.getRenderConnection(userId);
+    if (!connection) {
+      return { error: 'No Render connection found' };
+    }
+
+    const primaryService = connection.metadata?.primary_service;
+
+    // Get recent Render analytics module executions
+    const client = await pool.connect();
+    try {
+      const result = await client.query(
+        `SELECT me.status, me.completed_at, me.metadata
+         FROM module_executions me
+         JOIN modules m ON me.module_id = m.id
+         WHERE m.user_id = $1
+           AND m.type = 'render_analytics'
+           AND me.completed_at > NOW() - INTERVAL '7 days'
+         ORDER BY me.completed_at DESC
+         LIMIT 10`,
+        [userId]
+      );
+
+      const lastRun = result.rows[0];
+
+      return {
+        primary_service: primaryService ? {
+          name: primaryService.name,
+          id: primaryService.id,
+          type: primaryService.type,
+        } : null,
+        analytics_runs_last_7_days: result.rows.length,
+        last_analytics_run: lastRun?.completed_at || null,
+        last_run_status: lastRun?.status || null,
+        connection_status: 'connected',
+      };
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Error collecting Render metrics:', error);
+    return { error: error.message };
+  }
+}
+
+/**
  * Collect module execution metrics
  */
 async function collectModuleMetrics(userId) {
@@ -296,6 +351,21 @@ function generateAnalyticsSummary(metrics) {
   if (metrics.meta_ads && !metrics.meta_ads.error) {
     summary += `## Meta Ads\n\n`;
     summary += `- **Status**: ${metrics.meta_ads.connected ? 'Connected' : 'Not Connected'}\n\n`;
+  }
+
+  // Render Summary
+  if (metrics.render && !metrics.render.error) {
+    summary += `## Render Service\n\n`;
+    if (metrics.render.primary_service) {
+      summary += `- **Primary Service**: ${metrics.render.primary_service.name} (${metrics.render.primary_service.type})\n`;
+    }
+    summary += `- **Connection Status**: ${metrics.render.connection_status}\n`;
+    summary += `- **Analytics Runs (Last 7 Days)**: ${metrics.render.analytics_runs_last_7_days || 0}\n`;
+    summary += `- **Last Analytics Run**: ${metrics.render.last_analytics_run || 'N/A'}\n`;
+    if (metrics.render.last_run_status) {
+      summary += `- **Last Run Status**: ${metrics.render.last_run_status}\n`;
+    }
+    summary += `\n`;
   }
 
   return summary;

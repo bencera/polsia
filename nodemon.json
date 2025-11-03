@@ -1,0 +1,16 @@
+{
+  "ignore": [
+    "temp/**",
+    "client/**",
+    "node_modules/**",
+    ".git/**"
+  ],
+  "watch": [
+    "*.js",
+    "routes/**/*.js",
+    "services/**/*.js",
+    "utils/**/*.js",
+    "migrations/**/*.js"
+  ],
+  "ext": "js,json"
+}

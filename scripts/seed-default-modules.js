@@ -34,7 +34,7 @@ const ESSENTIAL_MODULES = [
                 repo: 'Polsia-Inc/newco-app',
                 branch: 'main',
             },
-            maxTurns: 30,
+            maxTurns: 200,
         },
     },
     {
@@ -45,6 +45,7 @@ const ESSENTIAL_MODULES = [
         config: {
             maxEmails: 5,
             query: 'in:inbox',
+            maxTurns: 100,
         },
     },
     {
@@ -53,7 +54,7 @@ const ESSENTIAL_MODULES = [
         type: 'autonomous',
         frequency: 'manual',
         config: {
-            maxTurns: 30,
+            maxTurns: 100,
             mcpMounts: ['gmail'],
             goal: `You are an email spam archiver. Your job is to:
 
@@ -80,7 +81,7 @@ Important: Only archive emails that are CLEARLY promotional. When in doubt, leav
         type: 'autonomous',
         frequency: 'manual',
         config: {
-            maxTurns: 40,
+            maxTurns: 100,
             mcpMounts: ['gmail'],
             goal: `You are an email importance analyzer. Your job is to:
 
@@ -128,7 +129,17 @@ IMPORTANT:
         frequency: 'manual',
         config: {
             mcpMounts: ['github'],
-            maxTurns: 30,
+            maxTurns: 200,
+        },
+    },
+    {
+        name: 'Render Analytics Summarizer',
+        description: 'Autonomously analyzes production database to generate comprehensive business insights and usage metrics',
+        type: 'render_analytics',
+        frequency: 'daily',
+        config: {
+            mcpMounts: ['github', 'render'],
+            maxTurns: 200, // High limit to allow thorough analysis and report generation
         },
     },
     {
@@ -137,7 +148,7 @@ IMPORTANT:
         type: 'autonomous',
         frequency: 'manual',
         config: {
-            maxTurns: 40,
+            maxTurns: 100,
             mcpMounts: ['sentry'],
             goal: `You are a Sentry bug checker using our custom Sentry MCP server. Your job is to:
 
@@ -214,7 +225,7 @@ const DEV_TEST_MODULES = [
                 oldText: 'Polsia Inc.',
                 newText: 'Polsia AI',
             },
-            maxTurns: 10,
+            maxTurns: 50,
         },
     },
 ];

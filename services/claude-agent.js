@@ -30,6 +30,90 @@ async function initializeSDK() {
 }
 
 /**
+ * Format tool use with parameters for better log visibility
+ * @param {string} toolName - Name of the tool
+ * @param {Object} input - Tool input parameters
+ * @returns {string} Formatted string
+ */
+function formatToolUse(toolName, input = {}) {
+  try {
+    switch (toolName) {
+      case 'Read':
+        return `Read(${input.file_path || 'unknown'})`;
+
+      case 'Glob':
+        return `Glob(${input.pattern || 'unknown'}${input.path ? ` in ${input.path}` : ''})`;
+
+      case 'Grep':
+        return `Grep("${input.pattern || 'unknown'}"${input.path ? ` in ${input.path}` : ''})`;
+
+      case 'Write':
+        const lineCount = input.content ? input.content.split('\n').length : 0;
+        return `Write(${input.file_path || 'unknown'}) [${lineCount} lines]`;
+
+      case 'Edit':
+        return `Edit(${input.file_path || 'unknown'})`;
+
+      case 'Bash':
+        const cmd = input.command || 'unknown';
+        const shortCmd = cmd.length > 60 ? cmd.substring(0, 60) + '...' : cmd;
+        return `Bash(${shortCmd})`;
+
+      case 'mcp__render__query_render_postgres':
+        const sql = input.sql || '';
+        const shortSql = sql.length > 80 ? sql.substring(0, 80) + '...' : sql;
+        return `render:query_postgres("${shortSql}")`;
+
+      case 'mcp__render__list_postgres_instances':
+        return `render:list_postgres_instances()`;
+
+      case 'mcp__render__get_postgres':
+        return `render:get_postgres(${input.postgresId || 'unknown'})`;
+
+      case 'mcp__render__list_services':
+        return `render:list_services()`;
+
+      case 'mcp__render__get_service':
+        return `render:get_service(${input.serviceId || 'unknown'})`;
+
+      case 'mcp__render__list_workspaces':
+        return `render:list_workspaces()`;
+
+      case 'mcp__render__get_metrics':
+        const metrics = input.metricTypes ? input.metricTypes.join(', ') : 'unknown';
+        return `render:get_metrics([${metrics}])`;
+
+      case 'mcp__github__create_or_update_file':
+        return `github:create_or_update_file(${input.path || 'unknown'})`;
+
+      case 'mcp__github__push_files':
+        const fileCount = input.files ? input.files.length : 0;
+        return `github:push_files([${fileCount} files])`;
+
+      case 'mcp__github__create_pull_request':
+        return `github:create_pull_request("${input.title || 'untitled'}")`;
+
+      case 'mcp__github__search_code':
+        return `github:search_code("${input.query || 'unknown'}")`;
+
+      case 'mcp__github__get_file_contents':
+        return `github:get_file_contents(${input.path || 'unknown'})`;
+
+      default:
+        // Generic format for unknown tools
+        if (toolName.startsWith('mcp__')) {
+          const shortName = toolName.replace('mcp__', '').replace(/__/g, ':');
+          const params = Object.keys(input).slice(0, 2).map(k => `${k}=${input[k]}`).join(', ');
+          return params ? `${shortName}(${params})` : shortName;
+        }
+        return toolName;
+    }
+  } catch (error) {
+    return toolName; // Fallback to just the name if formatting fails
+  }
+}
+
+/**
  * Execute a coding task using Claude Code SDK
  * @param {string} prompt - The task description
  * @param {Object} options - Configuration options
@@ -128,11 +212,16 @@ async function executeTask(prompt, options = {}) {
                 }
               } else if (content.type === 'tool_use') {
                 turnCount++;
-                console.log(`[Claude Agent] Tool use: ${content.name}`);
+
+                // Format tool use with parameters for better visibility
+                const toolDetails = formatToolUse(content.name, content.input);
+                console.log(`[Claude Agent] ⏺ ${toolDetails}`);
+
                 if (onProgress) {
                   onProgress({
                     stage: 'tool_use',
                     tool: content.name,
+                    details: toolDetails,
                     turnCount
                   });
                 }
