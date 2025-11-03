@@ -1408,6 +1408,7 @@ IMPORTANT:
 async function runAppStoreAnalyticsModule(module, userId, executionRecord, startTime) {
     const crypto = require('crypto');
     const fs = require('fs').promises;
+    let workspace; // Declare outside try block so finally can access it
 
     try {
         console.log(`[Agent Runner] 📱 Running App Store Analytics Integrator module`);
@@ -1742,12 +1743,14 @@ IMPORTANT:
             execution_id: executionRecord.id,
         };
     } finally {
-        // Cleanup workspace
-        try {
-            await fs.rm(workspace, { recursive: true, force: true });
-            console.log(`[Agent Runner] 🧹 Workspace cleaned up`);
-        } catch (cleanupError) {
-            console.warn(`[Agent Runner] Warning: Failed to cleanup workspace: ${cleanupError.message}`);
+        // Cleanup workspace (only if it was created)
+        if (workspace) {
+            try {
+                await fs.rm(workspace, { recursive: true, force: true });
+                console.log(`[Agent Runner] 🧹 Workspace cleaned up`);
+            } catch (cleanupError) {
+                console.warn(`[Agent Runner] Warning: Failed to cleanup workspace: ${cleanupError.message}`);
+            }
         }
     }
 }
