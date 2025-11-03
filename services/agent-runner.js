@@ -470,14 +470,15 @@ async function configureMCPServers(module, userId, config) {
             const encryptedToken = await getSlackToken(userId);
             if (encryptedToken) {
                 const token = decryptToken(encryptedToken);
+                // slack-mcp-server expects SLACK_MCP_XOXP_TOKEN for OAuth bot tokens
                 mcpServers.slack = {
                     command: 'npx',
                     args: ['-y', 'slack-mcp-server'],
                     env: {
-                        SLACK_BOT_TOKEN: token,
+                        SLACK_MCP_XOXP_TOKEN: token,
                     },
                 };
-                console.log('[Agent Runner] Configured Slack MCP server');
+                console.log('[Agent Runner] Configured Slack MCP server with bot token');
             } else {
                 console.warn('[Agent Runner] Slack MCP requested but user has no Slack connection');
             }
