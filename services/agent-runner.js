@@ -465,20 +465,17 @@ async function configureMCPServers(module, userId, config) {
                 console.warn('[Agent Runner] Gmail MCP requested but user has no Gmail connection');
             }
         } else if (mcpName === 'slack') {
-            // Slack MCP - uses bot token for workspace access
-            // Supports reading channels, messages, DMs, and posting to Slack
+            // Custom Slack MCP - uses bot token via Slack Web API
+            // Built in-house to work with OAuth bot tokens (xoxb-)
             const encryptedToken = await getSlackToken(userId);
             if (encryptedToken) {
                 const token = decryptToken(encryptedToken);
-                // slack-mcp-server expects SLACK_MCP_XOXP_TOKEN for OAuth bot tokens
+                const serverPath = require('path').join(__dirname, 'slack-custom-mcp-server.js');
                 mcpServers.slack = {
-                    command: 'npx',
-                    args: ['-y', 'slack-mcp-server'],
-                    env: {
-                        SLACK_MCP_XOXP_TOKEN: token,
-                    },
+                    command: 'node',
+                    args: [serverPath, `--bot-token=${token}`],
                 };
-                console.log('[Agent Runner] Configured Slack MCP server with bot token');
+                console.log('[Agent Runner] Configured custom Slack MCP server (Slack Web API)');
             } else {
                 console.warn('[Agent Runner] Slack MCP requested but user has no Slack connection');
             }
