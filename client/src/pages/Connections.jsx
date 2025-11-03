@@ -94,6 +94,15 @@ function Connections() {
         fetchConnections();
         setSuccessMessage('');
       }, 3000);
+    } else if (success === 'slack_connected') {
+      setSuccessMessage('Slack workspace connected successfully!');
+      // Clear URL parameters
+      window.history.replaceState({}, '', '/connections');
+      // Refresh connections after a brief delay
+      setTimeout(() => {
+        fetchConnections();
+        setSuccessMessage('');
+      }, 3000);
     } else if (errorParam) {
       const errorMessages = {
         'invalid_state': 'OAuth security validation failed. Please try again.',
@@ -198,6 +207,17 @@ function Connections() {
       : (import.meta.env.VITE_API_URL || 'http://localhost:3000'); // Use env var or localhost in dev
 
     window.location.href = `${backendUrl}/api/auth/meta-ads?token=${token}`;
+  };
+
+  const connectSlack = () => {
+    // Redirect to Slack OAuth flow
+    // Auto-detect backend URL based on current domain
+    const isProduction = window.location.hostname !== 'localhost';
+    const backendUrl = isProduction
+      ? window.location.origin // Use same domain in production (https://polsia.ai)
+      : (import.meta.env.VITE_API_URL || 'http://localhost:3000'); // Use env var or localhost in dev
+
+    window.location.href = `${backendUrl}/api/auth/slack?token=${token}`;
   };
 
   const disconnectGitHub = async (connectionId) => {
@@ -323,6 +343,38 @@ function Connections() {
       }
     } catch (err) {
       alert('Failed to disconnect Meta Ads. Please try again.');
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const disconnectSlack = async (connectionId) => {
+    if (!confirm('Are you sure you want to disconnect your Slack workspace?')) {
+      return;
+    }
+
+    setUpdating(connectionId);
+
+    try {
+      const response = await fetch(`/api/auth/slack/${connectionId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Remove the connection from the list
+        setConnections(connections.filter(conn => conn.id !== connectionId));
+        setSuccessMessage('Slack workspace disconnected successfully!');
+        setTimeout(() => setSuccessMessage(''), 3000);
+      } else {
+        alert(data.error || 'Failed to disconnect Slack');
+      }
+    } catch (err) {
+      alert('Failed to disconnect Slack. Please try again.');
     } finally {
       setUpdating(null);
     }
@@ -951,6 +1003,27 @@ function Connections() {
           </div>
         )}
 
+        {/* Slack Connect Button (show if not connected) */}
+        {!loading && !connections.find(c => c.service_name === 'slack') && (
+          <div className="connection-card slack-connect-card">
+            <div className="connection-header">
+              <div className="service-info">
+                <div>
+                  <h3>Slack</h3>
+                  <p className="service-description">Connect your Slack workspace to read messages, post updates, and understand team conversations</p>
+                </div>
+              </div>
+            </div>
+            <button
+              className="connect-button"
+              onClick={connectSlack}
+              disabled={updating === 'slack'}
+            >
+              {updating === 'slack' ? 'Connecting...' : 'Connect Slack'}
+            </button>
+          </div>
+        )}
+
         {/* Instagram Connect Button (show if not connected) */}
         {!loading && !connections.find(c => c.service_name === 'instagram') && (
           <div className="connection-card instagram-connect-card">
@@ -1267,12 +1340,13 @@ MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwd...
                     </div>
                   </div>
 
-                  {connection.service_name === 'github' || connection.service_name === 'gmail' || connection.service_name === 'instagram' || connection.service_name === 'meta-ads' || connection.service_name === 'sentry' || connection.service_name === 'render' || connection.service_name === 'appstore_connect' ? (
+                  {connection.service_name === 'github' || connection.service_name === 'gmail' || connection.service_name === 'slack' || connection.service_name === 'instagram' || connection.service_name === 'meta-ads' || connection.service_name === 'sentry' || connection.service_name === 'render' || connection.service_name === 'appstore_connect' ? (
                     <button
                       className="disconnect-button"
                       onClick={() => {
                         if (connection.service_name === 'github') disconnectGitHub(connection.id);
                         else if (connection.service_name === 'gmail') disconnectGmail(connection.id);
+                        else if (connection.service_name === 'slack') disconnectSlack(connection.id);
                         else if (connection.service_name === 'instagram') disconnectInstagram(connection.id);
                         else if (connection.service_name === 'meta-ads') disconnectMetaAds(connection.id);
                         else if (connection.service_name === 'sentry') disconnectSentry(connection.id);
@@ -1423,6 +1497,50 @@ MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwd...
                         <div className="metadata-item">
                           <p className="metadata-label">Name:</p>
                           <p className="metadata-value">{connection.metadata.name}</p>
+                        </div>
+                      )}
+                      <div className="metadata-item">
+                        <p className="metadata-label">Connected since:</p>
+                        <p className="metadata-value">
+                          {new Date(connection.created_at).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Slack-specific metadata */}
+                {connection.service_name === 'slack' && connection.metadata && (
+                  <div className="connection-metadata slack-metadata">
+                    {connection.metadata.bot_avatar && (
+                      <div className="slack-avatar">
+                        <img
+                          src={connection.metadata.bot_avatar}
+                          alt={connection.metadata.workspace_name}
+                        />
+                      </div>
+                    )}
+                    <div className="metadata-details">
+                      {connection.metadata.workspace_name && (
+                        <div className="metadata-item">
+                          <p className="metadata-label">Workspace:</p>
+                          <p className="metadata-value">{connection.metadata.workspace_name}</p>
+                        </div>
+                      )}
+                      {connection.metadata.bot_name && (
+                        <div className="metadata-item">
+                          <p className="metadata-label">Bot Name:</p>
+                          <p className="metadata-value">{connection.metadata.bot_name}</p>
+                        </div>
+                      )}
+                      {connection.metadata.workspace_id && (
+                        <div className="metadata-item">
+                          <p className="metadata-label">Workspace ID:</p>
+                          <p className="metadata-value">{connection.metadata.workspace_id}</p>
                         </div>
                       )}
                       <div className="metadata-item">

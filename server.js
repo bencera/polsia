@@ -252,6 +252,11 @@ app.use('/api/auth/github', githubOAuthRoutes);
 const gmailOAuthRoutes = require('./routes/gmail-oauth')(authenticateTokenFromQuery, authenticateToken);
 app.use('/api/auth/gmail', gmailOAuthRoutes);
 
+// Slack OAuth Routes
+// Pass middleware functions to the router so it can apply them conditionally
+const slackOAuthRoutes = require('./routes/slack-oauth')(authenticateTokenFromQuery, authenticateToken);
+app.use('/api/auth/slack', slackOAuthRoutes);
+
 // Instagram OAuth Routes (via Late.dev)
 // Pass middleware functions to the router so it can apply them conditionally
 const instagramOAuthRoutes = require('./routes/instagram-oauth')(authenticateTokenFromQuery, authenticateToken);

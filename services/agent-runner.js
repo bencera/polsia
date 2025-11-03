@@ -17,7 +17,7 @@ const {
     getExecutionLogs,
     getServiceConnectionByName,
 } = require('../db');
-const { getGitHubToken, getGmailToken, getSentryToken, getAppStoreConnectConnection, getMetaAdsConnection, getRenderApiKey, getRenderConnection } = require('../db');
+const { getGitHubToken, getGmailToken, getSlackToken, getSentryToken, getAppStoreConnectConnection, getMetaAdsConnection, getRenderApiKey, getRenderConnection } = require('../db');
 const { decryptToken } = require('../utils/encryption');
 const { generateTaskSummary } = require('./summary-generator');
 const { summarizeRecentEmails } = require('./email-summarizer');
@@ -463,6 +463,23 @@ async function configureMCPServers(module, userId, config) {
                 console.log('[Agent Runner] Configured Gmail MCP server (credentials pre-seeded)');
             } else {
                 console.warn('[Agent Runner] Gmail MCP requested but user has no Gmail connection');
+            }
+        } else if (mcpName === 'slack') {
+            // Slack MCP - uses bot token for workspace access
+            // Supports reading channels, messages, DMs, and posting to Slack
+            const encryptedToken = await getSlackToken(userId);
+            if (encryptedToken) {
+                const token = decryptToken(encryptedToken);
+                mcpServers.slack = {
+                    command: 'npx',
+                    args: ['-y', 'slack-mcp-server'],
+                    env: {
+                        SLACK_BOT_TOKEN: token,
+                    },
+                };
+                console.log('[Agent Runner] Configured Slack MCP server');
+            } else {
+                console.warn('[Agent Runner] Slack MCP requested but user has no Slack connection');
             }
         } else if (mcpName === 'sentry') {
             // Custom Sentry MCP server - uses direct REST API, no OpenAI required
