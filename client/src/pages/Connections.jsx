@@ -1544,6 +1544,24 @@ MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwd...
                         </div>
                       )}
                       <div className="metadata-item">
+                        <p className="metadata-label">Channel Access:</p>
+                        <p className="metadata-value">
+                          {connection.metadata.has_user_token ? (
+                            <span style={{ color: '#10b981' }}>
+                              ✓ Full Access (All public channels)
+                            </span>
+                          ) : (
+                            <span style={{ color: '#f59e0b' }}>
+                              ⚠️ Limited (Bot must be invited to channels)
+                              <br />
+                              <small style={{ fontSize: '0.85em', opacity: 0.8 }}>
+                                Reconnect to enable full access
+                              </small>
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                      <div className="metadata-item">
                         <p className="metadata-label">Connected since:</p>
                         <p className="metadata-value">
                           {new Date(connection.created_at).toLocaleDateString('en-US', {

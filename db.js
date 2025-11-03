@@ -351,15 +351,20 @@ async function deleteGitHubConnection(connectionId, userId) {
 }
 
 // Store Slack connection with encrypted token
-async function storeSlackConnection(userId, slackData, encryptedToken) {
+async function storeSlackConnection(userId, slackData, encryptedBotToken, encryptedUserToken = null) {
     const client = await pool.connect();
     try {
-        // Combine Slack workspace data with encrypted token in metadata
+        // Combine Slack workspace data with encrypted tokens in metadata
         const metadata = {
             ...slackData,
-            encrypted_token: encryptedToken.encrypted,
-            token_iv: encryptedToken.iv,
-            token_auth_tag: encryptedToken.authTag
+            // Bot token (always present)
+            encrypted_token: encryptedBotToken.encrypted,
+            token_iv: encryptedBotToken.iv,
+            token_auth_tag: encryptedBotToken.authTag,
+            // User token (optional but recommended)
+            encrypted_user_token: encryptedUserToken?.encrypted || null,
+            user_token_iv: encryptedUserToken?.iv || null,
+            user_token_auth_tag: encryptedUserToken?.authTag || null
         };
 
         // Check if user already has a Slack connection for this workspace
@@ -391,7 +396,8 @@ async function storeSlackConnection(userId, slackData, encryptedToken) {
     }
 }
 
-// Get decrypted Slack token for a user (returns first connected workspace)
+// Get Slack tokens for a user (returns both bot and user tokens, if available)
+// For backward compatibility, can still be called as getSlackToken() which returns bot token only
 async function getSlackToken(userId) {
     const client = await pool.connect();
     try {
@@ -406,13 +412,14 @@ async function getSlackToken(userId) {
 
         const metadata = result.rows[0].metadata;
 
-        // Check if encrypted token data exists
+        // Check if bot token data exists
         if (!metadata || !metadata.encrypted_token || !metadata.token_iv || !metadata.token_auth_tag) {
             console.error('Slack connection exists but encrypted token data is missing');
             return null;
         }
 
-        // Return encrypted token data (decryption will be done by the caller)
+        // Return encrypted bot token data (decryption will be done by the caller)
+        // For backward compatibility, return bot token in the same format as before
         return {
             encrypted: metadata.encrypted_token,
             iv: metadata.token_iv,
@@ -420,6 +427,55 @@ async function getSlackToken(userId) {
         };
     } catch (err) {
         console.error('Error getting Slack token:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Get both bot and user tokens for Slack
+async function getSlackTokens(userId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            'SELECT metadata FROM service_connections WHERE user_id = $1 AND service_name = $2 AND status = $3 ORDER BY created_at DESC LIMIT 1',
+            [userId, 'slack', 'connected']
+        );
+
+        if (result.rows.length === 0) {
+            return null;
+        }
+
+        const metadata = result.rows[0].metadata;
+
+        // Check if bot token data exists
+        if (!metadata || !metadata.encrypted_token || !metadata.token_iv || !metadata.token_auth_tag) {
+            console.error('Slack connection exists but encrypted token data is missing');
+            return null;
+        }
+
+        const tokens = {
+            bot: {
+                encrypted: metadata.encrypted_token,
+                iv: metadata.token_iv,
+                authTag: metadata.token_auth_tag
+            },
+            user: null,
+            metadata: metadata  // Include full metadata for context
+        };
+
+        // Check if user token exists
+        if (metadata.encrypted_user_token && metadata.user_token_iv && metadata.user_token_auth_tag) {
+            tokens.user = {
+                encrypted: metadata.encrypted_user_token,
+                iv: metadata.user_token_iv,
+                authTag: metadata.user_token_auth_tag
+            };
+        }
+
+        return tokens;
+    } catch (err) {
+        console.error('Error getting Slack tokens:', err);
         throw err;
     } finally {
         client.release();
@@ -2513,6 +2569,7 @@ module.exports = {
     // Slack connection functions
     storeSlackConnection,
     getSlackToken,
+    getSlackTokens,  // Get both bot and user tokens
     deleteSlackConnection,
     // Gmail connection functions
     storeGmailConnection,

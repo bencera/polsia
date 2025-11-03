@@ -88,8 +88,17 @@ router.get('/', authenticateTokenFromQuery, async (req, res) => {
 
     const allScopes = [...readScopes, ...writeScopes].join(',');
 
+    // User token scopes - for reading all channels without bot membership
+    const userScopes = [
+      'channels:history',   // Read all public channel messages (no invite needed!)
+      'channels:read',      // View all public channels
+      'search:read',        // Search workspace messages
+      'users:read'          // View workspace users
+    ].join(',');
+
     // Build Slack authorization URL (using OAuth v2)
-    const authUrl = `https://slack.com/oauth/v2/authorize?client_id=${SLACK_CLIENT_ID}&redirect_uri=${encodeURIComponent(SLACK_CALLBACK_URL)}&scope=${encodeURIComponent(allScopes)}&state=${state}`;
+    // Request BOTH bot token (scope) and user token (user_scope)
+    const authUrl = `https://slack.com/oauth/v2/authorize?client_id=${SLACK_CLIENT_ID}&redirect_uri=${encodeURIComponent(SLACK_CALLBACK_URL)}&scope=${encodeURIComponent(allScopes)}&user_scope=${encodeURIComponent(userScopes)}&state=${state}`;
 
     console.log(`[Slack OAuth] Redirecting user ${req.user.id} to Slack authorization`);
 
@@ -159,7 +168,7 @@ router.get('/callback', async (req, res) => {
       return res.redirect(`${FRONTEND_URL}/connections?error=${responseData.error}`);
     }
 
-    // Extract bot token and workspace info
+    // Extract bot token, user token, and workspace info
     const {
       access_token,        // Bot token (xoxb-)
       token_type,
@@ -167,7 +176,7 @@ router.get('/callback', async (req, res) => {
       bot_user_id,
       app_id,
       team,                // Workspace info
-      authed_user,
+      authed_user,         // Contains user token!
       enterprise
     } = responseData;
 
@@ -176,7 +185,14 @@ router.get('/callback', async (req, res) => {
       return res.redirect(`${FRONTEND_URL}/connections?error=no_token`);
     }
 
+    // Extract user token from authed_user object
+    const userToken = authed_user?.access_token;  // User token (xoxp-)
+    const userScopes = authed_user?.scope;
+
     console.log(`[Slack OAuth] Bot token received for workspace: ${team.name}`);
+    if (userToken) {
+      console.log(`[Slack OAuth] User token also received with scopes: ${userScopes}`);
+    }
 
     // Fetch bot user info for display
     let botInfo = {};
@@ -198,21 +214,24 @@ router.get('/callback', async (req, res) => {
       console.warn('[Slack OAuth] Could not fetch bot info:', error.message);
     }
 
-    // Encrypt the bot token
-    const encryptedToken = encryptToken(access_token);
+    // Encrypt both bot and user tokens
+    const encryptedBotToken = encryptToken(access_token);
+    const encryptedUserToken = userToken ? encryptToken(userToken) : null;
 
-    // Store connection in database with workspace and bot metadata
+    // Store connection in database with both tokens and metadata
     await storeSlackConnection(userId, {
       workspace_name: team.name,
       workspace_id: team.id,
       bot_user_id,
       app_id,
       scopes: scope ? scope.split(',') : [],
+      user_scopes: userScopes ? userScopes.split(',') : [],
+      has_user_token: !!userToken,
       authed_user_id: authed_user?.id,
       enterprise_id: enterprise?.id,
       enterprise_name: enterprise?.name,
       ...botInfo
-    }, encryptedToken);
+    }, encryptedBotToken, encryptedUserToken);
 
     console.log(`[Slack OAuth] Slack connection stored for user ${userId} (workspace: ${team.name})`);
 

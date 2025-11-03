@@ -11,16 +11,24 @@ const { StdioServerTransport } = require('@modelcontextprotocol/sdk/server/stdio
 const { CallToolRequestSchema, ListToolsRequestSchema } = require('@modelcontextprotocol/sdk/types.js');
 const { SlackAPIClient } = require('./slack-api-service.js');
 
-// Get bot token from command line argument
+// Get bot and user tokens from command line arguments
 const botToken = process.argv.find(arg => arg.startsWith('--bot-token='))?.split('=')[1];
+const userToken = process.argv.find(arg => arg.startsWith('--user-token='))?.split('=')[1];
 
 if (!botToken) {
     console.error('Error: --bot-token argument is required');
     process.exit(1);
 }
 
-// Initialize Slack API client
-const slackClient = new SlackAPIClient(botToken);
+// Initialize Slack API client with both tokens
+// User token is optional but highly recommended for broader channel access
+const slackClient = new SlackAPIClient(botToken, userToken);
+
+if (userToken) {
+    console.error('[Slack MCP] Initialized with bot AND user tokens (full channel access)');
+} else {
+    console.error('[Slack MCP] Initialized with bot token only (limited to channels bot is member of)');
+}
 
 // Create MCP server
 const server = new Server(

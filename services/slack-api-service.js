@@ -6,19 +6,20 @@
 const axios = require('axios');
 
 class SlackAPIClient {
-    constructor(botToken) {
+    constructor(botToken, userToken = null) {
         this.botToken = botToken;
+        this.userToken = userToken;  // Optional user token for broader access
         this.baseURL = 'https://slack.com/api';
     }
 
     /**
-     * Make a request to Slack API
+     * Make a request to Slack API with a specific token
      */
-    async request(endpoint, params = {}) {
+    async requestWithToken(token, endpoint, params = {}) {
         try {
             const response = await axios.get(`${this.baseURL}/${endpoint}`, {
                 headers: {
-                    'Authorization': `Bearer ${this.botToken}`,
+                    'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 },
                 params
@@ -36,13 +37,20 @@ class SlackAPIClient {
     }
 
     /**
-     * Make a POST request to Slack API
+     * Make a request to Slack API (uses bot token by default)
      */
-    async postRequest(endpoint, data = {}) {
+    async request(endpoint, params = {}) {
+        return this.requestWithToken(this.botToken, endpoint, params);
+    }
+
+    /**
+     * Make a POST request to Slack API with a specific token
+     */
+    async postRequestWithToken(token, endpoint, data = {}) {
         try {
             const response = await axios.post(`${this.baseURL}/${endpoint}`, data, {
                 headers: {
-                    'Authorization': `Bearer ${this.botToken}`,
+                    'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 }
             });
@@ -56,6 +64,13 @@ class SlackAPIClient {
             console.error(`[Slack API] Error calling ${endpoint}:`, error.message);
             throw error;
         }
+    }
+
+    /**
+     * Make a POST request to Slack API (uses bot token by default)
+     */
+    async postRequest(endpoint, data = {}) {
+        return this.postRequestWithToken(this.botToken, endpoint, data);
     }
 
     /**
@@ -84,6 +99,8 @@ class SlackAPIClient {
 
     /**
      * Get conversation history
+     * Prefers user token if available (can access channels without bot membership)
+     * Falls back to bot token if user token not available
      */
     async getConversationHistory(channelId, options = {}) {
         const params = {
@@ -92,7 +109,10 @@ class SlackAPIClient {
             ...options
         };
 
-        return await this.request('conversations.history', params);
+        // Use user token if available (can read channels without membership)
+        // Otherwise fall back to bot token (requires channel membership)
+        const token = this.userToken || this.botToken;
+        return await this.requestWithToken(token, 'conversations.history', params);
     }
 
     /**
@@ -121,8 +141,13 @@ class SlackAPIClient {
 
     /**
      * Search messages
+     * Requires user token (search.messages API only works with user tokens)
      */
     async searchMessages(query, options = {}) {
+        if (!this.userToken) {
+            throw new Error('search.messages API requires user token. User must reconnect to grant user-level permissions.');
+        }
+
         const params = {
             query,
             count: options.limit || 20,
@@ -131,7 +156,7 @@ class SlackAPIClient {
             ...options
         };
 
-        return await this.request('search.messages', params);
+        return await this.requestWithToken(this.userToken, 'search.messages', params);
     }
 
     /**
