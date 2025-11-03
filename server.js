@@ -267,6 +267,11 @@ app.use('/api/auth/meta-ads', metaAdsOAuthRoutes);
 const sentryOAuthRoutes = require('./routes/sentry-oauth')(authenticateTokenFromQuery, authenticateToken);
 app.use('/api/auth/sentry', sentryOAuthRoutes);
 
+// Render API Key Routes (non-OAuth)
+// Pass authentication middleware to the router
+const renderRoutes = require('./routes/render-routes')(authenticateToken);
+app.use('/api/connections/render', renderRoutes);
+
 // MCP Routes - Host third-party MCP servers
 const mcpRoutes = require('./routes/mcp-routes');
 app.use('/mcp', authenticateToken, mcpRoutes);

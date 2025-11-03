@@ -35,10 +35,10 @@ function Navbar() {
       <div className="navbar-actions">
         <span className="user-info">{user?.email}</span>
         <button onClick={handleBrain} className="nav-button">
-          🧠 Brain
+          Brain
         </button>
         <button onClick={handleDocuments} className="nav-button">
-          📄 Docs
+          Docs
         </button>
         <button onClick={handleModules} className="nav-button">
           Modules

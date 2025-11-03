@@ -2051,6 +2051,118 @@ async function updateServiceConnectionMetadata(userId, serviceName, metadata) {
     }
 }
 
+// ===== RENDER CONNECTION FUNCTIONS =====
+
+// Store Render connection with encrypted API key
+async function storeRenderConnection(userId, renderData, encryptedApiKey) {
+    const client = await pool.connect();
+    try {
+        // Combine Render data with encrypted API key in metadata
+        const metadata = {
+            ...renderData,
+            encrypted_token: encryptedApiKey.encrypted,
+            token_iv: encryptedApiKey.iv,
+            token_auth_tag: encryptedApiKey.authTag
+        };
+
+        // Check if user already has a Render connection
+        const existingResult = await client.query(
+            'SELECT id FROM service_connections WHERE user_id = $1 AND service_name = $2',
+            [userId, 'render']
+        );
+
+        if (existingResult.rows.length > 0) {
+            // Update existing connection
+            const result = await client.query(
+                'UPDATE service_connections SET status = $1, metadata = $2 WHERE id = $3 RETURNING *',
+                ['connected', metadata, existingResult.rows[0].id]
+            );
+            return result.rows[0];
+        } else {
+            // Create new connection
+            const result = await client.query(
+                'INSERT INTO service_connections (user_id, service_name, status, metadata) VALUES ($1, $2, $3, $4) RETURNING *',
+                [userId, 'render', 'connected', metadata]
+            );
+            return result.rows[0];
+        }
+    } catch (err) {
+        console.error('Error storing Render connection:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Get decrypted Render API key for a user
+async function getRenderApiKey(userId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            'SELECT metadata FROM service_connections WHERE user_id = $1 AND service_name = $2 AND status = $3',
+            [userId, 'render', 'connected']
+        );
+
+        if (result.rows.length === 0) {
+            return null;
+        }
+
+        const metadata = result.rows[0].metadata;
+
+        // Check if encrypted token data exists
+        if (!metadata || !metadata.encrypted_token || !metadata.token_iv || !metadata.token_auth_tag) {
+            console.error('Render connection exists but encrypted token data is missing');
+            return null;
+        }
+
+        // Return encrypted token data (decryption will be done by the caller)
+        return {
+            encrypted: metadata.encrypted_token,
+            iv: metadata.token_iv,
+            authTag: metadata.token_auth_tag
+        };
+    } catch (err) {
+        console.error('Error getting Render API key:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Delete Render connection
+async function deleteRenderConnection(connectionId, userId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            'DELETE FROM service_connections WHERE id = $1 AND user_id = $2 AND service_name = $3 RETURNING *',
+            [connectionId, userId, 'render']
+        );
+        return result.rows.length > 0;
+    } catch (err) {
+        console.error('Error deleting Render connection:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Get Render connection for a user
+async function getRenderConnection(userId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            'SELECT * FROM service_connections WHERE user_id = $1 AND service_name = $2 AND status = $3',
+            [userId, 'render', 'connected']
+        );
+        return result.rows[0] || null;
+    } catch (err) {
+        console.error('Error getting Render connection:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
 module.exports = {
     pool,
     initDatabase,
@@ -2087,6 +2199,11 @@ module.exports = {
     deleteSentryConnection,
     updateSentryTokens,
     getSentryConnection,
+    // Render connection functions
+    storeRenderConnection,
+    getRenderApiKey,
+    deleteRenderConnection,
+    getRenderConnection,
     // Module functions
     getModulesByUserId,
     getModuleById,

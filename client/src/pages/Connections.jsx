@@ -14,6 +14,14 @@ function Connections() {
   const [availableRepos, setAvailableRepos] = useState([]);
   const [loadingRepos, setLoadingRepos] = useState(false);
   const [primaryRepo, setPrimaryRepo] = useState(null);
+  const [showRenderModal, setShowRenderModal] = useState(false);
+  const [renderApiKey, setRenderApiKey] = useState('');
+  const [validatingRender, setValidatingRender] = useState(false);
+  const [showRenderApiKey, setShowRenderApiKey] = useState(false);
+  const [showRenderServiceSelector, setShowRenderServiceSelector] = useState(false);
+  const [availableRenderServices, setAvailableRenderServices] = useState([]);
+  const [loadingRenderServices, setLoadingRenderServices] = useState(false);
+  const [primaryRenderService, setPrimaryRenderService] = useState(null);
   const { token } = useAuth();
   const { terminalLogs } = useTerminal();
 
@@ -332,6 +340,152 @@ function Connections() {
     }
   };
 
+  const connectRender = async () => {
+    if (!renderApiKey.trim()) {
+      setError('Please enter your Render API key');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+
+    setValidatingRender(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/connections/render', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ api_key: renderApiKey })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSuccessMessage('Render API key connected successfully!');
+        setShowRenderModal(false);
+        setRenderApiKey('');
+        setShowRenderApiKey(false);
+        setTimeout(() => {
+          fetchConnections();
+          setSuccessMessage('');
+        }, 3000);
+      } else {
+        setError(data.error || 'Failed to connect Render API key');
+        setTimeout(() => setError(''), 5000);
+      }
+    } catch (err) {
+      setError('Failed to validate Render API key. Please try again.');
+      setTimeout(() => setError(''), 5000);
+    } finally {
+      setValidatingRender(false);
+    }
+  };
+
+  const disconnectRender = async (connectionId) => {
+    if (!confirm('Are you sure you want to disconnect your Render account?')) {
+      return;
+    }
+
+    setUpdating(connectionId);
+
+    try {
+      const response = await fetch(`/api/connections/render/${connectionId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Remove the connection from the list
+        setConnections(connections.filter(conn => conn.id !== connectionId));
+        setSuccessMessage('Render account disconnected successfully!');
+        setTimeout(() => setSuccessMessage(''), 3000);
+      } else {
+        alert(data.error || 'Failed to disconnect Render');
+      }
+    } catch (err) {
+      alert('Failed to disconnect Render. Please try again.');
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  // Fetch Render services
+  const fetchRenderServices = async () => {
+    setLoadingRenderServices(true);
+    try {
+      const response = await fetch('/api/connections/render/services', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setAvailableRenderServices(data.services);
+        setShowRenderServiceSelector(true);
+      } else {
+        alert(data.error || 'Failed to fetch Render services');
+      }
+    } catch (err) {
+      alert('Failed to fetch Render services. Please try again.');
+    } finally {
+      setLoadingRenderServices(false);
+    }
+  };
+
+  // Fetch current primary Render service
+  const fetchPrimaryRenderService = async () => {
+    try {
+      const response = await fetch('/api/connections/render/primary-service', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.primary_service) {
+        setPrimaryRenderService(data.primary_service);
+      }
+    } catch (err) {
+      console.error('Failed to fetch primary Render service:', err);
+    }
+  };
+
+  // Set primary Render service
+  const setPrimaryRenderServiceHandler = async (serviceId, serviceName, serviceType) => {
+    try {
+      const response = await fetch('/api/connections/render/primary-service', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ serviceId, serviceName, serviceType })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setPrimaryRenderService(data.primary_service);
+        setShowRenderServiceSelector(false);
+        setSuccessMessage('Primary Render service updated successfully!');
+        setTimeout(() => setSuccessMessage(''), 3000);
+      } else {
+        alert(data.error || 'Failed to set primary Render service');
+      }
+    } catch (err) {
+      alert('Failed to set primary Render service. Please try again.');
+    }
+  };
+
   const toggleConnection = async (connectionId, currentStatus) => {
     setUpdating(connectionId);
     const newStatus = currentStatus === 'connected' ? 'disconnected' : 'connected';
@@ -437,6 +591,13 @@ function Connections() {
   useEffect(() => {
     if (connections.find(c => c.service_name === 'github')) {
       fetchPrimaryRepo();
+    }
+  }, [connections]);
+
+  // Load primary Render service when connections load
+  useEffect(() => {
+    if (connections.find(c => c.service_name === 'render')) {
+      fetchPrimaryRenderService();
     }
   }, [connections]);
 
@@ -618,7 +779,110 @@ function Connections() {
           </div>
         )}
 
-        {!loading && !error && connections.length === 0 && !connections.find(c => c.service_name === 'github') && !connections.find(c => c.service_name === 'gmail') && !connections.find(c => c.service_name === 'instagram') && !connections.find(c => c.service_name === 'meta-ads') && !connections.find(c => c.service_name === 'sentry') && (
+        {/* Render Connect Button (show if not connected) */}
+        {!loading && !connections.find(c => c.service_name === 'render') && (
+          <div className="connection-card render-connect-card">
+            <div className="connection-header">
+              <div className="service-info">
+                <div>
+                  <h3>Render</h3>
+                  <p className="service-description">Connect your Render account to manage web services, databases, and deployments</p>
+                </div>
+              </div>
+            </div>
+            <button
+              className="connect-button"
+              onClick={() => setShowRenderModal(true)}
+              disabled={updating === 'render'}
+            >
+              {updating === 'render' ? 'Connecting...' : 'Connect Render'}
+            </button>
+          </div>
+        )}
+
+        {/* Render API Key Modal */}
+        {showRenderModal && (
+          <div className="modal-overlay" onClick={() => setShowRenderModal(false)}>
+            <div className="modal-content render-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3>Connect Render Account</h3>
+                <button
+                  className="modal-close"
+                  onClick={() => {
+                    setShowRenderModal(false);
+                    setRenderApiKey('');
+                    setShowRenderApiKey(false);
+                    setError('');
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+              <div className="modal-body">
+                <p className="modal-description">
+                  Enter your Render API key to connect your account. You can generate an API key from your Render Dashboard.
+                </p>
+                <div className="api-key-instructions">
+                  <p><strong>How to get your API key:</strong></p>
+                  <ol>
+                    <li>Go to <a href="https://dashboard.render.com/u/settings?add-api-key" target="_blank" rel="noopener noreferrer">Render Dashboard Settings</a></li>
+                    <li>Click "Create API Key"</li>
+                    <li>Copy the key immediately (it won't be shown again)</li>
+                    <li>Paste it below</li>
+                  </ol>
+                </div>
+                <div className="api-key-input-wrapper">
+                  <input
+                    type={showRenderApiKey ? 'text' : 'password'}
+                    className="api-key-input"
+                    placeholder="rnd_xxxxxxxxxxxxxxxxxxxx"
+                    value={renderApiKey}
+                    onChange={(e) => setRenderApiKey(e.target.value)}
+                    disabled={validatingRender}
+                  />
+                  <button
+                    className="toggle-visibility"
+                    onClick={() => setShowRenderApiKey(!showRenderApiKey)}
+                    type="button"
+                  >
+                    {showRenderApiKey ? '🙈' : '👁️'}
+                  </button>
+                </div>
+                <p className="security-warning">
+                  ⚠️ Keep your API key secure. It provides full access to your Render account.
+                </p>
+                {error && (
+                  <div className="modal-error">
+                    {error}
+                  </div>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button
+                  className="modal-cancel"
+                  onClick={() => {
+                    setShowRenderModal(false);
+                    setRenderApiKey('');
+                    setShowRenderApiKey(false);
+                    setError('');
+                  }}
+                  disabled={validatingRender}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="modal-submit"
+                  onClick={connectRender}
+                  disabled={validatingRender || !renderApiKey.trim()}
+                >
+                  {validatingRender ? 'Validating...' : 'Connect'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {!loading && !error && connections.length === 0 && !connections.find(c => c.service_name === 'github') && !connections.find(c => c.service_name === 'gmail') && !connections.find(c => c.service_name === 'instagram') && !connections.find(c => c.service_name === 'meta-ads') && !connections.find(c => c.service_name === 'sentry') && !connections.find(c => c.service_name === 'render') && (
           <div className="empty-state">
             <p>No other service connections found.</p>
           </div>
@@ -638,7 +902,7 @@ function Connections() {
                     </div>
                   </div>
 
-                  {connection.service_name === 'github' || connection.service_name === 'gmail' || connection.service_name === 'instagram' || connection.service_name === 'meta-ads' || connection.service_name === 'sentry' ? (
+                  {connection.service_name === 'github' || connection.service_name === 'gmail' || connection.service_name === 'instagram' || connection.service_name === 'meta-ads' || connection.service_name === 'sentry' || connection.service_name === 'render' ? (
                     <button
                       className="disconnect-button"
                       onClick={() => {
@@ -647,6 +911,7 @@ function Connections() {
                         else if (connection.service_name === 'instagram') disconnectInstagram(connection.id);
                         else if (connection.service_name === 'meta-ads') disconnectMetaAds(connection.id);
                         else if (connection.service_name === 'sentry') disconnectSentry(connection.id);
+                        else if (connection.service_name === 'render') disconnectRender(connection.id);
                       }}
                       disabled={updating === connection.id}
                     >
@@ -907,8 +1172,108 @@ function Connections() {
                   </div>
                 )}
 
+                {/* Render-specific metadata */}
+                {connection.service_name === 'render' && connection.metadata && (
+                  <div className="connection-metadata render-metadata">
+                    <div className="metadata-details">
+                      {connection.metadata.owner_name && (
+                        <div className="metadata-item">
+                          <p className="metadata-label">Workspace:</p>
+                          <p className="metadata-value">{connection.metadata.owner_name}</p>
+                        </div>
+                      )}
+                      {connection.metadata.total_workspaces !== undefined && (
+                        <div className="metadata-item">
+                          <p className="metadata-label">Total Workspaces:</p>
+                          <p className="metadata-value">{connection.metadata.total_workspaces}</p>
+                        </div>
+                      )}
+                      {connection.metadata.owner_email && (
+                        <div className="metadata-item">
+                          <p className="metadata-label">Email:</p>
+                          <p className="metadata-value">{connection.metadata.owner_email}</p>
+                        </div>
+                      )}
+                      <div className="metadata-item">
+                        <p className="metadata-label">Primary Service:</p>
+                        <p className="metadata-value">
+                          {primaryRenderService ? (
+                            <span>
+                              {primaryRenderService.name} ({primaryRenderService.type})
+                              <button
+                                className="change-repo-button"
+                                onClick={fetchRenderServices}
+                                disabled={loadingRenderServices}
+                              >
+                                {loadingRenderServices ? 'Loading...' : 'Change'}
+                              </button>
+                            </span>
+                          ) : (
+                            <button
+                              className="set-repo-button"
+                              onClick={fetchRenderServices}
+                              disabled={loadingRenderServices}
+                            >
+                              {loadingRenderServices ? 'Loading...' : 'Set Primary Service'}
+                            </button>
+                          )}
+                        </p>
+                      </div>
+                      <div className="metadata-item">
+                        <p className="metadata-label">Connected since:</p>
+                        <p className="metadata-value">
+                          {new Date(connection.metadata.connected_at || connection.created_at).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Render Service Selector Modal */}
+                {connection.service_name === 'render' && showRenderServiceSelector && (
+                  <div className="repo-selector-modal">
+                    <div className="modal-header">
+                      <h4>Select Primary Service</h4>
+                      <button
+                        className="modal-close"
+                        onClick={() => setShowRenderServiceSelector(false)}
+                      >
+                        ×
+                      </button>
+                    </div>
+                    <div className="repo-list">
+                      {availableRenderServices.length === 0 ? (
+                        <p>No services found</p>
+                      ) : (
+                        availableRenderServices.map((service) => (
+                          <div
+                            key={service.id}
+                            className="repo-item"
+                            onClick={() => setPrimaryRenderServiceHandler(service.id, service.name, service.type)}
+                          >
+                            <div className="repo-info">
+                              <strong>{service.name || 'Unknown Service'}</strong>
+                              <p>
+                                {service.type && `Type: ${service.type.toUpperCase()}`}
+                                {service.region && ` • Region: ${service.region}`}
+                                {service.env && ` • Env: ${service.env}`}
+                              </p>
+                              {service.url && <small>URL: {service.url}</small>}
+                              {service.suspended && service.suspended !== 'NOT_SUSPENDED' && <small style={{color: 'red'}}> • {service.suspended}</small>}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* Standard metadata for other services */}
-                {connection.service_name !== 'github' && connection.service_name !== 'gmail' && connection.service_name !== 'instagram' && connection.service_name !== 'meta-ads' && connection.metadata && (
+                {connection.service_name !== 'github' && connection.service_name !== 'gmail' && connection.service_name !== 'instagram' && connection.service_name !== 'meta-ads' && connection.service_name !== 'render' && connection.metadata && (
                   <div className="connection-metadata">
                     <p className="metadata-label">Connected since:</p>
                     <p className="metadata-value">

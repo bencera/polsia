@@ -7,8 +7,7 @@
   color: #000;
   line-height: 1.6;
   padding: 0;
-  max-width: 850px;
-  margin: 0 auto;
+  width: 100%;
 }
 
 /* Terminal */
@@ -395,6 +394,233 @@ input:disabled + .toggle-slider {
   color: #999;
 }
 
+/* Render Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal-content {
+  background: #fff;
+  border: 2px solid #000;
+  max-width: 500px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  font-family: "Times New Roman", Times, serif;
+}
+
+.render-modal .modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #000;
+}
+
+.render-modal .modal-header h3 {
+  margin: 0;
+  font-size: 1.5em;
+  font-weight: 700;
+  color: #000;
+}
+
+.render-modal .modal-close {
+  background: none;
+  border: none;
+  font-size: 28px;
+  cursor: pointer;
+  color: #000;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  line-height: 24px;
+}
+
+.render-modal .modal-close:hover {
+  color: #666;
+}
+
+.render-modal .modal-body {
+  padding: 20px;
+}
+
+.modal-description {
+  margin: 0 0 15px 0;
+  color: #333;
+  font-size: 1em;
+  line-height: 1.5;
+}
+
+.api-key-instructions {
+  background: #f9f9f9;
+  border: 1px solid #ddd;
+  padding: 15px;
+  margin-bottom: 20px;
+  font-size: 0.9em;
+}
+
+.api-key-instructions p {
+  margin: 0 0 10px 0;
+  font-weight: 600;
+}
+
+.api-key-instructions ol {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.api-key-instructions li {
+  margin-bottom: 5px;
+}
+
+.api-key-instructions a {
+  color: #000;
+  text-decoration: underline;
+}
+
+.api-key-instructions a:hover {
+  text-decoration: none;
+}
+
+.api-key-input-wrapper {
+  position: relative;
+  margin-bottom: 15px;
+}
+
+.api-key-input {
+  width: 100%;
+  padding: 12px 45px 12px 12px;
+  border: 1px solid #000;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.9em;
+  box-sizing: border-box;
+}
+
+.api-key-input:focus {
+  outline: none;
+  border-color: #000;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+}
+
+.api-key-input:disabled {
+  background: #f5f5f5;
+  cursor: not-allowed;
+}
+
+.toggle-visibility {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  padding: 4px 8px;
+  line-height: 1;
+}
+
+.toggle-visibility:hover {
+  opacity: 0.7;
+}
+
+.security-warning {
+  margin: 0;
+  padding: 10px;
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  color: #856404;
+  font-size: 0.85em;
+  line-height: 1.4;
+}
+
+.modal-error {
+  margin-top: 10px;
+  padding: 12px;
+  background: #f8d7da;
+  border: 1px solid #f5c6cb;
+  color: #721c24;
+  font-size: 0.9em;
+  line-height: 1.4;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 20px;
+  border-top: 1px solid #000;
+}
+
+.modal-cancel,
+.modal-submit {
+  padding: 8px 20px;
+  font-family: helvetica, serif;
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: 2px;
+  border: 1px solid #1a1a1a;
+}
+
+.modal-cancel {
+  background: #fff;
+  color: #000;
+}
+
+.modal-cancel:hover:not(:disabled) {
+  background: #f0f0f0;
+}
+
+.modal-submit {
+  background: linear-gradient(top, #ffffff, #888888);
+  background: -webkit-linear-gradient(top, #ffffff, #888888);
+  color: #000;
+  box-shadow: rgba(255, 255, 255, 0.4) 0 1px 0 0 inset, rgba(255, 255, 255, 0.4) 0 1px 0;
+}
+
+.modal-submit:hover:not(:disabled) {
+  background: linear-gradient(top, #ffffff, #888888);
+  background: -webkit-linear-gradient(top, #ffffff, #888888);
+}
+
+.modal-submit:active:not(:disabled) {
+  background: linear-gradient(top, #888888, #ffffff);
+  background: -webkit-linear-gradient(top, #888888, #ffffff);
+  box-shadow: rgba(0, 0, 0, 0.4) 0 1px 2px 0 inset;
+  padding-top: 9px;
+  padding-bottom: 7px;
+}
+
+.modal-cancel:disabled,
+.modal-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Render Connect Card */
+.render-connect-card {
+  background: #fff;
+  border: 2px solid #000;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+/* Render Metadata */
+.render-metadata {
+  display: flex;
+  flex-direction: column;
+}
+
 @media (max-width: 768px) {
   .settings-container {
     padding: 20px 15px;
@@ -410,5 +636,13 @@ input:disabled + .toggle-slider {
 
   .repo-selector-modal {
     max-height: 300px;
+  }
+
+  .modal-content {
+    max-height: 95vh;
+  }
+
+  .modal-overlay {
+    padding: 10px;
   }
 }
