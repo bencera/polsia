@@ -108,16 +108,16 @@ async function runModule(moduleId, userId, options = {}) {
             }
         }
 
-        // 4. Create workspace directory
+        // 4. Create persistent workspace for this module (same path for session resumption)
         const workspace = path.join(
             process.cwd(),
             'temp',
-            'module-executions',
-            `${executionRecord.id}-${crypto.randomBytes(4).toString('hex')}`
+            'module-sessions',
+            `module-${module.id}`
         );
         await fs.mkdir(workspace, { recursive: true });
 
-        console.log(`[Agent Runner] Workspace created: ${workspace}`);
+        console.log(`[Agent Runner] Workspace: ${workspace}`);
 
         // 5. Check for existing session_id to enable continuous learning
         const resumeSessionId = module.session_id || null;
@@ -187,9 +187,8 @@ async function runModule(moduleId, userId, options = {}) {
 
         console.log(`[Agent Runner] ✓ AI execution completed. Success: ${result.success}`);
 
-        // 6. Cleanup workspace and Gmail MCP credentials
-        console.log(`[Agent Runner] 🧹 Cleaning up workspace...`);
-        await fs.rm(workspace, { recursive: true, force: true });
+        // 6. Workspace preserved for session continuity
+        console.log(`[Agent Runner] ✓ Workspace preserved for session continuity`);
 
         // Cleanup Gmail MCP credentials if they were used
         if (mcpMounts.includes('gmail')) {
@@ -1511,9 +1510,7 @@ Save to Reports database using \`create_report\` tool:
  * Fetches App Store Connect analytics and integrates into analytics.md
  */
 async function runAppStoreAnalyticsModule(module, userId, executionRecord, startTime) {
-    const crypto = require('crypto');
     const fs = require('fs').promises;
-    let workspace; // Declare outside try block so finally can access it
 
     try {
         console.log(`[Agent Runner] 📱 Running App Store Analytics Integrator module`);
@@ -1540,40 +1537,64 @@ async function runAppStoreAnalyticsModule(module, userId, executionRecord, start
             message: `Starting App Store analytics for ${primaryApp.name}`,
         });
 
-        // Load existing analytics document if available
-        const { getDocumentStore } = require('./document-store');
-        const documents = await getDocumentStore(userId);
-        const existingAnalytics = documents?.analytics_md || '';
-
-        console.log(`[Agent Runner] Existing analytics found: ${existingAnalytics ? 'Yes' : 'No'}`);
-
-        // Prepare context with App Store Connect MCP
+        // Prepare context with App Store Connect MCP + Reports MCP
         const context = await prepareModuleContext(module, userId);
 
-        // Create workspace
+        // Create persistent workspace for this module (same path for session resumption)
         const workspace = path.join(
             process.cwd(),
             'temp',
-            'module-executions',
-            `${executionRecord.id}-${crypto.randomBytes(4).toString('hex')}`
+            'module-sessions',
+            `module-${module.id}`
         );
         await fs.mkdir(workspace, { recursive: true });
 
-        console.log(`[Agent Runner] Workspace created: ${workspace}`);
+        console.log(`[Agent Runner] Workspace: ${workspace}`);
 
-        // If there's existing analytics, save it to workspace for the agent to read
-        if (existingAnalytics) {
-            await fs.writeFile(path.join(workspace, 'existing-analytics.md'), existingAnalytics);
-            console.log(`[Agent Runner] Existing analytics written to workspace for agent access`);
-        }
+        // Build analytics prompt with Reports MCP
+        const today = new Date().toISOString().split('T')[0];
+        const analyticsPrompt = `You are an App Store analytics reporter for "${primaryApp.name}".
 
-        // Build autonomous analytics prompt
-        const analyticsPrompt = `You are an App Store analytics integrator for "${primaryApp.name}".
+**📅 TODAY'S DATE: ${today}**
+
+## Your Task
+
+Generate an App Store analytics report for **${today}** - but ONLY if one doesn't exist yet.
+
+---
+
+## ⚠️ CRITICAL FIRST STEP - Check for Existing Report
+
+**BEFORE doing anything else, you MUST check if a report already exists for today:**
+
+1. Use the \`get_reports_by_date\` tool from Reports MCP:
+   - report_date: "${today}"
+   - report_type: "appstore_analytics"
+
+2. **If a report EXISTS for ${today}:**
+   - Respond: "✓ Report already exists for ${today}. No action needed."
+   - STOP immediately - do NOT create a duplicate report
+
+3. **If NO report exists for ${today}:**
+   - This is a NEW day (or first run) - proceed to create fresh report
+
+---
+
+## Tools Available
+
+**Reports MCP (check/save reports):**
+- \`get_reports_by_date\` - Check if report exists for a date
+- \`create_report\` - Save new report to database
+
+**App Store Connect MCP (query app data):**
+- \`list_apps\` - Confirm app exists
+- \`get_app_analytics\` - Get app metadata and version history
+- \`list_customer_reviews\` - Get ratings and user feedback
 
 ## IMPORTANT: API Limitations
 
 App Store Connect API v1 does NOT provide downloads, active users, or session data via REST endpoints.
-These metrics require the complex async Analytics Reports workflow (not implemented yet).
+These metrics require the complex async Analytics Reports workflow.
 
 ## What IS Available
 
@@ -1581,35 +1602,24 @@ These metrics require the complex async Analytics Reports workflow (not implemen
 - Customer reviews and ratings (★ ratings, review text, sentiment)
 - App Store versions and states
 
-## Your Task
+## Process (If No Report Exists)
 
 1. Fetch available App Store data:
    - \`list_apps\` - Confirm app exists
-   - \`get_app_analytics\` with appId="${primaryApp.id}" - Get app metadata and version history (NOT downloads/sessions)
-   - \`list_customer_reviews\` with appId="${primaryApp.id}" and limit=100 - Get ratings and user feedback
+   - \`get_app_analytics\` with appId="${primaryApp.id}" - Get app metadata and version history
+   - \`list_customer_reviews\` with appId="${primaryApp.id}" and limit=100 - Get ratings and feedback
 
-${existingAnalytics ? `2. Read existing analytics:
-   - Use \`Read\` to read \`existing-analytics.md\`
+2. Generate a report with this structure:
 
-3. IMMEDIATELY write updated report to \`analytics-report.md\`:
-   - Copy entire existing content
-   - Update Executive Summary to mention App Store presence
-   - Add "## App Store Performance" section with:
-     - App version history
-     - ⭐ Star rating and review count
-     - Review sentiment analysis (positive/negative themes)
-     - Recent user feedback highlights
-   - Be honest that downloads/sessions aren't available via API` : `2. Write new report to \`analytics-report.md\`:
-   - Executive Summary
-   - App Store Performance section
-   - Focus on ratings, reviews, and version history`}
-
-**Format Example:**
-
-## App Store Performance
+# App Store Analytics - ${today}
 **App:** ${primaryApp.name}
 **Bundle ID:** ${primaryApp.bundle_id || 'N/A'}
-**Latest Version:** [from get_app_analytics version history]
+
+## App Store Performance
+
+### Version Info
+- **Latest Version:** [from get_app_analytics]
+- **Release Date:** [date]
 
 ### User Reception
 - **App Store Rating:** [X.X] ⭐ (based on [N] reviews)
@@ -1618,15 +1628,26 @@ ${existingAnalytics ? `2. Read existing analytics:
   - Positive: [themes from 5-star reviews]
   - Negative: [themes from 1-2 star reviews]
 
-### Version History
+### Recent Version History
 - [List recent versions with release dates]
 
 ### API Limitation Note
 Downloads, active users, and session metrics are not available via App Store Connect REST API v1.
-These require the async Analytics Reports workflow. Use App Store Connect web interface for full analytics.
+These require the async Analytics Reports workflow.
 
-**DO IT NOW - fetch the 3 tools, then write the file immediately.**`;
+## Final Step - Save Report
 
+Save to Reports database using \`create_report\` tool:
+- name: "App Store Analytics Report"
+- report_type: "appstore_analytics"
+- report_date: "${today}"
+- content: The full markdown report
+- metadata: { "app_name": "${primaryApp.name}", "app_id": "${primaryApp.id}", "rating": [X.X], "review_count": [N] }
+
+**IMPORTANT:**
+- TODAY'S DATA ONLY (${today})
+- DO NOT write to files - save directly to database with create_report
+- Work efficiently`;
 
         // Log analysis start
         await saveExecutionLog(executionRecord.id, {
@@ -1635,20 +1656,41 @@ These require the async Analytics Reports workflow. Use App Store Connect web in
             message: 'Fetching App Store analytics with MCP tools',
         });
 
+        // Check for existing session_id to enable continuous learning
+        const resumeSessionId = module.session_id || null;
+        if (resumeSessionId) {
+            console.log(`[Agent Runner] ♻️  Module has existing session - will resume for continuous learning`);
+        } else {
+            console.log(`[Agent Runner] 🆕 First run for this module - creating new session`);
+        }
+
+        // Track new session ID if this is first run
+        let newSessionId = null;
+
         // Execute the agent
         const result = await executeTask(analyticsPrompt, {
             cwd: workspace,
             maxTurns: context.maxTurns || 50,
             mcpServers: context.mcpServers,
+            skipFileCollection: true,
+            resumeSessionId,
             onProgress: async (progress) => {
                 if (progress.stage === 'tool_use' && progress.tool) {
-                    console.log(`[Agent Runner] 🔧 Using App Store tool: ${progress.tool}`);
+                    console.log(`[Agent Runner] 🔧 Using tool: ${progress.tool}`);
                     await saveExecutionLog(executionRecord.id, {
                         log_level: 'info',
                         stage: 'analyzing',
-                        message: `Using App Store tool: ${progress.tool}`,
+                        message: `Using tool: ${progress.tool}`,
                         metadata: { tool: progress.tool }
                     });
+                } else if (progress.stage === 'initialized') {
+                    console.log(`[Agent Runner] ✓ Session initialized with model: ${progress.model}`);
+
+                    // Capture session ID for first-time sessions
+                    if (progress.sessionId && !resumeSessionId) {
+                        newSessionId = progress.sessionId;
+                        console.log(`[Agent Runner] 📝 New session ID captured: ${newSessionId}`);
+                    }
                 }
             }
         });
@@ -1659,53 +1701,16 @@ These require the async Analytics Reports workflow. Use App Store Connect web in
 
         console.log(`[Agent Runner] Claude analysis complete`);
 
-        // Read the analytics report
-        const reportPath = path.join(workspace, 'analytics-report.md');
-        let analyticsContent = null;
-
-        try {
-            analyticsContent = await fs.readFile(reportPath, 'utf-8');
-            console.log(`[Agent Runner] ✓ Analytics report read from file (${analyticsContent.length} characters)`);
-        } catch (error) {
-            console.error('[Agent Runner] ❌ Failed to read analytics-report.md');
-            throw new Error('Agent did not write analytics-report.md file. The agent must use the Write tool to create this file.');
-        }
-
-        // Validate report content
-        const trimmed = analyticsContent.trim();
-        if (!trimmed.startsWith('# ') || trimmed.length < 500) {
-            throw new Error('Analytics report is invalid. Must start with "# " header and be at least 500 characters.');
-        }
-
-        console.log(`[Agent Runner] ✓ Report validated`);
-
         // Calculate metrics
         const duration = Date.now() - startTime;
         const cost = result.metadata?.cost_usd || 0;
         const turns = result.metadata?.num_turns || 0;
 
-        // Save to document store (analytics_md)
-        await saveExecutionLog(executionRecord.id, {
-            log_level: 'info',
-            stage: 'saving',
-            message: 'Saving updated analytics report to document store',
-        });
-
-        const { updateDocument } = require('./document-store');
-        await updateDocument(userId, 'analytics_md', analyticsContent);
-
-        console.log(`[Agent Runner] ✓ App Store Analytics integrated into analytics.md`);
-
-        // Extract summary for task summary
-        const extractSummary = (content) => {
-            const execMatch = content.match(/##\s*Executive\s*Summary\s*\n\n?([^\n]+(?:\n(?!##)[^\n]+)*)/i);
-            if (execMatch) {
-                return execMatch[1].trim().substring(0, 300);
-            }
-            return `Integrated App Store analytics for ${primaryApp.name} into analytics report`;
-        };
-
-        const summaryDescription = extractSummary(analyticsContent);
+        console.log(`[Agent Runner] ✅ App Store Analytics Integrator completed`);
+        console.log(`   - App: ${primaryApp.name}`);
+        console.log(`   - Duration: ${(duration / 1000).toFixed(2)}s`);
+        console.log(`   - Cost: $${cost.toFixed(4)}`);
+        console.log(`   - Turns: ${turns}`);
 
         // Update execution record
         await updateModuleExecution(executionRecord.id, {
@@ -1716,37 +1721,29 @@ These require the async Analytics Reports workflow. Use App Store Connect web in
             metadata: {
                 app_name: primaryApp.name,
                 app_id: primaryApp.id,
-                analytics_length: analyticsContent.length,
-                had_existing_analytics: !!existingAnalytics,
                 turns,
+                session_id: result.metadata?.session_id || newSessionId,
+                resumed_from_session: !!resumeSessionId,
+                note: 'Report saved to database via Reports MCP during execution'
             },
         });
 
-        // Create task summary
-        await createTaskSummary(userId, {
-            title: `App Store Analytics: ${primaryApp.name}`,
-            description: summaryDescription,
-            status: 'completed',
-            execution_id: executionRecord.id,
-            module_id: module.id,
-            cost_usd: cost,
-            duration_ms: duration,
-            num_turns: turns,
-            completed_at: new Date(),
-        });
+        // Save new session ID to module for future runs (continuous learning)
+        if (newSessionId && !resumeSessionId && result.success) {
+            console.log(`[Agent Runner] 💾 Saving session ID to module for future runs...`);
+            const { updateModuleSessionId } = require('../db');
+            await updateModuleSessionId(module.id, newSessionId);
+            console.log(`[Agent Runner] ✅ Session ID saved - future runs will resume from this session`);
+        }
 
-        console.log(`[Agent Runner] ✅ App Store Analytics Integrator completed`);
-        console.log(`   - App: ${primaryApp.name}`);
-        console.log(`   - Duration: ${(duration / 1000).toFixed(2)}s`);
-        console.log(`   - Cost: $${cost.toFixed(4)}`);
-        console.log(`   - Turns: ${turns}`);
+        // Keep workspace persistent for session resumption
+        console.log(`[Agent Runner] ✓ Workspace preserved for session continuity`);
 
         return {
             success: true,
             execution_id: executionRecord.id,
             duration_ms: duration,
             cost_usd: cost,
-            analytics_length: analyticsContent.length,
         };
 
     } catch (error) {
@@ -1774,16 +1771,6 @@ These require the async Analytics Reports workflow. Use App Store Connect web in
             error: error.message,
             execution_id: executionRecord.id,
         };
-    } finally {
-        // Cleanup workspace (only if it was created)
-        if (workspace) {
-            try {
-                await fs.rm(workspace, { recursive: true, force: true });
-                console.log(`[Agent Runner] 🧹 Workspace cleaned up`);
-            } catch (cleanupError) {
-                console.warn(`[Agent Runner] Warning: Failed to cleanup workspace: ${cleanupError.message}`);
-            }
-        }
     }
 }
 

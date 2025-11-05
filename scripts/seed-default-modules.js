@@ -446,105 +446,68 @@ IMPORTANT:
     },
     {
         name: 'Fetch App Store Analytics Data',
-        description: 'Downloads and parses analytics reports from Apple (downloads, revenue, sessions). Integrates real metrics into analytics.md.',
+        description: 'Downloads analytics reports from Apple and creates short daily snapshots with real metrics (downloads, revenue, sessions)',
         type: 'autonomous',
         frequency: 'daily',
         config: {
             maxTurns: 30,
-            mcpMounts: ['appstore_connect'],
-            goal: `You are an App Store analytics data fetcher. Your job is to download and parse analytics reports from Apple.
+            mcpMounts: ['appstore_connect', 'reports'],
+            goal: `You are an App Store analytics reporter. Generate SHORT daily reports with Apple's latest data.
 
-## Your Mission
+## ⚠️ CRITICAL FIRST STEP - Check for Existing Report
 
-1. Check for available analytics report instances
-2. Download CSV files with real metrics (downloads, revenue, sessions, active users)
-3. Parse the data and integrate it into the analytics report
+**BEFORE doing anything else:**
+1. Use \`get_reports_by_date\` tool (Reports MCP):
+   - report_date: [today's date in YYYY-MM-DD]
+   - report_type: "appstore_fetch"
+2. **If report EXISTS:** Respond "✓ Report exists for [date]" and STOP
+3. **If NO report:** Continue to create new report
 
-## Important Context
+## Your Task (If No Report Exists)
 
-The "Enable App Store Analytics Reports" module already created analytics report requests.
-Your job is to CHECK if Apple has generated any new report instances and download them.
+Generate a SHORT daily snapshot with today's Apple data only.
 
-## Your Process
+### Step 1: Check for Available Reports
+- Use \`get_analytics_report_status\` with stored request ID
+- Use \`get_analytics_report_instances\` to check if CSVs are ready
 
-**Step 1: Get the analytics request**
-- First, use \`list_apps\` to find your app
-- IMPORTANT: You need to know the request ID from when analytics was enabled
-- If you don't have it, this is likely the FIRST TIME running after enabling
-- Try common report IDs or skip to checking specific report types
+### Step 2: Download LATEST Report Only (if available)
+- Only download the MOST RECENT instance (newest processingDate)
+- Use \`download_analytics_report\` with latest URL
+- Parse the CSV for key metrics
 
-**Step 2: Check for available report instances**
-- Use \`get_analytics_report_status\` with the request ID (if known)
-- This returns a list of reports (e.g., r39-xxx, r154-xxx)
-- For each report ID, use \`get_analytics_report_instances\` to check if CSV files are ready
+### Step 3: Create SHORT Report
 
-**Step 3: Download LATEST reports only**
-- If instances are available, they'll have download URLs in \`segments[].url\`
-- **IMPORTANT:** Only download the MOST RECENT instance (latest date)
-- Each instance has a \`processingDate\` - sort by date and take the newest one
-- Use \`download_analytics_report\` with the latest instance's URL
-- This avoids re-downloading all historical data every day
+If data available:
+# App Store Analytics - [date]
+**Data Source:** Apple Analytics API
 
-**Step 4: Summarize the data**
-- Extract key metrics from the LATEST parsed data:
-  - Downloads/Units (for that day or period)
-  - Revenue
-  - Sessions
-  - Active Devices
-  - Date range
-- Create a summary with actual numbers from the latest report
-
-**Step 5: Update analytics report**
-- Read existing analytics.md (if exists)
-- Add or update "App Store Analytics Data" section with:
-  - Total downloads
-  - Total revenue
-  - Active users
-  - Session counts
-  - Date range of data
-- Write updated report back
-
-## Report Format
-
-Add this section to analytics.md:
-
-## App Store Analytics (Latest from Apple)
-**Report Date:** [date of the latest report]
-**Last Fetched:** [current timestamp]
-**Source:** Apple Analytics Reports API (CSV download)
-
-### Latest Period Metrics
-- **Downloads:** [number] (for this period)
+## Latest Metrics
+- **Downloads:** [number] (period: [range])
 - **Revenue:** $[amount] (if available)
 - **Active Devices:** [number] (if available)
 - **Sessions:** [number] (if available)
 
-### Trend Analysis
-[If you have multiple data points from the CSV, show trends within that report]
-- Data covers: [date range from CSV]
-- Peak performance: [insights from the data]
-
-### Notes
-- Data sourced from Apple's Analytics Reports API
-- Reports typically updated daily by Apple
-- Full data available in downloaded CSV files
-
-## If No Reports Available
-
-If \`get_analytics_report_instances\` returns 0 instances:
-- This is normal if analytics was just enabled (takes 24-48 hours)
-- Create a brief status update instead:
-
-## App Store Analytics Status
+If NO data available yet:
+# App Store Analytics - [date]
 **Status:** Waiting for Apple to generate reports
-**Expected:** Reports typically available 24-48 hours after enabling analytics
-**Next Check:** This module runs daily to check for new data
+**Expected:** 24-48 hours after enabling analytics
+**Next Check:** Tomorrow
 
-IMPORTANT:
-- Focus on REAL data from CSV files, not estimates
-- If no data available yet, just create a status update
-- Don't make up numbers - only use actual parsed metrics
-- Be concise and data-focused`,
+### Step 4: Save Report
+
+Use \`create_report\` tool (Reports MCP):
+- name: "App Store Analytics Report"
+- report_type: "appstore_fetch"
+- report_date: [today YYYY-MM-DD]
+- content: [the short markdown above]
+- metadata: { "downloads": [X], "revenue": [Y], "status": "available" or "pending" }
+
+**IMPORTANT:**
+- SHORT reports only (under 15 lines)
+- Today's data only - no historical analysis
+- DO NOT write to files - save directly via create_report
+- If no CSV available, create status report and save it`,
         },
     },
     {
