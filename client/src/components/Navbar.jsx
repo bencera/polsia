@@ -31,6 +31,10 @@ function Navbar() {
     navigate('/analytics');
   };
 
+  const handleTasks = () => {
+    navigate('/tasks');
+  };
+
   const handleHome = () => {
     navigate('/dashboard');
   };
@@ -53,6 +57,9 @@ function Navbar() {
         </button>
         <button onClick={handleAnalytics} className="nav-button">
           Analytics
+        </button>
+        <button onClick={handleTasks} className="nav-button">
+          Tasks
         </button>
         <button onClick={handleModules} className="nav-button">
           Modules
