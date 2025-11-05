@@ -626,6 +626,23 @@ async function deleteModule(moduleId, userId) {
     }
 }
 
+// Update module session ID (for session resumption)
+async function updateModuleSessionId(moduleId, sessionId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            'UPDATE modules SET session_id = $1 WHERE id = $2 RETURNING *',
+            [sessionId, moduleId]
+        );
+        return result.rows[0] || null;
+    } catch (err) {
+        console.error('Error updating module session ID:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
 // Get execution history for a module
 async function getModuleExecutions(moduleId, userId, limit = 50) {
     const client = await pool.connect();
@@ -2551,6 +2568,117 @@ async function getRenderConnection(userId) {
     }
 }
 
+// ===== REPORTS FUNCTIONS =====
+
+// Create a new report
+async function createReport(userId, reportData) {
+    const client = await pool.connect();
+    try {
+        const {
+            execution_id,
+            module_id,
+            name,
+            report_type,
+            report_date,
+            content,
+            metadata
+        } = reportData;
+
+        const result = await client.query(
+            `INSERT INTO reports (
+                user_id, execution_id, module_id, name, report_type,
+                report_date, content, metadata
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            RETURNING *`,
+            [
+                userId,
+                execution_id || null,
+                module_id || null,
+                name,
+                report_type,
+                report_date,
+                content,
+                metadata || null
+            ]
+        );
+        return result.rows[0];
+    } catch (err) {
+        console.error('Error creating report:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Get reports by user ID with optional filters
+async function getReportsByUserId(userId, filters = {}, limit = 50) {
+    const client = await pool.connect();
+    try {
+        const {
+            report_type,
+            start_date,
+            end_date
+        } = filters;
+
+        let query = 'SELECT * FROM reports WHERE user_id = $1';
+        const values = [userId];
+        let paramCount = 2;
+
+        if (report_type) {
+            query += ` AND report_type = $${paramCount}`;
+            values.push(report_type);
+            paramCount++;
+        }
+
+        if (start_date) {
+            query += ` AND report_date >= $${paramCount}`;
+            values.push(start_date);
+            paramCount++;
+        }
+
+        if (end_date) {
+            query += ` AND report_date <= $${paramCount}`;
+            values.push(end_date);
+            paramCount++;
+        }
+
+        query += ` ORDER BY report_date DESC, created_at DESC LIMIT $${paramCount}`;
+        values.push(limit);
+
+        const result = await client.query(query, values);
+        return result.rows;
+    } catch (err) {
+        console.error('Error getting reports by user ID:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Get reports by specific date (optionally filtered by report_type)
+async function getReportsByDate(userId, reportDate, reportType = null) {
+    const client = await pool.connect();
+    try {
+        let query = 'SELECT * FROM reports WHERE user_id = $1 AND report_date = $2';
+        const values = [userId, reportDate];
+
+        if (reportType) {
+            query += ' AND report_type = $3';
+            values.push(reportType);
+        }
+
+        query += ' ORDER BY created_at DESC';
+
+        const result = await client.query(query, values);
+        return result.rows;
+    } catch (err) {
+        console.error('Error getting reports by date:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
 module.exports = {
     pool,
     initDatabase,
@@ -2610,6 +2738,7 @@ module.exports = {
     getModuleById,
     createModule,
     updateModule,
+    updateModuleSessionId,
     deleteModule,
     getModuleExecutions,
     createModuleExecution,
@@ -2651,4 +2780,8 @@ module.exports = {
     getAIGenerationsByUserId,
     linkMediaToGeneration,
     getAIGenerationStats,
+    // Reports functions
+    createReport,
+    getReportsByUserId,
+    getReportsByDate,
 };

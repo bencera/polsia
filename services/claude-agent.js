@@ -59,6 +59,20 @@ function formatToolUse(toolName, input = {}) {
         const shortCmd = cmd.length > 60 ? cmd.substring(0, 60) + '...' : cmd;
         return `Bash(${shortCmd})`;
 
+      case 'Task':
+        // Extract sub-agent info from input
+        const agentName = input.subagent_type || input.agent || 'unknown-agent';
+        const taskDescription = input.description || '';
+        const taskPrompt = input.prompt || '';
+
+        // Format for logs
+        const shortDesc = taskDescription.length > 40 ? taskDescription.substring(0, 40) + '...' : taskDescription;
+        const shortPrompt = taskPrompt.length > 60 ? taskPrompt.substring(0, 60) + '...' : taskPrompt;
+
+        return shortDesc
+          ? `🤖 Task("${agentName}"): ${shortDesc}`
+          : `🤖 Task("${agentName}"): ${shortPrompt}`;
+
       case 'mcp__render__query_render_postgres':
         const sql = input.sql || '';
         const shortSql = sql.length > 80 ? sql.substring(0, 80) + '...' : sql;
@@ -133,10 +147,17 @@ async function executeTask(prompt, options = {}) {
     maxTurns = 10,
     model,
     mcpServers,
+    agents,
     onMessage,
     onProgress,
-    skipFileCollection = false
+    skipFileCollection = false,
+    resumeSessionId = null  // Allow resuming from previous session
   } = options;
+
+  // Track current sub-agent context for better logging
+  let currentSubAgent = null;
+  let currentTaskToolId = null; // Track the Task tool_use_id to know when sub-agent actually completes
+  const getLogPrefix = () => currentSubAgent ? `[${currentSubAgent}]` : '[Claude Agent]';
 
   try {
     console.log('[Claude Agent] Starting task execution');
@@ -157,9 +178,22 @@ async function executeTask(prompt, options = {}) {
       queryOptions.model = model;
     }
 
+    // Resume from previous session if provided
+    if (resumeSessionId) {
+      queryOptions.resume = resumeSessionId;
+      console.log(`[Claude Agent] ♻️  Resuming session: ${resumeSessionId}`);
+    } else {
+      console.log('[Claude Agent] 🆕 Starting new session');
+    }
+
     if (mcpServers) {
       queryOptions.mcpServers = mcpServers;
       console.log('[Claude Agent] MCP servers configured:', Object.keys(mcpServers).join(', '));
+    }
+
+    if (agents) {
+      queryOptions.agents = agents;
+      console.log('[Claude Agent] Sub-agents configured:', Object.keys(agents).join(', '));
     }
 
     // Track execution state
@@ -192,7 +226,7 @@ async function executeTask(prompt, options = {}) {
               onProgress({
                 stage: 'initialized',
                 model: message.model,
-                sessionId: message.session_id
+                sessionId: message.session_id || message.sessionId
               });
             }
           }
@@ -203,27 +237,63 @@ async function executeTask(prompt, options = {}) {
           if (message.message?.content) {
             message.message.content.forEach(content => {
               if (content.type === 'text') {
-                console.log(`[Claude Agent] Assistant: ${content.text.substring(0, 100)}...`);
+                console.log(`${getLogPrefix()} Assistant: ${content.text.substring(0, 100)}...`);
                 if (onProgress) {
                   onProgress({
                     stage: 'thinking',
-                    message: content.text
+                    message: content.text,
+                    subAgent: currentSubAgent
                   });
                 }
               } else if (content.type === 'tool_use') {
                 turnCount++;
 
+                // Track sub-agent invocations
+                if (content.name === 'Task' && content.input?.subagent_type) {
+                  currentSubAgent = content.input.subagent_type;
+                  currentTaskToolId = content.id; // Store the Task tool_use_id
+                  console.log(`\n🤖 [${currentSubAgent}] Sub-agent starting...`);
+                }
+
                 // Format tool use with parameters for better visibility
                 const toolDetails = formatToolUse(content.name, content.input);
-                console.log(`[Claude Agent] ⏺ ${toolDetails}`);
+                console.log(`${getLogPrefix()} ⏺ ${toolDetails}`);
 
                 if (onProgress) {
                   onProgress({
                     stage: 'tool_use',
                     tool: content.name,
                     details: toolDetails,
-                    turnCount
+                    turnCount,
+                    subAgent: currentSubAgent
                   });
+                }
+              }
+            });
+          }
+          break;
+
+        case 'user':
+          // Track tool results (responses from tools)
+          if (message.message?.content) {
+            message.message.content.forEach(content => {
+              if (content.type === 'tool_result') {
+                const toolId = content.tool_use_id || 'unknown';
+
+                if (content.content) {
+                  const resultText = Array.isArray(content.content)
+                    ? content.content.map(c => c.text || '').join(' ')
+                    : (typeof content.content === 'string' ? content.content : JSON.stringify(content.content));
+
+                  const shortResult = resultText.length > 150 ? resultText.substring(0, 150) + '...' : resultText;
+                  console.log(`${getLogPrefix()} ✓ Tool result [${toolId.substring(0, 8)}]: ${shortResult}`);
+
+                  // Check if this is the Task tool result (sub-agent actually finished)
+                  if (currentSubAgent && toolId === currentTaskToolId) {
+                    console.log(`🤖 [${currentSubAgent}] Sub-agent completed\n`);
+                    currentSubAgent = null;
+                    currentTaskToolId = null;
+                  }
                 }
               }
             });

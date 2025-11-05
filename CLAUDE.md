@@ -148,6 +148,7 @@ All database queries are centralized in `db.js`. Key patterns:
 - `module_executions` - Execution history (status, duration, cost)
 - `execution_logs` - Streaming logs from module runs
 - `service_connections` - OAuth tokens (encrypted) for GitHub, Gmail, etc.
+- `reports` - Business reports (markdown content, saved by analytics modules)
 - `profiles` - Social media profiles (maps to Late.dev)
 - `social_accounts` - Connected social accounts per profile
 - `content` - Scheduled/posted social media content
@@ -168,6 +169,13 @@ Polsia uses MCP servers to extend Claude Agent SDK with external tool access:
 - Send emails
 - Archive/label messages
 
+**Reports MCP** (custom: `services/reports-custom-mcp-server.js`):
+- Save business reports to database (markdown content)
+- Query reports by type, date range
+- Retrieve historical reports for analysis
+- Used by analytics modules to persist daily metrics
+- CEO agents query reports to understand business trends
+
 **MCP Server Configuration** (in module config):
 ```json
 {
@@ -182,6 +190,66 @@ Polsia uses MCP servers to extend Claude Agent SDK with external tool access:
 ```
 
 **MCP Bridge**: `services/mcp-http-bridge.js` hosts MCP servers over HTTP for external clients
+
+### Reports System
+
+Polsia includes a built-in reports system for agents to save and query business metrics:
+
+**Database Schema** (`reports` table):
+- `user_id` - Foreign key to users (multi-tenant isolation)
+- `execution_id` - Optional link to module_executions
+- `module_id` - Optional link to modules that created the report
+- `name` - Report name (e.g., "Render Analytics Daily Report")
+- `report_type` - Type identifier (e.g., "render_analytics", "slack_digest", "meta_ads_performance")
+- `report_date` - Business date being reported on (DATE)
+- `content` - Report markdown content (TEXT)
+- `metadata` - Optional structured metrics (JSONB)
+- `created_at` - Timestamp when report was saved
+
+**How Modules Use Reports:**
+
+1. **Save a Report** (at end of execution):
+```javascript
+// Via Reports MCP from within an agent execution
+create_report({
+  name: "Render Analytics Daily Report",
+  report_type: "render_analytics",
+  report_date: "2025-01-05",
+  content: "# Analytics Report\n\n...",
+  metadata: { total_users: 150, active_modules: 12 }
+})
+```
+
+2. **Query Reports** (CEO agent checking historicals):
+```javascript
+// Get all render analytics from last week
+query_reports({
+  report_type: "render_analytics",
+  start_date: "2025-01-01",
+  end_date: "2025-01-07",
+  limit: 50
+})
+
+// Get all reports for a specific date
+get_reports_by_date({
+  report_date: "2025-01-05",
+  report_type: "render_analytics"  // optional filter
+})
+```
+
+**Key Features:**
+- Multiple reports per date (different modules report on different business areas)
+- Markdown content for human-readable reports
+- JSONB metadata for structured metrics
+- Date-based queries for trend analysis
+- Links to execution records for audit trail
+
+**Example Use Cases:**
+- "Render Analytics" module saves daily infrastructure metrics
+- "Slack Daily Digest" module saves daily workspace summaries
+- "Meta Ads Performance" module saves campaign performance reports
+- CEO agent queries last 7 days of reports to understand business trends
+- Data agent compares current metrics to historical reports
 
 ### OAuth Flow Pattern
 

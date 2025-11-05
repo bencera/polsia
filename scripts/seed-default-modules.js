@@ -134,12 +134,12 @@ IMPORTANT:
     },
     {
         name: 'Render Analytics Summarizer',
-        description: 'Autonomously analyzes production database to generate comprehensive business insights and usage metrics',
+        description: 'Generates a short daily snapshot of key metrics from the production database (users, executions, costs)',
         type: 'render_analytics',
         frequency: 'daily',
         config: {
-            mcpMounts: ['github', 'render'],
-            maxTurns: 200, // High limit to allow thorough analysis and report generation
+            mcpMounts: ['render', 'reports'],
+            maxTurns: 30, // Reduced - focused on quick daily metrics only
         },
     },
     {
@@ -638,7 +638,7 @@ IMPORTANT:
         frequency: 'daily',
         config: {
             maxTurns: 100,
-            mcpMounts: ['slack'],
+            mcpMounts: ['slack', 'reports'],
             goal: `You are a Slack conversation summarizer. Your job is to analyze recent Slack messages and provide a comprehensive daily digest.
 
 ## Your Mission
@@ -766,7 +766,18 @@ This could mean:
 - Bot doesn't have access to channels yet
 - Slack connection may need to be refreshed
 
-Run this module again later to check for updates.`,
+Run this module again later to check for updates.
+
+## CRITICAL: Save Report
+
+After generating your digest, **save it to the Reports database** using the Reports MCP \`create_report\` tool:
+- **name**: "Slack Daily Digest"
+- **report_type**: "slack_digest"
+- **report_date**: Today's date in YYYY-MM-DD format
+- **content**: The full markdown digest you generated above
+- **metadata**: Optional summary (e.g., {"channels_analyzed": 5, "messages_reviewed": 120})
+
+This allows the CEO agent and other modules to query historical Slack digests later.`,
         },
     },
     {
@@ -776,7 +787,7 @@ Run this module again later to check for updates.`,
         frequency: 'manual',
         config: {
             maxTurns: 50,
-            mcpMounts: ['meta_ads'],
+            mcpMounts: ['meta_ads', 'reports'],
             goal: `You are a Meta Ads performance analyst. Your job is to analyze ad account performance and provide actionable optimization recommendations.
 
 ## Your Workflow
@@ -895,6 +906,288 @@ Prioritized list of actionable recommendations:
 - **CTR**: Click-Through Rate (clicks / impressions). Higher is better. >1% is typically good.
 - **Frequency**: How many times average user sees ads. >3 may indicate ad fatigue.
 - **Conversion Rate**: conversions / clicks. Higher is better.`,
+        },
+    },
+    {
+        name: 'All Analytics',
+        description: 'Comprehensive analytics dashboard that aggregates metrics from all connected sources (Slack, Meta Ads, App Store, Sentry, Gmail, Render DB)',
+        type: 'all_analytics',
+        frequency: 'manual',
+        config: {
+            maxTurns: 200,
+            mcpMounts: ['slack', 'meta_ads', 'appstore_connect', 'sentry', 'gmail', 'render', 'github'],
+            goal: `You are a comprehensive analytics aggregator. Your job is to collect key business metrics from all available data sources and create two files:
+
+## Your Workflow
+
+### 1. Check Available Data Sources
+Before collecting data, check which services are connected and available:
+- Slack (workspace messages and activity)
+- Meta Ads (ad performance and spend)
+- App Store Connect (downloads and revenue)
+- Sentry (bug counts and severity)
+- Gmail (email volume and priorities)
+- Render (database metrics - users, executions, costs)
+
+**If a service is not connected, skip it gracefully** and note which sources were unavailable in your report.
+
+### 2. Collect Business Metrics from Each Source
+
+**From Slack (if available):**
+- Total messages analyzed (past 24 hours)
+- Number of action items identified
+- Number of blockers/issues raised
+- Active channels count
+
+**From Meta Ads (if available):**
+- Total ad spend (USD, past 7 days)
+- ROAS (Return on Ad Spend)
+- Active campaigns count
+- Total impressions and clicks
+
+**From App Store Connect (if available):**
+- App downloads (latest available period)
+- Revenue (if available)
+- Active devices
+- Sessions
+
+**From Sentry (if available):**
+- Total unresolved bugs
+- Critical bugs count (high severity/frequency)
+- Projects monitored
+
+**From Gmail (if available):**
+- Unread emails count
+- Urgent emails count (time-sensitive)
+- Important emails count (requires action)
+
+**From Render Database (if available):**
+- Active users count
+- New users (this week)
+- Total module executions (past 7 days)
+- AI API costs (USD, past 7 days)
+
+### 3. Create analytics.md File
+
+Create a **factual, concise** product analytics summary with this structure:
+
+\`\`\`markdown
+# Product Analytics Summary
+**Generated**: [timestamp]
+**Data Sources**: [list which sources were available]
+
+## Executive Summary
+[3-5 key findings about current product state - keep factual, no fluff]
+
+## Product Metrics
+- Active Users: [number]
+- New Users (this week): [number]
+- App Downloads: [number] (or N/A if not available)
+- Active Devices: [number] (or N/A)
+
+## Revenue & Marketing
+- Ad Spend (7d): $[amount] (or N/A)
+- ROAS: [number] (or N/A)
+- App Revenue: $[amount] (or N/A)
+- Active Campaigns: [number] (or N/A)
+
+## Product Health
+- Critical Bugs: [number] (or N/A)
+- Total Unresolved Bugs: [number] (or N/A)
+- Sentry Projects: [number] (or N/A)
+
+## Infrastructure & Operations
+- Module Executions (7d): [number]
+- AI API Costs (7d): $[amount]
+- Slack Messages Analyzed: [number] (or N/A)
+
+## Team Activity
+- Blockers Identified: [number] (or N/A)
+- Action Items: [number] (or N/A)
+- Urgent Emails: [number] (or N/A)
+- Important Emails: [number] (or N/A)
+
+## Data Source Status
+- ✅ Available: [list]
+- ❌ Not Connected: [list]
+\`\`\`
+
+**Important**: Keep this summary concise and factual. No recommendations, just the current state of the business.
+
+### 4. Create analytics.json File
+
+Create a **flat JSON object with business metrics only**. Use null for unavailable metrics.
+
+\`\`\`json
+{
+  "timestamp": "2025-01-03T12:00:00Z",
+  "active_users": 150,
+  "new_users_this_week": 23,
+  "app_downloads": 342,
+  "app_revenue_usd": 1250.50,
+  "active_devices": 890,
+  "ad_spend_usd": 450.00,
+  "roas": 2.78,
+  "active_campaigns": 5,
+  "ad_impressions": 125000,
+  "ad_clicks": 3400,
+  "critical_bugs": 3,
+  "total_bugs": 15,
+  "sentry_projects": 2,
+  "module_executions_7d": 89,
+  "ai_cost_usd_7d": 45.20,
+  "slack_messages_analyzed": 456,
+  "slack_blockers": 7,
+  "slack_action_items": 23,
+  "urgent_emails": 5,
+  "important_emails": 12,
+  "unread_emails": 34
+}
+\`\`\`
+
+**Important**:
+- Use null for metrics that are unavailable (not 0, unless it's truly zero)
+- All currency values in USD
+- All counts as integers
+- Include timestamp in ISO 8601 format
+- Keep metric names descriptive but concise
+
+### 5. Save Files to Document Store
+After generating both files, save them to the document store:
+- Save analytics.md as a document with key "analytics_md"
+- Save analytics.json as a document with key "analytics_json"
+
+## Important Guidelines
+- **Graceful degradation**: If a service isn't connected, skip it and note it in the report
+- **Factual only**: No recommendations or opinions, just current state
+- **Concise**: analytics.md should be brief and scannable
+- **Business-focused**: Only include metrics that matter to business health
+- **Use latest data**: Prefer most recent time periods (today, past 7 days, this week)
+- **Consistent time ranges**: Note time ranges for all metrics
+- **Error handling**: If a data source fails, continue with others and note the failure`,
+        },
+    },
+    {
+        name: 'Analytics Sub-Agents Demo',
+        description: 'Demonstrates sub-agent delegation pattern. Main orchestrator agent delegates to 2 specialized sub-agents (Render Analytics + Sentry Bug Checker) who do complete work, then synthesizes their reports into unified analytics.',
+        type: 'analytics_sub_agents',
+        frequency: 'manual',
+        config: {
+            maxTurns: 200,
+            mcpMounts: ['render', 'github', 'sentry'],
+            goal: `You are the main orchestrator for analytics aggregation using sub-agents.
+
+## Your Mission
+
+Coordinate 2 specialized sub-agents to gather comprehensive analytics, then synthesize their reports into a unified document.
+
+## Available Sub-Agents
+
+You have access to these specialized agents via the Task tool:
+
+1. **render-analytics** - Analyzes Render production database
+   - Explores database schema from GitHub repo (if available)
+   - Queries production Postgres for business metrics
+   - Returns complete analytics report in markdown format
+
+2. **sentry-bug-checker** - Scans Sentry for bugs
+   - Lists all organizations and projects
+   - Fetches unresolved issues
+   - Categorizes by priority (Critical/High/Medium/Low)
+   - Returns complete bug report in markdown format
+
+## Your Workflow
+
+### Step 1: Delegate to Sub-Agents IN PARALLEL
+
+**CRITICAL:** To maximize performance, you MUST call BOTH Task tools in the SAME turn to run sub-agents in parallel!
+
+Call both agents at once (in a single assistant message):
+
+\`\`\`
+Task(agent="render-analytics", prompt="Analyze the production database and generate a comprehensive business analytics report. Include user metrics, module execution stats, costs, and recommendations.")
+
+Task(agent="sentry-bug-checker", prompt="Scan all Sentry projects for unresolved issues. Categorize by priority and generate a complete bug report with Sentry URLs.")
+\`\`\`
+
+**DO NOT** wait for the first agent before calling the second. Make BOTH Task calls together so they execute in parallel.
+
+The SDK will run both agents concurrently and return both results when they're ready.
+
+### Step 2: Synthesize Reports
+
+After BOTH agents have completed and returned their reports:
+
+1. **Create Executive Summary**
+   - Extract key findings from both reports
+   - Highlight 3-5 most important insights
+   - Focus on actionable items
+
+2. **Structure Unified Report**
+   Create analytics.md with this structure:
+
+   \`\`\`markdown
+   # Unified Analytics Dashboard
+   **Generated:** [timestamp]
+   **Sources:** Render Production Database, Sentry Bug Tracking
+
+   ## Executive Summary
+   [3-5 key findings combining insights from both reports]
+
+   ---
+
+   ## Render Production Analytics
+   [Insert complete Render analytics report here]
+
+   ---
+
+   ## Sentry Bug Report
+   [Insert complete Sentry bug report here]
+
+   ---
+
+   ## Overall Recommendations
+   1. [Critical actions based on both reports]
+   2. [Important improvements]
+   3. [Long-term optimizations]
+   \`\`\`
+
+3. **Save Report**
+   Use Write("analytics.md") to save the synthesized report.
+
+   **CRITICAL:** Use relative path "analytics.md" NOT absolute path like "/Users/...".
+
+### Step 3: Summary
+
+Provide a brief summary of what was accomplished:
+- Both sub-agents completed successfully
+- Number of issues found by Sentry agent
+- Key metrics from Render analytics
+- Location of saved report
+
+## Important Guidelines
+
+- **Parallel Execution**: Call BOTH Task tools in the SAME turn for concurrent execution
+- **Performance**: Running in parallel is ~2x faster than sequential execution
+- **Preserve Content**: Include the FULL reports from both agents in your synthesis
+- **Add Value**: Your executive summary should provide cross-report insights
+- **Relative Paths**: Always use "analytics.md" not absolute paths
+- **Error Handling**: If a sub-agent fails, document it and continue with partial data
+
+## Example Task Usage (PARALLEL)
+
+\`\`\`
+# Step 1: Call BOTH agents in the SAME turn
+Task(agent="render-analytics", prompt="Full analytics please")
+Task(agent="sentry-bug-checker", prompt="Complete bug scan please")
+
+# Step 2: After BOTH complete, combine and save
+Write("analytics.md") with synthesized content
+\`\`\`
+
+**Key Point:** The two Task calls above should be in the SAME assistant message, NOT separate turns.
+
+The Task tool will automatically discover agents from the .claude/agents/ directory in your workspace.`,
         },
     },
 ];

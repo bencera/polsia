@@ -84,6 +84,14 @@ async function runModule(moduleId, userId, options = {}) {
             return await runAppStoreAnalyticsModule(module, userId, executionRecord, startTime);
         }
 
+        if (module.type === 'all_analytics') {
+            return await runAllAnalyticsModule(module, userId, executionRecord, startTime);
+        }
+
+        if (module.type === 'analytics_sub_agents') {
+            return await runAnalyticsSubAgentsModule(module, userId, executionRecord, startTime);
+        }
+
         // 4. Prepare execution context for regular modules
         const context = await prepareModuleContext(module, userId);
 
@@ -111,7 +119,18 @@ async function runModule(moduleId, userId, options = {}) {
 
         console.log(`[Agent Runner] Workspace created: ${workspace}`);
 
-        // 5. Execute task using Claude Agent SDK
+        // 5. Check for existing session_id to enable continuous learning
+        const resumeSessionId = module.session_id || null;
+        if (resumeSessionId) {
+            console.log(`[Agent Runner] ♻️  Module has existing session - will resume for continuous learning`);
+        } else {
+            console.log(`[Agent Runner] 🆕 First run for this module - creating new session`);
+        }
+
+        // Track new session ID if this is first run
+        let newSessionId = null;
+
+        // 6. Execute task using Claude Agent SDK
         console.log(`[Agent Runner] 🤖 Starting AI execution...`);
         console.log(`[Agent Runner] Prompt: ${context.prompt.substring(0, 100)}...`);
 
@@ -119,6 +138,7 @@ async function runModule(moduleId, userId, options = {}) {
             cwd: workspace,
             maxTurns: context.maxTurns || 20,
             mcpServers: context.mcpServers,
+            resumeSessionId,  // Pass session ID for resumption
             onProgress: async (progress) => {
                 let logMessage = '';
                 let logLevel = 'info';
@@ -135,6 +155,12 @@ async function runModule(moduleId, userId, options = {}) {
                     logMessage = `Session initialized with model: ${progress.model}`;
                     stage = 'initialized';
                     console.log(`[Agent Runner] ✓ Session initialized with model: ${progress.model}`);
+
+                    // Capture session ID for first-time sessions
+                    if (progress.sessionId && !resumeSessionId) {
+                        newSessionId = progress.sessionId;
+                        console.log(`[Agent Runner] 📝 New session ID captured: ${newSessionId}`);
+                    }
                 } else if (progress.stage) {
                     logMessage = `Stage: ${progress.stage}${progress.substage ? `/${progress.substage}` : ''}`;
                     console.log(`[Agent Runner] 📊 Stage: ${progress.stage}${progress.substage ? `/${progress.substage}` : ''}`);
@@ -190,9 +216,19 @@ async function runModule(moduleId, userId, options = {}) {
                 messages_count: result.metadata?.messages_count,
                 files: result.files ? Object.keys(result.files) : [],
                 model: result.metadata?.model,
+                session_id: result.metadata?.session_id || newSessionId,
+                resumed_from_session: !!resumeSessionId,
             },
             error_message: result.success ? null : result.error,
         });
+
+        // 7.1. Save new session ID to module for future runs (continuous learning)
+        if (newSessionId && !resumeSessionId && result.success) {
+            console.log(`[Agent Runner] 💾 Saving session ID to module for future runs...`);
+            const { updateModuleSessionId } = require('../db');
+            await updateModuleSessionId(module.id, newSessionId);
+            console.log(`[Agent Runner] ✅ Session ID saved - future runs will resume from this session`);
+        }
 
         console.log(`[Agent Runner] ✅ Module execution completed: ${moduleId}`);
 
@@ -590,6 +626,15 @@ async function configureMCPServers(module, userId, config) {
             } else {
                 console.warn('[Agent Runner] Render MCP requested but user has no Render connection');
             }
+        } else if (mcpName === 'reports') {
+            // Custom Reports MCP server - allows agents to save and query business reports
+            // No OAuth tokens needed - uses database directly with user_id scope
+            const serverPath = require('path').join(__dirname, 'reports-custom-mcp-server.js');
+            mcpServers.reports = {
+                command: 'node',
+                args: [serverPath, `--user-id=${userId}`],
+            };
+            console.log('[Agent Runner] Configured Reports MCP server (database-backed)');
         }
         // Add more MCP server types here (notion, slack, etc.)
         // Note: 'fal-ai' is handled via prompt augmentation in buildModulePrompt(),
@@ -1148,189 +1193,161 @@ async function runRenderAnalyticsModule(module, userId, executionRecord, startTi
             console.log(`[Agent Runner] Primary repo: ${primaryRepo.full_name}`);
         }
 
-        // Create workspace
+        // Create persistent workspace for this module (same path for session resumption)
+        // Using module ID instead of execution ID so sessions can resume with same cwd
         const workspace = path.join(
             process.cwd(),
             'temp',
-            'module-executions',
-            `${executionRecord.id}-${crypto.randomBytes(4).toString('hex')}`
+            'module-sessions',
+            `module-${module.id}`
         );
         await fs.mkdir(workspace, { recursive: true });
 
-        console.log(`[Agent Runner] Workspace created: ${workspace}`);
+        console.log(`[Agent Runner] Workspace: ${workspace}`);
 
-        // Clone GitHub repository if configured
+        // Clone or update GitHub repository if configured
         let repoPath = null;
         if (primaryRepo) {
             try {
                 const { execSync } = require('child_process');
                 repoPath = path.join(workspace, 'repo');
 
-                console.log(`[Agent Runner] Cloning repository: ${primaryRepo.full_name}...`);
+                // Check if repo already exists (from previous session)
+                try {
+                    await fs.access(repoPath);
+                    console.log(`[Agent Runner] Updating existing repository: ${primaryRepo.full_name}...`);
+
+                    await saveExecutionLog(executionRecord.id, {
+                        log_level: 'info',
+                        stage: 'setup',
+                        message: `Updating repository: ${primaryRepo.full_name}`,
+                    });
+
+                    // Pull latest changes
+                    execSync(`git -C ${repoPath} pull origin`, {
+                        stdio: 'pipe',
+                        timeout: 60000,
+                    });
+
+                    console.log(`[Agent Runner] Repository updated successfully`);
+                } catch {
+                    // Repo doesn't exist, clone it
+                    console.log(`[Agent Runner] Cloning repository: ${primaryRepo.full_name}...`);
+
+                    await saveExecutionLog(executionRecord.id, {
+                        log_level: 'info',
+                        stage: 'setup',
+                        message: `Cloning repository: ${primaryRepo.full_name}`,
+                    });
+
+                    // Clone repo with depth=1 for faster cloning
+                    execSync(`git clone --depth 1 https://github.com/${primaryRepo.full_name} ${repoPath}`, {
+                        stdio: 'pipe',
+                        timeout: 60000,
+                    });
+
+                    console.log(`[Agent Runner] Repository cloned successfully to: ${repoPath}`);
+                }
 
                 await saveExecutionLog(executionRecord.id, {
                     log_level: 'info',
                     stage: 'setup',
-                    message: `Cloning repository: ${primaryRepo.full_name}`,
-                });
-
-                // Clone repo with depth=1 for faster cloning (just latest commit)
-                execSync(`git clone --depth 1 https://github.com/${primaryRepo.full_name} ${repoPath}`, {
-                    stdio: 'pipe',
-                    timeout: 60000, // 60 second timeout
-                });
-
-                console.log(`[Agent Runner] Repository cloned successfully to: ${repoPath}`);
-
-                await saveExecutionLog(executionRecord.id, {
-                    log_level: 'info',
-                    stage: 'setup',
-                    message: 'Repository cloned successfully',
+                    message: 'Repository ready',
                 });
             } catch (error) {
-                console.warn(`[Agent Runner] Failed to clone repository: ${error.message}`);
+                console.warn(`[Agent Runner] Failed to setup repository: ${error.message}`);
                 await saveExecutionLog(executionRecord.id, {
                     log_level: 'warning',
                     stage: 'setup',
-                    message: `Failed to clone repository: ${error.message}. Continuing with GitHub MCP only.`,
+                    message: `Failed to setup repository: ${error.message}. Continuing with GitHub MCP only.`,
                 });
-                repoPath = null; // Reset if cloning failed
+                repoPath = null; // Reset if setup failed
             }
         }
 
-        // Build autonomous analytics prompt with vision context (after repo cloning)
-        const analyticsPrompt = `You are an autonomous business analyst for "${primaryService.name}".
+        // Build daily analytics prompt focused on today's metrics only
+        const today = new Date().toISOString().split('T')[0];
+        const analyticsPrompt = `You are a daily metrics reporter for "${primaryService.name}".
 
-## Your Mission
+**📅 TODAY'S DATE: ${today}**
 
-Analyze the production database to generate comprehensive business insights. You have access to:
-1. **Vision document** - Understand what matters for this business
-2. **${repoPath ? 'Local repository clone' : 'GitHub repository'}** - Explore codebase to understand database schema${primaryRepo ? ` (${primaryRepo.full_name})` : ''}${repoPath ? `\n   - **Location:** \`./repo/\` (cloned in your workspace)` : ''}
-3. **Production Postgres database** - Query live business metrics via Render MCP
+## Your Task
 
-${visionContext ? `## Company Vision\n\n${visionContext}\n\n` : ''}## Available Tools
-
-**${repoPath ? 'Local File Tools (fastest - use these first):' : 'GitHub MCP (explore codebase):'}**${repoPath ? `
-- \`Read\` - Read files from ./repo/ directory
-- \`Grep\` - Search codebase for patterns
-- \`Glob\` - Find files by pattern
-- \`Bash\` - Run shell commands in ./repo/ directory
-
-Examples:
-- \`Read ./repo/migrations/001-create-users.js\`
-- \`Grep "CREATE TABLE" ./repo/migrations/\`
-- \`Glob ./repo/migrations/*.js\`
-` : `
-- Read migrations/ to understand database schema
-- Read db.js to see table structures and business logic
-- Explore models/ or services/ to understand data relationships
-`}
-**Render MCP (query production data):**
-- \`mcp__render__list_postgres_instances\` - Find production database
-- \`mcp__render__get_postgres\` - Get database connection details
-- \`mcp__render__query_render_postgres\` - Run read-only SQL queries
-
-## Your Autonomous Process
-
-**Phase 1: Understand the Business**
-- Read the vision document carefully to identify key business goals
-- What metrics would indicate success for this business?
-
-**Phase 2: Discover Database Schema**${repoPath ? `
-- Explore the local repository clone at \`./repo/\`:
-  - Use \`Glob\` to find migration files: \`./repo/migrations/*.js\`
-  - Use \`Read\` to examine migrations and understand tables
-  - Use \`Grep\` to search for table definitions and relationships
-  - Look at db.js or schema files for business logic` : `
-- Explore GitHub repository${primaryRepo ? ` (${primaryRepo.full_name})` : ''}:
-  - Read migrations/ directory to understand tables and columns
-  - Read db.js or schema files to see business logic`}
-- Query production database \`information_schema\`:
-  - \`SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'\`
-  - \`SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'TABLE'\`
-
-**Phase 3: Identify Important Metrics**
-Based on vision + schema, autonomously decide what to measure. Consider:
-- User activity and growth trends
-- Feature usage and adoption patterns
-- Execution costs and resource consumption
-- Content creation and engagement
-- AI generation usage and costs
-- Task completion rates and efficiency
-- Revenue indicators (if applicable)
-
-**Phase 4: Gather Analytics**
-Run SQL queries to collect data:
-- Count aggregations over time periods
-- SUM costs and durations
-- Calculate success/failure rates
-- Identify trends (week-over-week, month-over-month)
-- Find anomalies or outliers
-
-**Phase 5: Generate Report**
-Create a comprehensive markdown report with:
-- Executive Summary (3-5 key findings)
-- Detailed metric sections based on what you discovered
-- Specific numbers, percentages, date ranges
-- Trend analysis (↑ growing, ↓ declining, → stable)
-- Business context from vision document
-- Actionable recommendations with priorities
-
-## Requirements
-
-- **Be autonomous**: Explore, discover, and decide what matters
-- **Be thorough**: Cover all important metrics you discovered
-- **Be specific**: Include exact numbers, dates, percentages
-- **Be contextual**: Relate metrics to vision goals
-- **Be actionable**: Provide clear, prioritized recommendations
-
-## Output Format
-
-**CRITICAL:** When you complete your analysis, write the final report to a file called \`analytics-report.md\`.
-
-Use the Write tool to create the report:
-
-\`\`\`
-Write(analytics-report.md)
-\`\`\`
-
-The report should follow this structure:
-
-# ${primaryService.name} Business Analytics Report
-**Generated:** [current date and time]
-**Analysis Period:** [date range of data analyzed]
-**Database:** [postgres instance analyzed]
-
-## Executive Summary
-[3-5 sentences summarizing key findings, trends, and critical insights]
-
-## [Your Analysis Sections]
-[Based on what you discovered in the database]
-
-## Key Findings & Metrics
-[Bullet points with specific numbers]
-
-## Trends Analysis
-[Growth patterns, cost trends, usage patterns]
-
-## Recommendations
-[Prioritized, actionable recommendations]
+Generate a daily metrics report for **${today}** - but ONLY if one doesn't exist yet.
 
 ---
 
-**CRITICAL REMINDER:**
+## ⚠️ CRITICAL FIRST STEP - Check for Existing Report
 
-1. **IMMEDIATELY** write your report to \`analytics-report.md\` using the Write tool
-2. Don't overthink it - just write the report based on the data you collected
-3. Include specific numbers, dates, percentages from your queries
-4. Make it markdown formatted and professional
-5. Cover the key findings without trying to be overly long
+**BEFORE doing anything else, you MUST check if a report already exists for today:**
 
-IMPORTANT:
-- This is production data - handle with care
-- Write the report file NOW - don't spend too many turns planning
-- Quality over length - focus on insights, not word count
-- The report file will be automatically read and saved to the document store`;
+1. Use the \`get_reports_by_date\` tool from Reports MCP:
+   - report_date: "${today}"
+   - report_type: "render_analytics"
+
+2. **If a report EXISTS for ${today}:**
+   - Respond: "✓ Report already exists for ${today}. No action needed."
+   - STOP immediately - do NOT create a duplicate report
+   - This is the correct behavior when running multiple times on the same day
+
+3. **If NO report exists for ${today}:**
+   - This is a NEW day (or first run) - proceed to create fresh report
+   - Continue with the steps below
+
+---
+
+## Tools Available
+
+**Reports MCP (check/save reports):**
+- \`get_reports_by_date\` - Check if report exists for a date
+- \`create_report\` - Save new report to database
+
+**Render MCP (query production data):**
+- \`list_postgres_instances\` - Find production database
+- \`get_postgres\` - Get database connection details
+- \`query_render_postgres\` - Run read-only SQL queries
+
+## Process (If No Report Exists)
+
+1. **Find the database**: Use \`list_postgres_instances\` and \`get_postgres\`
+
+2. **Query TODAY'S metrics** (past 24 hours):
+   - Total users: \`SELECT COUNT(*) FROM users\`
+   - Active modules: \`SELECT COUNT(*) FROM modules WHERE is_active = true\`
+   - Executions today: \`SELECT COUNT(*) FROM module_executions WHERE created_at >= NOW() - INTERVAL '24 hours'\`
+   - Success rate: \`SELECT status, COUNT(*) FROM module_executions WHERE created_at >= NOW() - INTERVAL '24 hours' GROUP BY status\`
+   - Total cost today: \`SELECT SUM(cost_usd) FROM module_executions WHERE created_at >= NOW() - INTERVAL '24 hours'\`
+
+3. **Generate a SHORT report** (under 20 lines) with just the numbers
+
+## Report Format
+
+# Daily Metrics - ${today}
+**Database:** [postgres name]
+
+## Key Metrics (24h)
+- **Users:** [count]
+- **Active Modules:** [count]
+- **Executions:** [count] ([X]% success rate)
+- **Cost:** $[amount] USD
+- **Most Active Module:** [name] ([X] runs)
+
+---
+
+## Final Step - Save Report
+
+Save to Reports database using \`create_report\` tool:
+- name: "Daily Metrics Report"
+- report_type: "render_analytics"
+- report_date: "${today}"
+- content: The full markdown report (paste entire report here)
+- metadata: { "users": [count], "executions": [count], "cost_usd": [amount] }
+
+**IMPORTANT:**
+- TODAY'S DATA ONLY (${today}) - no historical analysis
+- KEEP IT SHORT - just the facts
+- DO NOT write to files - save directly to database with create_report
+- Work fast - don't overthink it`;
 
         // Log analysis start
         await saveExecutionLog(executionRecord.id, {
@@ -1339,12 +1356,24 @@ IMPORTANT:
             message: 'Claude is analyzing Render metrics with MCP tools',
         });
 
+        // Check for existing session_id to enable continuous learning
+        const resumeSessionId = module.session_id || null;
+        if (resumeSessionId) {
+            console.log(`[Agent Runner] ♻️  Module has existing session - will resume for continuous learning`);
+        } else {
+            console.log(`[Agent Runner] 🆕 First run for this module - creating new session`);
+        }
+
+        // Track new session ID if this is first run
+        let newSessionId = null;
+
         // Execute Claude Agent with Render MCP
         const result = await executeTask(analyticsPrompt, {
             cwd: workspace,
             maxTurns: context.maxTurns || 25,
             mcpServers: context.mcpServers,
             skipFileCollection: true,
+            resumeSessionId,  // Pass session ID for resumption
             onProgress: async (progress) => {
                 if (progress.stage === 'tool_use') {
                     await saveExecutionLog(executionRecord.id, {
@@ -1353,6 +1382,14 @@ IMPORTANT:
                         message: `Using Render tool: ${progress.tool}`,
                         metadata: { tool: progress.tool }
                     });
+                } else if (progress.stage === 'initialized') {
+                    console.log(`[Agent Runner] ✓ Session initialized with model: ${progress.model}`);
+
+                    // Capture session ID for first-time sessions
+                    if (progress.sessionId && !resumeSessionId) {
+                        newSessionId = progress.sessionId;
+                        console.log(`[Agent Runner] 📝 New session ID captured: ${newSessionId}`);
+                    }
                 }
             }
         });
@@ -1363,88 +1400,10 @@ IMPORTANT:
 
         console.log(`[Agent Runner] Claude analysis complete`);
 
-        // Read the analytics report from the file the agent wrote (BEFORE cleanup!)
-        const reportPath = path.join(workspace, 'analytics-report.md');
-        let analyticsContent = null;
-
-        try {
-            analyticsContent = await fs.readFile(reportPath, 'utf-8');
-            console.log(`[Agent Runner] ✓ Analytics report read from file (${analyticsContent.length} characters)`);
-        } catch (error) {
-            console.error('[Agent Runner] ❌ Failed to read analytics-report.md');
-            console.error('[Agent Runner] Error:', error.message);
-            throw new Error('Agent did not write analytics-report.md file. The agent must use the Write tool to create this file with the complete report.');
-        }
-
-        // Validate report content
-        const trimmed = analyticsContent.trim();
-        if (!trimmed.startsWith('# ') || trimmed.length < 500) {
-            console.error('[Agent Runner] ❌ Invalid report format');
-            console.error('[Agent Runner] Report length:', trimmed.length);
-            console.error('[Agent Runner] Starts with #:', trimmed.startsWith('# '));
-            throw new Error('Analytics report is invalid. Must start with "# " header and be at least 500 characters.');
-        }
-
-        console.log(`[Agent Runner] ✓ Report validated`);
-
-        // Calculate metrics first (needed for JSON and task summary)
+        // Calculate metrics
         const duration = Date.now() - startTime;
         const cost = result.metadata?.cost_usd || 0;
         const turns = result.metadata?.num_turns || 0;
-
-        // Helper function to extract summary from analytics content
-        const extractSummary = (content) => {
-            // Try to extract Executive Summary section
-            const execMatch = content.match(/##\s*Executive\s*Summary\s*\n\n?([^\n]+(?:\n(?!##)[^\n]+)*)/i);
-            if (execMatch) {
-                return execMatch[1].trim().substring(0, 300);
-            }
-
-            // Fallback: Extract first paragraph after main header
-            const lines = content.split('\n').filter(l => l.trim());
-            for (let i = 0; i < Math.min(10, lines.length); i++) {
-                if (!lines[i].startsWith('#') && !lines[i].startsWith('**') && lines[i].length > 50) {
-                    return lines[i].trim().substring(0, 300);
-                }
-            }
-
-            return `Analyzed ${primaryService.name} production database and generated comprehensive business insights`;
-        };
-
-        // Save to document store (analytics_md)
-        await saveExecutionLog(executionRecord.id, {
-            log_level: 'info',
-            stage: 'saving',
-            message: 'Saving analytics report to document store',
-        });
-
-        const { updateDocument } = require('./document-store');
-        await updateDocument(userId, 'analytics_md', analyticsContent);
-
-        // Also save structured analytics JSON for programmatic access
-        const analyticsJSON = {
-            timestamp: new Date().toISOString(),
-            service: {
-                name: primaryService.name,
-                id: primaryService.id,
-                type: primaryService.type,
-            },
-            report_length: analyticsContent.length,
-            analysis: {
-                database_queried: true,
-                github_explored: !!primaryRepo,
-                repo_cloned: !!repoPath,
-                vision_included: !!visionContext,
-                turns_used: turns,
-                cost_usd: cost,
-            },
-            summary: extractSummary(analyticsContent),
-            generated_at: new Date().toISOString(),
-        };
-
-        await updateDocument(userId, 'analytics_json', analyticsJSON);
-
-        console.log(`[Agent Runner] ✓ Analytics saved to document store (MD + JSON)`);
 
         console.log(`[Agent Runner] ✓ Render Analytics Summarizer completed`);
         console.log(`   - Service: ${primaryService.name}`);
@@ -1461,36 +1420,26 @@ IMPORTANT:
             metadata: {
                 service_name: primaryService.name,
                 service_id: primaryService.id,
-                analytics_length: analyticsContent.length,
                 turns,
+                session_id: result.metadata?.session_id || newSessionId,
+                resumed_from_session: !!resumeSessionId,
+                note: 'Report saved to database via Reports MCP during execution'
             },
         });
 
-        // Extract key insights from analytics for task summary (using helper defined earlier)
-        const summaryDescription = extractSummary(analyticsContent);
-
-        // Create task summary
-        await createTaskSummary(userId, {
-            title: 'Render Analytics Report Generated',
-            description: summaryDescription,
-            status: 'completed',
-            serviceIds: [connection.id],
-            execution_id: executionRecord.id,
-            module_id: module.id,
-            cost_usd: cost,
-            duration_ms: duration,
-            num_turns: turns,
-            completed_at: new Date(),
-        });
-
-        console.log(`[Agent Runner] ✅ Task summary created for Render Analytics`);
+        // Save new session ID to module for future runs (continuous learning)
+        if (newSessionId && !resumeSessionId && result.success) {
+            console.log(`[Agent Runner] 💾 Saving session ID to module for future runs...`);
+            const { updateModuleSessionId } = require('../db');
+            await updateModuleSessionId(module.id, newSessionId);
+            console.log(`[Agent Runner] ✅ Session ID saved - future runs will resume from this session`);
+        }
 
         return {
             success: true,
             execution_id: executionRecord.id,
             duration_ms: duration,
             cost_usd: cost,
-            analytics_length: analyticsContent.length,
         };
 
     } catch (error) {
@@ -1519,13 +1468,9 @@ IMPORTANT:
             execution_id: executionRecord.id,
         };
     } finally {
-        // Cleanup workspace (happens whether success or failure)
-        try {
-            await fs.rm(workspace, { recursive: true, force: true });
-            console.log(`[Agent Runner] 🧹 Workspace cleaned up`);
-        } catch (cleanupError) {
-            console.warn(`[Agent Runner] Warning: Failed to cleanup workspace: ${cleanupError.message}`);
-        }
+        // Keep workspace persistent for session resumption
+        // Workspace is reused across executions to maintain session continuity
+        console.log(`[Agent Runner] ✓ Workspace preserved for session continuity`);
     }
 }
 
@@ -1799,6 +1744,677 @@ These require the async Analytics Reports workflow. Use App Store Connect web in
         };
     } finally {
         // Cleanup workspace (only if it was created)
+        if (workspace) {
+            try {
+                await fs.rm(workspace, { recursive: true, force: true });
+                console.log(`[Agent Runner] 🧹 Workspace cleaned up`);
+            } catch (cleanupError) {
+                console.warn(`[Agent Runner] Warning: Failed to cleanup workspace: ${cleanupError.message}`);
+            }
+        }
+    }
+}
+
+/**
+ * Run All Analytics module
+ * Aggregates metrics from all connected sources into unified analytics files
+ */
+async function runAllAnalyticsModule(module, userId, executionRecord, startTime) {
+    const crypto = require('crypto');
+    const fs = require('fs').promises;
+    let workspace;
+
+    try {
+        console.log(`[Agent Runner] 📊 Running All Analytics module`);
+
+        await saveExecutionLog(executionRecord.id, {
+            log_level: 'info',
+            stage: 'started',
+            message: 'Starting comprehensive analytics aggregation',
+        });
+
+        // Check which services are connected
+        const { getServiceConnectionsByUserId } = require('../db');
+        const allConnections = await getServiceConnectionsByUserId(userId);
+
+        const availableServices = {};
+        const requestedServices = ['slack', 'meta_ads', 'appstore_connect', 'sentry', 'gmail', 'render', 'github'];
+
+        for (const serviceName of requestedServices) {
+            const connection = allConnections.find(c => c.service_name === serviceName);
+            availableServices[serviceName] = !!connection;
+        }
+
+        const connectedServices = Object.keys(availableServices).filter(s => availableServices[s]);
+        const missingServices = Object.keys(availableServices).filter(s => !availableServices[s]);
+
+        console.log(`[Agent Runner] Connected services: ${connectedServices.join(', ')}`);
+        console.log(`[Agent Runner] Missing services: ${missingServices.join(', ')}`);
+
+        await saveExecutionLog(executionRecord.id, {
+            log_level: 'info',
+            stage: 'setup',
+            message: `Available data sources: ${connectedServices.join(', ')}`,
+            metadata: { connectedServices, missingServices },
+        });
+
+        // Prepare context with all available MCPs
+        const context = await prepareModuleContext(module, userId);
+
+        // Use all configured MCP servers (prepareModuleContext already filtered them)
+        const filteredMcpServers = context.mcpServers || {};
+
+        console.log(`[Agent Runner] MCP servers configured: ${Object.keys(filteredMcpServers).length}`);
+        console.log(`[Agent Runner] MCP server keys: ${Object.keys(filteredMcpServers).join(', ')}`);
+
+        // Create workspace
+        workspace = path.join(
+            process.cwd(),
+            'temp',
+            'module-executions',
+            `${executionRecord.id}-${crypto.randomBytes(4).toString('hex')}`
+        );
+        await fs.mkdir(workspace, { recursive: true });
+
+        console.log(`[Agent Runner] Workspace created: ${workspace}`);
+
+        // Build comprehensive analytics prompt
+        const analyticsPrompt = `You are a comprehensive business analytics aggregator. Your mission is to collect key business metrics from all available data sources and create two files: analytics.md and analytics.json.
+
+## Available Data Sources
+
+You have access to the following services:
+${connectedServices.map(s => `✅ ${s}`).join('\n')}
+
+${missingServices.length > 0 ? `\nNOT CONNECTED (skip these):\n${missingServices.map(s => `❌ ${s}`).join('\n')}` : ''}
+
+## Your Workflow
+
+### Step 1: Collect Metrics from Each Available Source
+
+${connectedServices.includes('slack') ? `**Slack:**
+- Use list_channels to get all channels
+- Use get_channel_history for past 24 hours
+- Count total messages analyzed
+- Identify action items and blockers from conversations
+- Count active channels
+
+` : ''}${connectedServices.includes('meta_ads') ? `**Meta Ads:**
+- Use get_ad_account_insights with datePreset="last_7d"
+- Get total spend, ROAS, impressions, clicks
+- Use list_campaigns to count active campaigns
+- Calculate key metrics (CPA, CTR)
+
+` : ''}${connectedServices.includes('appstore_connect') ? `**App Store Connect:**
+- Use get_analytics_report_instances to find latest report
+- Use download_analytics_report to get metrics
+- Extract downloads, revenue, active devices, sessions
+
+` : ''}${connectedServices.includes('sentry') ? `**Sentry:**
+- Use list_organizations and list_projects
+- Use list_issues with query='is:unresolved'
+- Count total bugs and critical bugs (high event count)
+- Count projects monitored
+
+` : ''}${connectedServices.includes('gmail') ? `**Gmail:**
+- Use search_emails to find unread emails
+- Analyze and count urgent/important emails
+- Track total unread count
+
+` : ''}${connectedServices.includes('render') ? `**Render Database:**
+- First use mcp__render__list_postgres_instances to find the database
+- Then use mcp__render__query_render_postgres with the postgresId to run SQL queries
+- Query for: active users, new users this week, module executions (7d), AI costs (7d)
+- Example queries:
+  - \`SELECT COUNT(*) FROM users\` (total users)
+  - \`SELECT COUNT(*) FROM users WHERE created_at > NOW() - INTERVAL '7 days'\` (new users)
+  - \`SELECT COUNT(*), COALESCE(SUM(cost_usd), 0) FROM module_executions WHERE created_at > NOW() - INTERVAL '7 days'\` (executions and cost)
+- **IMPORTANT**: Extract the postgresId from list_postgres_instances first!
+
+` : ''}
+### Step 2: Create analytics.md
+
+**IMPORTANT**: Write files to the CURRENT WORKING DIRECTORY using RELATIVE paths only!
+- Use \`Write("analytics.md")\` NOT \`Write("/Users/.../analytics.md")\`
+- Use \`Write("analytics.json")\` NOT \`Write("/Users/.../analytics.json")\`
+
+Write a **factual, concise** product analytics summary to analytics.md using the Write tool:
+
+\`\`\`markdown
+# Product Analytics Summary
+**Generated**: ${new Date().toISOString()}
+**Data Sources**: ${connectedServices.join(', ')}
+
+## Executive Summary
+[3-5 key findings about current product state - factual, no fluff]
+
+## Product Metrics
+- Active Users: [number or N/A]
+- New Users (this week): [number or N/A]
+- App Downloads: [number or N/A]
+- Active Devices: [number or N/A]
+
+## Revenue & Marketing
+- Ad Spend (7d): $[amount or N/A]
+- ROAS: [number or N/A]
+- App Revenue: $[amount or N/A]
+- Active Campaigns: [number or N/A]
+
+## Product Health
+- Critical Bugs: [number or N/A]
+- Total Unresolved Bugs: [number or N/A]
+- Sentry Projects: [number or N/A]
+
+## Infrastructure & Operations
+- Module Executions (7d): [number or N/A]
+- AI API Costs (7d): $[amount or N/A]
+- Slack Messages Analyzed: [number or N/A]
+
+## Team Activity
+- Blockers Identified: [number or N/A]
+- Action Items: [number or N/A]
+- Urgent Emails: [number or N/A]
+- Important Emails: [number or N/A]
+
+## Data Source Status
+- ✅ Available: ${connectedServices.join(', ')}
+${missingServices.length > 0 ? `- ❌ Not Connected: ${missingServices.join(', ')}` : ''}
+\`\`\`
+
+### Step 3: Create analytics.json
+
+Write a **flat JSON object with business metrics only** to analytics.json using the Write tool:
+
+\`\`\`json
+{
+  "timestamp": "${new Date().toISOString()}",
+  "active_users": 150,
+  "new_users_this_week": 23,
+  "app_downloads": 342,
+  "app_revenue_usd": 1250.50,
+  "active_devices": 890,
+  "ad_spend_usd": 450.00,
+  "roas": 2.78,
+  "active_campaigns": 5,
+  "ad_impressions": 125000,
+  "ad_clicks": 3400,
+  "critical_bugs": 3,
+  "total_bugs": 15,
+  "sentry_projects": 2,
+  "module_executions_7d": 89,
+  "ai_cost_usd_7d": 45.20,
+  "slack_messages_analyzed": 456,
+  "slack_blockers": 7,
+  "slack_action_items": 23,
+  "urgent_emails": 5,
+  "important_emails": 12,
+  "unread_emails": 34
+}
+\`\`\`
+
+**Use null for unavailable metrics** (not 0 unless truly zero).
+
+## Critical Requirements
+
+1. **Write both files**: Use Write tool with RELATIVE PATHS ONLY
+   - Write("analytics.md") ✅
+   - Write("analytics.json") ✅
+   - Write("/Users/benbroca/analytics.md") ❌ WRONG
+2. **Graceful degradation**: Skip unavailable services, use null for missing metrics
+3. **Factual only**: No recommendations, just current state
+4. **Business metrics**: Focus on numbers that matter to business health
+5. **Latest data**: Use most recent time periods (today, past 7 days, this week)
+
+**WRITE THE FILES NOW!** Don't overthink, just collect data and write both files to the CURRENT WORKING DIRECTORY.`;
+
+        await saveExecutionLog(executionRecord.id, {
+            log_level: 'info',
+            stage: 'analyzing',
+            message: 'Claude is aggregating analytics from all sources',
+        });
+
+        // Execute Claude Agent
+        const result = await executeTask(analyticsPrompt, {
+            cwd: workspace,
+            maxTurns: context.maxTurns || 200,
+            mcpServers: filteredMcpServers,
+            skipFileCollection: true,
+            onProgress: async (progress) => {
+                if (progress.stage === 'tool_use') {
+                    await saveExecutionLog(executionRecord.id, {
+                        log_level: 'info',
+                        stage: 'analyzing',
+                        message: `Using tool: ${progress.tool}`,
+                        metadata: { tool: progress.tool }
+                    });
+                }
+            }
+        });
+
+        if (!result.success) {
+            throw new Error(result.error || 'Analytics aggregation failed');
+        }
+
+        console.log(`[Agent Runner] Claude analysis complete`);
+
+        // Read both files
+        const mdPath = path.join(workspace, 'analytics.md');
+        const jsonPath = path.join(workspace, 'analytics.json');
+
+        let analyticsMarkdown = null;
+        let analyticsJson = null;
+
+        try {
+            analyticsMarkdown = await fs.readFile(mdPath, 'utf-8');
+            console.log(`[Agent Runner] ✓ analytics.md read (${analyticsMarkdown.length} characters)`);
+        } catch (error) {
+            throw new Error('Agent did not write analytics.md file. The agent must use the Write tool.');
+        }
+
+        try {
+            const jsonContent = await fs.readFile(jsonPath, 'utf-8');
+            analyticsJson = JSON.parse(jsonContent);
+            console.log(`[Agent Runner] ✓ analytics.json read and parsed`);
+        } catch (error) {
+            throw new Error('Agent did not write analytics.json file or JSON is invalid.');
+        }
+
+        // Validate markdown
+        const trimmed = analyticsMarkdown.trim();
+        if (!trimmed.startsWith('# ') || trimmed.length < 200) {
+            throw new Error('analytics.md is invalid. Must start with "# " and be at least 200 characters.');
+        }
+
+        // Calculate metrics
+        const duration = Date.now() - startTime;
+        const cost = result.metadata?.cost_usd || 0;
+        const turns = result.metadata?.num_turns || 0;
+
+        // Save to document store
+        await saveExecutionLog(executionRecord.id, {
+            log_level: 'info',
+            stage: 'saving',
+            message: 'Saving analytics to document store',
+        });
+
+        const { updateDocument } = require('./document-store');
+        await updateDocument(userId, 'analytics_md', analyticsMarkdown);
+        await updateDocument(userId, 'analytics_json', analyticsJson);
+
+        console.log(`[Agent Runner] ✓ Analytics saved to document store (MD + JSON)`);
+
+        // Update execution record
+        await updateModuleExecution(executionRecord.id, {
+            status: 'completed',
+            completed_at: new Date(),
+            duration_ms: duration,
+            cost_usd: cost,
+            metadata: {
+                sources_connected: connectedServices,
+                sources_missing: missingServices,
+                analytics_md_length: analyticsMarkdown.length,
+                turns,
+            },
+        });
+
+        // Create task summary
+        await createTaskSummary(userId, {
+            title: 'All Analytics Dashboard Updated',
+            description: `Aggregated business metrics from ${connectedServices.length} data sources: ${connectedServices.join(', ')}`,
+            status: 'completed',
+            serviceIds: allConnections.filter(c => connectedServices.includes(c.service_name)).map(c => c.id),
+            execution_id: executionRecord.id,
+            module_id: module.id,
+            cost_usd: cost,
+            duration_ms: duration,
+            num_turns: turns,
+            completed_at: new Date(),
+        });
+
+        console.log(`[Agent Runner] ✅ All Analytics module completed`);
+        console.log(`   - Sources: ${connectedServices.length}/${requestedServices.length}`);
+        console.log(`   - Duration: ${(duration / 1000).toFixed(2)}s`);
+        console.log(`   - Cost: $${cost.toFixed(4)}`);
+        console.log(`   - Turns: ${turns}`);
+
+        return {
+            success: true,
+            execution_id: executionRecord.id,
+            duration_ms: duration,
+            cost_usd: cost,
+            sources_connected: connectedServices.length,
+        };
+
+    } catch (error) {
+        console.error(`[Agent Runner] ❌ All Analytics error:`, error.message);
+
+        const duration = Date.now() - startTime;
+
+        await saveExecutionLog(executionRecord.id, {
+            log_level: 'error',
+            stage: 'failed',
+            message: `All Analytics failed: ${error.message}`,
+        });
+
+        await updateModuleExecution(executionRecord.id, {
+            status: 'failed',
+            completed_at: new Date(),
+            duration_ms: duration,
+            error_message: error.message,
+        });
+
+        return {
+            success: false,
+            error: error.message,
+            execution_id: executionRecord.id,
+        };
+    } finally {
+        if (workspace) {
+            try {
+                await fs.rm(workspace, { recursive: true, force: true });
+                console.log(`[Agent Runner] 🧹 Workspace cleaned up`);
+            } catch (cleanupError) {
+                console.warn(`[Agent Runner] Warning: Failed to cleanup workspace: ${cleanupError.message}`);
+            }
+        }
+    }
+}
+
+/**
+ * Run Analytics Sub-Agents Demo module
+ * Demonstrates sub-agent pattern: orchestrator delegates to specialized agents
+ */
+async function runAnalyticsSubAgentsModule(module, userId, executionRecord, startTime) {
+    const crypto = require('crypto');
+    const fs = require('fs').promises;
+    let workspace;
+
+    try {
+        console.log(`[Agent Runner] 📊 Running Analytics Sub-Agents Demo module`);
+
+        await saveExecutionLog(executionRecord.id, {
+            log_level: 'info',
+            stage: 'started',
+            message: 'Starting sub-agent orchestration demo',
+        });
+
+        // 1. Create workspace
+        workspace = path.join(
+            process.cwd(),
+            'temp',
+            'module-executions',
+            `${executionRecord.id}-${crypto.randomBytes(4).toString('hex')}`
+        );
+        await fs.mkdir(workspace, { recursive: true });
+
+        console.log(`[Agent Runner] Workspace created: ${workspace}`);
+
+        // 2. Create .claude/agents/ directory in workspace
+        const agentsDir = path.join(workspace, '.claude', 'agents');
+        await fs.mkdir(agentsDir, { recursive: true });
+
+        console.log(`[Agent Runner] Created .claude/agents/ directory in workspace`);
+
+        await saveExecutionLog(executionRecord.id, {
+            log_level: 'info',
+            stage: 'setup',
+            message: 'Created .claude/agents/ directory for sub-agent discovery',
+        });
+
+        // 3. Parse agent markdown files and create agent definitions
+        const renderAgentTemplate = path.join(process.cwd(), 'services', 'sub-agents', 'render-analytics.md');
+        const sentryAgentTemplate = path.join(process.cwd(), 'services', 'sub-agents', 'sentry-bug-checker.md');
+
+        const renderAgentContent = await fs.readFile(renderAgentTemplate, 'utf-8');
+        const sentryAgentContent = await fs.readFile(sentryAgentTemplate, 'utf-8');
+
+        // Parse markdown frontmatter and content
+        const parseAgentMarkdown = (content) => {
+            const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
+            if (!frontmatterMatch) {
+                throw new Error('Invalid agent markdown: missing frontmatter');
+            }
+
+            const frontmatter = {};
+            const frontmatterLines = frontmatterMatch[1].split('\n');
+            for (const line of frontmatterLines) {
+                const [key, ...valueParts] = line.split(':');
+                if (key && valueParts.length > 0) {
+                    const value = valueParts.join(':').trim();
+                    frontmatter[key.trim()] = value;
+                }
+            }
+
+            const prompt = frontmatterMatch[2].trim();
+
+            return {
+                description: frontmatter.description || '',
+                tools: frontmatter.tools ? frontmatter.tools.split(',').map(t => t.trim()) : undefined,
+                prompt,
+                model: frontmatter.model || 'sonnet'
+            };
+        };
+
+        const renderAgent = parseAgentMarkdown(renderAgentContent);
+        const sentryAgent = parseAgentMarkdown(sentryAgentContent);
+
+        const agents = {
+            'render-analytics': renderAgent,
+            'sentry-bug-checker': sentryAgent
+        };
+
+        console.log(`[Agent Runner] Parsed render-analytics agent definition`);
+        console.log(`[Agent Runner] Parsed sentry-bug-checker agent definition`);
+
+        await saveExecutionLog(executionRecord.id, {
+            log_level: 'info',
+            stage: 'setup',
+            message: 'Parsed 2 sub-agent definitions',
+            metadata: { agents: ['render-analytics', 'sentry-bug-checker'] },
+        });
+
+        // 4. Clone GitHub repository if available (for render-analytics sub-agent)
+        const { getServiceConnectionByName } = require('../db');
+        const githubConnection = await getServiceConnectionByName(userId, 'github');
+        const primaryRepo = githubConnection?.metadata?.primary_repo;
+
+        let repoPath = null;
+        if (primaryRepo) {
+            try {
+                const { execSync } = require('child_process');
+                repoPath = path.join(workspace, 'repo');
+
+                console.log(`[Agent Runner] Cloning repository: ${primaryRepo.full_name}...`);
+
+                await saveExecutionLog(executionRecord.id, {
+                    log_level: 'info',
+                    stage: 'setup',
+                    message: `Cloning repository: ${primaryRepo.full_name}`,
+                });
+
+                execSync(`git clone --depth 1 https://github.com/${primaryRepo.full_name} ${repoPath}`, {
+                    stdio: 'pipe',
+                    timeout: 60000,
+                });
+
+                console.log(`[Agent Runner] Repository cloned successfully`);
+
+                await saveExecutionLog(executionRecord.id, {
+                    log_level: 'info',
+                    stage: 'setup',
+                    message: 'Repository cloned successfully',
+                });
+            } catch (error) {
+                console.warn(`[Agent Runner] Failed to clone repository: ${error.message}`);
+                await saveExecutionLog(executionRecord.id, {
+                    log_level: 'warning',
+                    stage: 'setup',
+                    message: `Failed to clone repository: ${error.message}. Continuing without repo.`,
+                });
+                repoPath = null;
+            }
+        } else {
+            console.log(`[Agent Runner] No primary GitHub repo configured - sub-agents will work without it`);
+        }
+
+        // 5. Prepare MCP servers
+        const context = await prepareModuleContext(module, userId);
+
+        console.log(`[Agent Runner] MCP servers configured: ${Object.keys(context.mcpServers || {}).length}`);
+
+        // 6. Build orchestrator prompt
+        const orchestratorPrompt = context.prompt || module.config.goal || `
+You are the main orchestrator for analytics aggregation using sub-agents.
+
+## Your Mission
+Coordinate 2 specialized sub-agents to gather comprehensive analytics, then synthesize their reports.
+
+## Available Sub-Agents
+1. **render-analytics** - Analyzes Render production database
+2. **sentry-bug-checker** - Scans Sentry for bugs
+
+## Your Workflow
+1. Task(agent="render-analytics", prompt="Analyze production database and generate comprehensive report")
+2. Task(agent="sentry-bug-checker", prompt="Scan Sentry projects and generate bug report")
+3. Synthesize both reports into unified analytics.md
+4. Use Write("analytics.md") to save
+
+Remember: Use relative path "analytics.md" not absolute path.
+`;
+
+        await saveExecutionLog(executionRecord.id, {
+            log_level: 'info',
+            stage: 'orchestrating',
+            message: 'Starting orchestrator agent with sub-agent delegation',
+        });
+
+        // 7. Execute orchestrator agent
+        const result = await executeTask(orchestratorPrompt, {
+            cwd: workspace,
+            maxTurns: context.maxTurns || 200,
+            mcpServers: context.mcpServers,
+            agents, // Pass sub-agent definitions
+            skipFileCollection: true,
+            onProgress: async (progress) => {
+                if (progress.stage === 'tool_use') {
+                    await saveExecutionLog(executionRecord.id, {
+                        log_level: 'info',
+                        stage: 'orchestrating',
+                        message: `Tool: ${progress.tool}`,
+                        metadata: { tool: progress.tool, turn: progress.turnCount }
+                    });
+                }
+            }
+        });
+
+        if (!result.success) {
+            throw new Error(result.error || 'Sub-agent orchestration failed');
+        }
+
+        console.log(`[Agent Runner] Orchestrator agent completed`);
+
+        // 8. Read analytics.md file
+        const analyticsPath = path.join(workspace, 'analytics.md');
+        let analyticsContent = null;
+
+        try {
+            analyticsContent = await fs.readFile(analyticsPath, 'utf-8');
+            console.log(`[Agent Runner] ✓ analytics.md read (${analyticsContent.length} characters)`);
+        } catch (error) {
+            throw new Error('Orchestrator did not write analytics.md file. The orchestrator must synthesize sub-agent reports and use Write tool.');
+        }
+
+        // Validate report
+        const trimmed = analyticsContent.trim();
+        if (!trimmed.startsWith('# ') || trimmed.length < 200) {
+            throw new Error('analytics.md is invalid. Must start with "# " and be at least 200 characters.');
+        }
+
+        console.log(`[Agent Runner] ✓ Report validated`);
+
+        // 9. Calculate metrics
+        const duration = Date.now() - startTime;
+        const cost = result.metadata?.cost_usd || 0;
+        const turns = result.metadata?.num_turns || 0;
+
+        // 10. Save to document store
+        await saveExecutionLog(executionRecord.id, {
+            log_level: 'info',
+            stage: 'saving',
+            message: 'Saving synthesized analytics to document store',
+        });
+
+        const { updateDocument } = require('./document-store');
+        await updateDocument(userId, 'analytics_md', analyticsContent);
+
+        console.log(`[Agent Runner] ✓ Analytics saved to document store`);
+
+        // 11. Update execution record
+        await updateModuleExecution(executionRecord.id, {
+            status: 'completed',
+            completed_at: new Date(),
+            duration_ms: duration,
+            cost_usd: cost,
+            metadata: {
+                sub_agents_used: ['render-analytics', 'sentry-bug-checker'],
+                analytics_md_length: analyticsContent.length,
+                repo_cloned: !!repoPath,
+                turns,
+            },
+        });
+
+        // 12. Create task summary
+        await createTaskSummary(userId, {
+            title: 'Sub-Agent Analytics Demo Completed',
+            description: `Orchestrator successfully coordinated 2 specialized sub-agents (Render Analytics + Sentry Bug Checker) and synthesized their reports into unified analytics.`,
+            status: 'completed',
+            serviceIds: [],
+            execution_id: executionRecord.id,
+            module_id: module.id,
+            cost_usd: cost,
+            duration_ms: duration,
+            num_turns: turns,
+            completed_at: new Date(),
+        });
+
+        console.log(`[Agent Runner] ✅ Analytics Sub-Agents Demo completed`);
+        console.log(`   - Duration: ${(duration / 1000).toFixed(2)}s`);
+        console.log(`   - Cost: $${cost.toFixed(4)}`);
+        console.log(`   - Turns: ${turns}`);
+        console.log(`   - Sub-agents: render-analytics, sentry-bug-checker`);
+
+        return {
+            success: true,
+            execution_id: executionRecord.id,
+            duration_ms: duration,
+            cost_usd: cost,
+            sub_agents_used: 2,
+        };
+
+    } catch (error) {
+        console.error(`[Agent Runner] ❌ Analytics Sub-Agents error:`, error.message);
+
+        const duration = Date.now() - startTime;
+
+        await saveExecutionLog(executionRecord.id, {
+            log_level: 'error',
+            stage: 'failed',
+            message: `Sub-agent orchestration failed: ${error.message}`,
+        });
+
+        await updateModuleExecution(executionRecord.id, {
+            status: 'failed',
+            completed_at: new Date(),
+            duration_ms: duration,
+            error_message: error.message,
+        });
+
+        return {
+            success: false,
+            error: error.message,
+            execution_id: executionRecord.id,
+        };
+    } finally {
         if (workspace) {
             try {
                 await fs.rm(workspace, { recursive: true, force: true });
