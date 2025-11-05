@@ -8,11 +8,9 @@
  * Add your production domain here
  */
 const ALLOWED_ORIGINS = [
-    'http://localhost:5173',    // Local development
-    'http://localhost:3000',    // Local production build
-    'https://polsia.com',       // Production (example - update with actual domain)
-    'https://www.polsia.com',   // Production with www
-    'https://app.polsia.com',   // Production app subdomain
+    'http://localhost:5173',        // Local development
+    'http://localhost:3000',        // Local production build
+    'https://polsia.onrender.com',  // Render production deployment
 ];
 
 /**
