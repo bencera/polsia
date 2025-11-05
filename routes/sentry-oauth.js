@@ -72,6 +72,7 @@ module.exports = (authenticateTokenFromQuery, authenticateToken) => {
         'project:write',      // Write project data
         'org:read',           // Read organization data
         'event:read',         // Read error events
+        'event:write',        // Write/update error events (mark resolved, assign, etc.)
         'member:read'         // Read member data
       ];
 

@@ -113,6 +113,91 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
                     },
                     required: ['issueId']
                 }
+            },
+            {
+                name: 'update_issue_status',
+                description: 'Update the status of a Sentry issue (e.g., mark as resolved, ignored, etc.). Use this to prevent re-processing issues.',
+                inputSchema: {
+                    type: 'object',
+                    properties: {
+                        organizationSlug: {
+                            type: 'string',
+                            description: 'The organization slug'
+                        },
+                        issueId: {
+                            type: 'string',
+                            description: 'The Sentry issue ID'
+                        },
+                        status: {
+                            type: 'string',
+                            enum: ['resolved', 'unresolved', 'ignored', 'resolvedInNextRelease'],
+                            description: 'New status for the issue'
+                        },
+                        statusDetails: {
+                            type: 'object',
+                            description: 'Additional status context (optional)',
+                            properties: {
+                                inRelease: {
+                                    type: 'string',
+                                    description: 'Release version (for resolved status)'
+                                },
+                                ignoreDuration: {
+                                    type: 'number',
+                                    description: 'Minutes to ignore issue (for ignored status)'
+                                },
+                                ignoreCount: {
+                                    type: 'number',
+                                    description: 'Ignore until N occurrences'
+                                },
+                                ignoreUserCount: {
+                                    type: 'number',
+                                    description: 'Ignore until N users affected'
+                                }
+                            }
+                        }
+                    },
+                    required: ['organizationSlug', 'issueId', 'status']
+                }
+            },
+            {
+                name: 'assign_issue',
+                description: 'Assign a Sentry issue to a user or team',
+                inputSchema: {
+                    type: 'object',
+                    properties: {
+                        organizationSlug: {
+                            type: 'string',
+                            description: 'The organization slug'
+                        },
+                        issueId: {
+                            type: 'string',
+                            description: 'The Sentry issue ID'
+                        },
+                        assignedTo: {
+                            type: 'string',
+                            description: 'Email address or actor ID to assign to'
+                        }
+                    },
+                    required: ['organizationSlug', 'issueId', 'assignedTo']
+                }
+            },
+            {
+                name: 'add_issue_note',
+                description: 'Add a comment/note to a Sentry issue for documentation purposes',
+                inputSchema: {
+                    type: 'object',
+                    properties: {
+                        issueId: {
+                            type: 'string',
+                            description: 'The Sentry issue ID'
+                        },
+                        comment: {
+                            type: 'string',
+                            description: 'The comment text to add'
+                        }
+                    },
+                    required: ['issueId', 'comment']
+                }
             }
         ]
     };
@@ -187,6 +272,63 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                     content: [{
                         type: 'text',
                         text: JSON.stringify(result, null, 2)
+                    }]
+                };
+            }
+
+            case 'update_issue_status': {
+                const { organizationSlug, issueId, status, statusDetails } = args;
+
+                const updates = { status };
+                if (statusDetails) {
+                    updates.statusDetails = statusDetails;
+                }
+
+                const result = await sentryClient.updateIssue(organizationSlug, issueId, updates);
+
+                return {
+                    content: [{
+                        type: 'text',
+                        text: JSON.stringify({
+                            success: true,
+                            message: `Issue ${issueId} status updated to: ${status}`,
+                            result
+                        }, null, 2)
+                    }]
+                };
+            }
+
+            case 'assign_issue': {
+                const { organizationSlug, issueId, assignedTo } = args;
+
+                const updates = { assignedTo };
+                const result = await sentryClient.updateIssue(organizationSlug, issueId, updates);
+
+                return {
+                    content: [{
+                        type: 'text',
+                        text: JSON.stringify({
+                            success: true,
+                            message: `Issue ${issueId} assigned to: ${assignedTo}`,
+                            result
+                        }, null, 2)
+                    }]
+                };
+            }
+
+            case 'add_issue_note': {
+                const { issueId, comment } = args;
+
+                const result = await sentryClient.addIssueNote(issueId, comment);
+
+                return {
+                    content: [{
+                        type: 'text',
+                        text: JSON.stringify({
+                            success: true,
+                            message: `Note added to issue ${issueId}`,
+                            result
+                        }, null, 2)
                     }]
                 };
             }

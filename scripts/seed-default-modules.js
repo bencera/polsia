@@ -144,64 +144,108 @@ IMPORTANT:
     },
     {
         name: 'Sentry Bug Checker',
-        description: 'Scans your Sentry projects for pending bugs and errors that need attention',
+        description: 'Converts unresolved Sentry bugs into actionable tasks in the task management system',
         type: 'autonomous',
-        frequency: 'manual',
+        frequency: 'daily',
         config: {
-            maxTurns: 100,
-            mcpMounts: ['sentry'],
-            goal: `You are a Sentry bug checker using our custom Sentry MCP server. Your job is to:
+            maxTurns: 150,
+            mcpMounts: ['sentry', 'tasks'],
+            goal: `You are a Sentry bug-to-task converter. Your job is to find unresolved Sentry bugs and create tasks for them.
 
-1. Use list_organizations to get your Sentry organizations
-2. Use list_projects with organizationSlug to list all projects
-3. Use list_issues with organizationSlug and projectSlug to retrieve unresolved issues
-   - Parameters: organizationSlug, projectSlug, query='is:unresolved', limit=100
-   - This returns a list of issues with metadata (count, userCount, etc.)
-4. For each critical issue, use get_issue_details with issueId to get full stacktrace
-5. Analyze and categorize issues by:
-   - **Critical**: High event count (100+), recent, affecting many users
-   - **High Priority**: Moderate frequency (20-100 events), recurring
-   - **Medium Priority**: Low frequency (5-20 events), sporadic
-   - **Low Priority**: Very low frequency (<5 events), edge cases
+## Workflow
 
-6. Provide this report format:
+### 1. Fetch Unresolved Issues
+- Use \`list_organizations\` to get your Sentry organizations
+- Use \`list_projects\` with organizationSlug to list all projects
+- Use \`list_issues\` with organizationSlug, projectSlug, query='is:unresolved', limit=100
+- Use \`get_issue_details\` with issueId to get full details and stacktrace
 
-## Sentry Bug Report
+### 2. Analyze Each Issue for Impact
+For each unresolved issue, evaluate:
+- **Event count**: How many times has this error occurred?
+- **User count**: How many users are affected?
+- **Recency**: When was it last seen?
+- **Error type**: What kind of error is it?
 
-**Total Issues Found:** [number]
-**Projects Scanned:** [list]
-**Generated:** [timestamp]
+**Decision Criteria:**
+- **Create task if**: Event count ≥ 20 OR user count ≥ 10 OR critical error type (auth failures, data loss, crashes)
+- **Skip if**: Event count < 5 AND not a critical error type (likely edge case or noise)
 
-### Critical Issues (immediate attention required)
-1. **[Issue Title]**
-   - Type: [error type]
-   - Events: [count] | Users: [affected]
-   - Last Seen: [timestamp]
-   - Link: [Sentry URL]
-   - Error: [first 3 lines of stacktrace]
+### 3. Create Task for Impactful Issues
+For each issue that warrants action, use \`create_task_proposal\` (Tasks MCP):
 
-### High Priority Issues
-[same format]
+**Parameters:**
+- **title**: Clear, concise bug description (e.g., "Fix NullPointerException in User Authentication")
+- **description**: Comprehensive context including:
+  \`\`\`
+  **Sentry Issue:** [full URL]
 
-### Medium Priority Issues
-[same format]
+  **Error:** [error type and message]
+  **Impact:** [X] events, [Y] users affected
+  **Last Seen:** [timestamp]
 
-### Low Priority Issues
-[same format]
+  **Stacktrace:**
+  [First 10-15 lines of stacktrace showing the error location]
 
-### Summary
-- Total Critical: [count]
-- Total High: [count]
-- Total Medium: [count]
-- Total Low: [count]
+  **Project:** [project name]
+  **Environment:** [if available]
+  \`\`\`
+- **suggestion_reasoning**: Why this bug needs attention (e.g., "High-impact authentication bug affecting 89 users with 247 occurrences in past 24h")
+- **priority**: Based on impact:
+  - \`critical\`: 100+ events OR auth/security/data-loss errors
+  - \`high\`: 20-100 events OR 10-50 users affected
+  - \`medium\`: 5-20 events OR recurring pattern
+  - \`low\`: <5 events but worth tracking
 
-IMPORTANT:
-- Use list_issues (our custom MCP tool), NOT search_issues or find_issues
-- Focus on unresolved issues only (query='is:unresolved')
-- Read-only analysis - don't modify issues
-- Include Sentry URLs for quick access (format: https://[org].sentry.io/issues/[issueId]/)
-- If no issues in a category, write "None"
-- Only fetch full stacktraces for Critical issues (to save API calls)`,
+### 4. Mark Issue in Sentry (Prevent Duplicates)
+**IMMEDIATELY after creating task**, use \`update_issue_status\` (Sentry MCP):
+- **organizationSlug**: [from list_organizations]
+- **issueId**: [the issue ID]
+- **status**: "ignored"
+- **statusDetails**: \`{ "ignoreDuration": 1440 }\` (ignore for 24 hours)
+
+**Why ignore for 24h?**
+- This prevents creating duplicate tasks tomorrow
+- If issue is still unresolved after 24h and still active, it will reappear and can be re-evaluated
+- Developers can manually change status in Sentry UI
+
+**Alternative (if you prefer):** Use \`add_issue_note\` to add a comment like "Task created: [task_id]" for reference
+
+### 5. Final Summary
+Report:
+- Total unresolved issues found
+- Tasks created (with IDs)
+- Issues skipped (with brief reason: "low impact", "edge case", etc.)
+- Issues marked as ignored in Sentry
+
+**Example Summary:**
+\`\`\`
+Found 15 unresolved issues across 3 projects.
+
+Tasks Created: 5
+- Task #123: Fix NullPointerException in auth (Critical - 247 events)
+- Task #124: Handle timeout in payment API (High - 89 events)
+- Task #125: Fix date parsing error (Medium - 23 events)
+- Task #126: Memory leak in background worker (High - 156 events)
+- Task #127: Invalid JSON response error (Medium - 34 events)
+
+Issues Skipped: 10
+- 8 low-impact issues (<5 events, edge cases)
+- 2 very old issues (last seen >30 days ago)
+
+All task-created issues marked as ignored in Sentry for 24h to prevent duplicates.
+\`\`\`
+
+---
+
+## Important Notes
+
+- **NO REPORTS**: Don't generate markdown reports or analytics.md files - tasks ARE the output
+- **Create tasks for impact, not volume**: Use judgment - 5 high-severity errors might warrant task, 50 obscure edge cases might not
+- **Always update Sentry status** after creating task (prevents duplicate work tomorrow)
+- **Include stacktraces** in task descriptions so developers have context
+- **Use Sentry URLs** in descriptions (format: https://[org].sentry.io/issues/[issueId]/)
+- **Work efficiently**: Don't overthink - scan, evaluate, create tasks, mark processed, done`,
         },
     },
     {
