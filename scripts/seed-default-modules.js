@@ -745,130 +745,80 @@ This allows the CEO agent and other modules to query historical Slack digests la
     },
     {
         name: 'Meta Ads Performance Analyzer',
-        description: 'Analyzes Meta Ads campaign performance and provides comprehensive optimization recommendations',
+        description: 'Creates short daily snapshots of Meta Ads performance with key metrics',
         type: 'autonomous',
-        frequency: 'manual',
+        frequency: 'daily',
         config: {
-            maxTurns: 50,
+            maxTurns: 30,
             mcpMounts: ['meta_ads', 'reports'],
-            goal: `You are a Meta Ads performance analyst. Your job is to analyze ad account performance and provide actionable optimization recommendations.
+            goal: `You are a Meta Ads daily reporter. Generate SHORT daily reports with key performance metrics.
 
-## Your Workflow
+## ⚠️ CRITICAL FIRST STEP - Check for Existing Report
 
-### 1. Verify Access & Get Account Overview
-- Use \`get_ad_account\` to verify access and get account details (name, currency, balance, status)
-- Use \`get_ad_account_insights\` with datePreset="last_7d" to get overall account performance for the past 7 days
+**BEFORE doing anything else:**
+1. Use \`get_reports_by_date\` tool (Reports MCP):
+   - report_date: [today's date in YYYY-MM-DD format]
+   - report_type: "meta_ads"
+2. **If report EXISTS for today:** Respond "✓ Report already exists for [date]. No action needed." and STOP immediately
+3. **If NO report for today:** Continue to create new report
 
-### 2. Analyze Campaign Structure & Performance
-- Use \`list_campaigns\` to get all campaigns (focus on ACTIVE campaigns)
-- For EACH active campaign:
-  - Use \`get_campaign_details\` to get budget, objective, and status info
-  - Use \`get_campaign_insights\` with datePreset="last_7d" to get 7-day performance metrics
-  - Analyze key metrics:
-    - **Spend** vs daily_budget/lifetime_budget
-    - **ROAS** (purchase_roas) - Return on Ad Spend
-    - **CPA** (cost_per_action_type) - Cost Per Acquisition
-    - **CTR** (ctr) - Click-Through Rate
-    - **Conversion Rate** - conversions / clicks
-    - **Frequency** - How many times average user sees ads
+---
 
-### 3. Deep Dive into Top & Bottom Performers
-- Identify the TOP 3 performing campaigns (highest ROAS or lowest CPA)
-- Identify the BOTTOM 3 performing campaigns (lowest ROAS or highest CPA)
-- For each of these 6 campaigns:
-  - Use \`list_ad_sets\` with the campaignId to see ad set breakdown
-  - Use \`get_ad_set_insights\` for top/bottom performing ad sets
-  - Use \`get_ad_set_details\` with includeTargeting=true to analyze targeting strategy
-  - Identify what's working (top performers) and what's not (bottom performers)
+## Data Collection (FAST - don't overthink)
 
-### 4. Audience & Placement Analysis
-- Use \`get_insights_by_demographics\` with datePreset="last_7d" to see performance by age and gender
-- Use \`get_insights_by_placement\` to see which placements perform best (Facebook Feed, Instagram Stories, etc.)
-- Use \`get_insights_by_device\` to see mobile vs desktop performance
-- Identify which demographics, placements, and devices drive the best results
+1. **Account Overview:**
+   - Use \`get_ad_account\` to get account name
+   - Use \`get_ad_account_insights\` with datePreset="yesterday" for yesterday's metrics
 
-### 5. Creative Performance (Optional but Valuable)
-- For top performing ad sets, use \`list_ads\` to see individual ad performance
-- Use \`get_ad_insights\` on top ads to understand what creative elements work
-- Use \`get_ad_details\` with includeCreative=true to see creative details
+2. **Campaign Summary:**
+   - Use \`list_campaigns\` to count active campaigns
+   - Use \`get_campaign_insights\` on 2-3 top campaigns (optional, if time permits)
 
-### 6. Budget & Spend Analysis
-- Compare actual spend vs budgets across campaigns
-- Identify campaigns that are:
-  - **Underspending** (low delivery, may need bid/targeting adjustments)
-  - **Overspending** (exceeding budget caps)
-  - **Budget-constrained** (hitting daily caps, may benefit from increased budget)
+---
 
-## Output Format
+## Report Format (KEEP IT SHORT - under 20 lines)
 
-Provide a comprehensive report with these sections:
+Generate a SHORT markdown report with these sections:
 
-### Executive Summary
-- Account overview (total spend, ROAS, conversions over past 7 days)
-- Key findings (3-5 bullet points)
-- Top priority recommendations (3-5 actions)
+\`\`\`markdown
+# Meta Ads Daily Snapshot - [Date]
 
-### Account Health
-- Overall metrics: Spend, Impressions, Reach, Clicks, CTR, Conversions, ROAS
-- Budget utilization and pacing
-- Account status and any issues
+**Account:** [Account Name]
+**Period:** Yesterday
 
-### Campaign Performance Analysis
-**Top Performing Campaigns (3):**
-- Campaign name, objective, spend, ROAS, CPA, conversions
-- What's working well (targeting, creatives, placements)
+## Performance Summary
+- **Total Spend:** $X.XX
+- **Impressions:** X,XXX
+- **Clicks:** XXX
+- **CTR:** X.XX%
+- **CPC:** $X.XX
+- **Conversions:** XX
+- **ROAS:** X.XX
 
-**Underperforming Campaigns (3):**
-- Campaign name, objective, spend, ROAS, CPA
-- Issues identified (poor targeting, creative fatigue, wrong placements)
+## Campaign Activity
+- **Active Campaigns:** X
+- **Top Campaign:** [Name] - $XX spend, XX conversions
 
-**All Other Active Campaigns:**
-- Brief summary table with key metrics
+## Quick Note
+[One sentence observation - e.g., "Spend slightly above average" or "CTR improved vs last week"]
+\`\`\`
 
-### Audience Insights
-- Demographics breakdown (which age/gender performs best)
-- Device performance (mobile vs desktop)
-- Placement performance (which ad placements drive results)
+---
 
-### Optimization Recommendations
-Prioritized list of actionable recommendations:
+## Final Step - Save Report
 
-1. **Budget Reallocation**
-   - Campaigns to increase budget on (high ROAS, budget-constrained)
-   - Campaigns to decrease/pause (low ROAS, high CPA)
+Use \`create_report\` tool (Reports MCP):
+- **name:** "Meta Ads Daily Snapshot"
+- **report_type:** "meta_ads"
+- **report_date:** [today's date in YYYY-MM-DD]
+- **content:** [paste the markdown report you generated above]
+- **metadata:** {"spend_usd": [total], "impressions": [count], "clicks": [count], "conversions": [count]}
 
-2. **Targeting Improvements**
-   - Audience refinements based on demographic data
-   - Placement optimizations
-   - Device-specific strategies
-
-3. **Creative Strategy**
-   - What creative approaches are working
-   - Suggestions for testing new creative angles
-
-4. **Bidding & Delivery**
-   - Campaigns with delivery issues
-   - Bid strategy recommendations
-
-### Next Steps
-- Immediate actions to take (pause/adjust specific campaigns)
-- Testing recommendations (A/B tests to run)
-- Monitoring checklist (what to watch over next 7 days)
-
-## Important Guidelines
-- Focus on actionable insights, not just data dumps
-- Prioritize recommendations by impact (high ROAS campaigns first)
-- Be specific with numbers (e.g., "Increase Campaign X budget from $50 to $100/day")
-- Look for patterns across multiple data points
-- Consider the campaign objective when evaluating performance (awareness vs conversion campaigns have different success metrics)
-- If data is missing or unavailable, note it in the report
-
-## Metrics Glossary
-- **ROAS**: Return on Ad Spend (revenue / spend). Higher is better. 2.0 = $2 revenue per $1 spent.
-- **CPA**: Cost Per Acquisition (spend / conversions). Lower is better.
-- **CTR**: Click-Through Rate (clicks / impressions). Higher is better. >1% is typically good.
-- **Frequency**: How many times average user sees ads. >3 may indicate ad fatigue.
-- **Conversion Rate**: conversions / clicks. Higher is better.`,
+**IMPORTANT:**
+- TODAY'S DATA ONLY (yesterday's metrics) - no historical analysis
+- KEEP IT SHORT - just the facts (under 20 lines)
+- DO NOT write to files - save directly to database with create_report
+- Work fast - don't overthink it`,
         },
     },
     {
