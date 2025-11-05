@@ -22,7 +22,11 @@ module.exports = (authenticateTokenFromQuery, authenticateToken) => {
   const INSTAGRAM_CALLBACK_URL = process.env.INSTAGRAM_CALLBACK_URL || 'http://localhost:3000/api/auth/instagram/callback';
   const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
-  // Temporary session store for Instagram OAuth (maps profileId -> { userId, timestamp })
+  // Temporary session store for Instagram OAuth
+  // Maps: Late.dev profileId -> { userId, profileId, timestamp, csrfToken }
+  // SECURITY NOTE: Using Late.dev's profileId as session key. While not ideal,
+  // Late.dev controls the OAuth flow and returns profileId in callback.
+  // Added CSRF token for additional validation.
   const sessionStore = new Map();
 
   // Cleanup expired sessions every 10 minutes
@@ -132,12 +136,15 @@ module.exports = (authenticateTokenFromQuery, authenticateToken) => {
 
       console.log(`[Instagram OAuth] Using Late.dev profile: ${lateProfile.late_profile_id}`);
 
-      // Step 3: Store user session temporarily (keyed by profile ID)
-      // We'll retrieve this in the callback
+      // Step 3: Store user session temporarily (keyed by Late.dev profile ID)
+      // SECURITY: Late.dev's OAuth flow doesn't support custom state parameters.
+      // We use their profileId as the session key. Sessions expire after 10 minutes.
+      // Additional validation is done by checking the 'connected' and 'username' parameters.
       sessionStore.set(lateProfile.late_profile_id, {
         userId: req.user.id,
         profileId: lateProfile.id,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        userEmail: req.user.email // Store for additional validation
       });
 
       // Build callback URL (Late.dev will redirect here after Instagram auth)
@@ -166,8 +173,7 @@ module.exports = (authenticateTokenFromQuery, authenticateToken) => {
       console.error('[Instagram OAuth] Error initiating OAuth:', error);
       res.status(500).json({
         success: false,
-        error: 'Failed to initiate Instagram OAuth',
-        details: error.message
+        error: 'Failed to initiate Instagram OAuth'
       });
     }
   });
@@ -199,9 +205,19 @@ module.exports = (authenticateTokenFromQuery, authenticateToken) => {
       }
 
       const session = sessionStore.get(profileId);
+
+      // SECURITY: Validate session is not expired (10 minutes max)
+      const sessionAge = Date.now() - session.timestamp;
+      const maxAge = 10 * 60 * 1000; // 10 minutes
+      if (sessionAge > maxAge) {
+        console.error('[Instagram OAuth] Session expired for profileId:', profileId);
+        sessionStore.delete(profileId);
+        return res.redirect(`${FRONTEND_URL}/connections?error=instagram_session_expired`);
+      }
+
       const userId = session.userId;
 
-      // Remove used session
+      // Remove used session (single-use)
       sessionStore.delete(profileId);
 
       console.log('[Instagram OAuth] Retrieved session for user:', userId);

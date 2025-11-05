@@ -254,15 +254,12 @@ module.exports = (authenticateTokenFromQuery, authenticateToken) => {
     } catch (error) {
       console.error('[Sentry OAuth] Error in callback:', error.message);
 
-      // More specific error handling
+      // SECURITY: Log errors for debugging but don't expose to logs in detail
+      // Only log status code, not full response data which may contain sensitive info
       if (error.response) {
-        console.error('[Sentry OAuth] Sentry API error details:');
-        console.error('  Status:', error.response.status);
-        console.error('  Status Text:', error.response.statusText);
-        console.error('  Data:', JSON.stringify(error.response.data, null, 2));
-        console.error('  Headers:', JSON.stringify(error.response.headers, null, 2));
+        console.error('[Sentry OAuth] Sentry API error - Status:', error.response.status);
       } else {
-        console.error('[Sentry OAuth] Full error:', error);
+        console.error('[Sentry OAuth] Error type:', error.constructor.name);
       }
 
       res.redirect(`${FRONTEND_URL}/connections?error=oauth_failed`);
@@ -413,11 +410,11 @@ module.exports = (authenticateTokenFromQuery, authenticateToken) => {
       });
 
     } catch (error) {
-      console.error('[Sentry OAuth] Error refreshing token:', error);
+      console.error('[Sentry OAuth] Error refreshing token:', error.message);
 
-      // If refresh fails, user may need to reconnect
-      if (error.response && error.response.data) {
-        console.error('[Sentry OAuth] Sentry API error:', error.response.data);
+      // SECURITY: Don't log full error response data
+      if (error.response) {
+        console.error('[Sentry OAuth] Sentry API error - Status:', error.response.status);
       }
 
       res.status(500).json({

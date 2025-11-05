@@ -33,8 +33,7 @@ router.post('/sync', async (req, res) => {
     console.error('Error syncing with Late.dev:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to sync with Late.dev',
-      error: error.message
+      message: 'Failed to sync with Late.dev'
     });
   }
 });
@@ -53,8 +52,7 @@ router.get('/sync-status', async (req, res) => {
     console.error('Error getting sync status:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to get sync status',
-      error: error.message
+      message: 'Failed to get sync status'
     });
   }
 });
@@ -73,8 +71,7 @@ router.get('/profiles', async (req, res) => {
     console.error('Error getting profiles:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to get profiles',
-      error: error.message
+      message: 'Failed to get profiles'
     });
   }
 });
@@ -87,7 +84,14 @@ router.get('/accounts', async (req, res) => {
 
     let accounts;
     if (profileId) {
-      accounts = await getSocialAccountsByProfileId(parseInt(profileId), userId);
+      const parsedProfileId = parseInt(profileId);
+      if (isNaN(parsedProfileId)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid profile ID'
+        });
+      }
+      accounts = await getSocialAccountsByProfileId(parsedProfileId, userId);
     } else {
       accounts = await getSocialAccountsByUserId(userId);
     }
@@ -100,8 +104,7 @@ router.get('/accounts', async (req, res) => {
     console.error('Error getting social accounts:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to get social accounts',
-      error: error.message
+      message: 'Failed to get social accounts'
     });
   }
 });
@@ -114,9 +117,30 @@ router.get('/content', async (req, res) => {
 
     let content;
     if (accountId) {
-      content = await getContentByAccountId(parseInt(accountId), userId, limit ? parseInt(limit) : 50);
+      const parsedAccountId = parseInt(accountId);
+      if (isNaN(parsedAccountId)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid account ID'
+        });
+      }
+      const parsedLimit = limit ? parseInt(limit) : 50;
+      if (limit && isNaN(parsedLimit)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid limit'
+        });
+      }
+      content = await getContentByAccountId(parsedAccountId, userId, parsedLimit);
     } else {
-      content = await getContentByUserId(userId, limit ? parseInt(limit) : 50);
+      const parsedLimit = limit ? parseInt(limit) : 50;
+      if (limit && isNaN(parsedLimit)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid limit'
+        });
+      }
+      content = await getContentByUserId(userId, parsedLimit);
     }
 
     res.json({
@@ -127,8 +151,7 @@ router.get('/content', async (req, res) => {
     console.error('Error getting content:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to get content',
-      error: error.message
+      message: 'Failed to get content'
     });
   }
 });
@@ -138,6 +161,13 @@ router.get('/content/:id', async (req, res) => {
   try {
     const userId = req.user.id;
     const contentId = parseInt(req.params.id);
+
+    if (isNaN(contentId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid content ID'
+      });
+    }
 
     const content = await getContentById(contentId, userId);
 
@@ -160,8 +190,7 @@ router.get('/content/:id', async (req, res) => {
     console.error('Error getting content:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to get content',
-      error: error.message
+      message: 'Failed to get content'
     });
   }
 });
@@ -171,6 +200,13 @@ router.get('/content/:id/media', async (req, res) => {
   try {
     const userId = req.user.id;
     const contentId = parseInt(req.params.id);
+
+    if (isNaN(contentId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid content ID'
+      });
+    }
 
     // Verify content exists and belongs to user
     const content = await getContentById(contentId, userId);
@@ -191,8 +227,7 @@ router.get('/content/:id/media', async (req, res) => {
     console.error('Error getting media:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to get media',
-      error: error.message
+      message: 'Failed to get media'
     });
   }
 });
@@ -299,8 +334,7 @@ router.post('/content', handleMediaUpload, async (req, res) => {
     console.error('Error creating content:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to create content',
-      error: error.message
+      message: 'Failed to create content'
     });
   }
 });
@@ -311,6 +345,13 @@ router.put('/content/:id', async (req, res) => {
     const userId = req.user.id;
     const contentId = parseInt(req.params.id);
     const { content_data, status, scheduled_for } = req.body;
+
+    if (isNaN(contentId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid content ID'
+      });
+    }
 
     // Verify content exists and belongs to user
     const existingContent = await getContentById(contentId, userId);
@@ -336,8 +377,7 @@ router.put('/content/:id', async (req, res) => {
     console.error('Error updating content:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to update content',
-      error: error.message
+      message: 'Failed to update content'
     });
   }
 });
@@ -347,6 +387,13 @@ router.post('/content/:id/post', async (req, res) => {
   try {
     const userId = req.user.id;
     const contentId = parseInt(req.params.id);
+
+    if (isNaN(contentId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid content ID'
+      });
+    }
 
     // Verify content exists and belongs to user
     const content = await getContentById(contentId, userId);
@@ -369,16 +416,14 @@ router.post('/content/:id/post', async (req, res) => {
     } else {
       res.status(500).json({
         success: false,
-        message: 'Failed to post content',
-        reason: result.reason || result.error
+        message: 'Failed to post content'
       });
     }
   } catch (error) {
     console.error('Error posting content:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to post content',
-      error: error.message
+      message: 'Failed to post content'
     });
   }
 });

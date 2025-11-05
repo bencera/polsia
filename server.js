@@ -4,6 +4,8 @@ const path = require('path');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const {
     addToWaitlist,
     getWaitlistCount,
@@ -17,12 +19,95 @@ const slackService = require('./slack');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+
+// SECURITY: Require JWT_SECRET to be explicitly set
+if (!process.env.JWT_SECRET) {
+    console.error('❌ CRITICAL: JWT_SECRET environment variable is required for security');
+    console.error('   Generate one with: node -e "console.log(require(\'crypto\').randomBytes(64).toString(\'hex\'))"');
+    process.exit(1);
+}
+const JWT_SECRET = process.env.JWT_SECRET;
+
+// SECURITY: Validate ENCRYPTION_KEY if database features are enabled
+if (process.env.DATABASE_URL && !process.env.ENCRYPTION_KEY) {
+    console.error('❌ CRITICAL: ENCRYPTION_KEY environment variable is required when DATABASE_URL is set');
+    console.error('   Generate one with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
+    process.exit(1);
+}
+if (process.env.ENCRYPTION_KEY) {
+    try {
+        const keyBuffer = Buffer.from(process.env.ENCRYPTION_KEY, 'hex');
+        if (keyBuffer.length !== 32) {
+            console.error('❌ CRITICAL: ENCRYPTION_KEY must be exactly 32 bytes (64 hex characters)');
+            process.exit(1);
+        }
+    } catch (err) {
+        console.error('❌ CRITICAL: ENCRYPTION_KEY must be a valid hex string');
+        process.exit(1);
+    }
+}
 
 // Middleware
-app.use(cors());
+
+// SECURITY: Add security headers with Helmet
+app.use(helmet({
+    contentSecurityPolicy: false, // Disabled for now to allow inline scripts in React
+    crossOriginEmbedderPolicy: false // Disabled for OAuth redirects
+}));
+
+// SECURITY: HTTPS enforcement in production
+if (process.env.NODE_ENV === 'production') {
+    app.use((req, res, next) => {
+        const proto = req.header('x-forwarded-proto');
+        if (proto && proto !== 'https') {
+            return res.redirect(301, `https://${req.header('host')}${req.url}`);
+        }
+        next();
+    });
+}
+
+// SECURITY: Configure CORS with specific origins
+const allowedOrigins = [
+    process.env.FRONTEND_URL,
+    'http://localhost:5173',
+    'http://localhost:3000'
+].filter(Boolean); // Remove undefined values
+
+app.use(cors({
+    origin: function(origin, callback) {
+        // Allow requests with no origin (mobile apps, curl, etc)
+        if (!origin) return callback(null, true);
+
+        if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
+            callback(null, true);
+        } else {
+            callback(new Error('CORS policy: Origin not allowed'));
+        }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// SECURITY: Rate limiting for authentication endpoints
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 5, // 5 requests per window
+    message: { success: false, message: 'Too many authentication attempts. Please try again later.' },
+    standardHeaders: true,
+    legacyHeaders: false
+});
+
+const waitlistLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 3, // 3 signups per hour per IP
+    message: { success: false, message: 'Too many signup attempts. Please try again later.' },
+    standardHeaders: true,
+    legacyHeaders: false
+});
 
 // JWT Authentication Middleware
 function authenticateToken(req, res, next) {
@@ -55,11 +140,22 @@ function authenticateToken(req, res, next) {
 
 // JWT Authentication Middleware (accepts token from query parameter)
 // Used for OAuth flows where we can't set Authorization headers due to browser redirects
+// SECURITY WARNING: Tokens in query parameters are:
+// - Visible in browser history
+// - Logged in server access logs
+// - May be cached by proxies/CDNs
+// - Exposed to analytics tools
+// Only use this for OAuth callbacks and SSE streams where headers aren't available
 function authenticateTokenFromQuery(req, res, next) {
     const token = req.query.token;
 
     if (!token) {
         return res.status(401).json({ success: false, message: 'Access token required' });
+    }
+
+    // Log warning in development mode
+    if (process.env.NODE_ENV !== 'production') {
+        console.warn('[SECURITY] Token passed in query parameter - ensure this is for OAuth/SSE only');
     }
 
     jwt.verify(token, JWT_SECRET, async (err, decoded) => {
@@ -98,7 +194,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // Authentication Routes
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', authLimiter, async (req, res) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
@@ -199,7 +295,7 @@ app.put('/api/connections/:id', authenticateToken, async (req, res) => {
 });
 
 // API endpoint for waitlist
-app.post('/api/waitlist', async (req, res) => {
+app.post('/api/waitlist', waitlistLimiter, async (req, res) => {
     const { email } = req.body;
 
     if (!email || !email.trim()) {
