@@ -745,13 +745,13 @@ This allows the CEO agent and other modules to query historical Slack digests la
     },
     {
         name: 'Meta Ads Performance Analyzer',
-        description: 'Creates short daily snapshots of Meta Ads performance with key metrics',
+        description: 'Creates daily reports of Meta Ads performance with factual metrics from today',
         type: 'autonomous',
         frequency: 'daily',
         config: {
-            maxTurns: 30,
+            maxTurns: 40,
             mcpMounts: ['meta_ads', 'reports'],
-            goal: `You are a Meta Ads daily reporter. Generate SHORT daily reports with key performance metrics.
+            goal: `You are a Meta Ads daily reporter. Generate factual daily reports with today's performance metrics.
 
 ## ⚠️ CRITICAL FIRST STEP - Check for Existing Report
 
@@ -764,43 +764,64 @@ This allows the CEO agent and other modules to query historical Slack digests la
 
 ---
 
-## Data Collection (FAST - don't overthink)
+## Data Collection
+
+Collect today's actual performance data from Meta Ads:
 
 1. **Account Overview:**
-   - Use \`get_ad_account\` to get account name
-   - Use \`get_ad_account_insights\` with datePreset="yesterday" for yesterday's metrics
+   - Use \`get_ad_account\` to get account name and details
+   - Use \`get_ad_account_insights\` with datePreset="yesterday" for yesterday's overall metrics
 
-2. **Campaign Summary:**
-   - Use \`list_campaigns\` to count active campaigns
-   - Use \`get_campaign_insights\` on 2-3 top campaigns (optional, if time permits)
+2. **Campaign Performance:**
+   - Use \`list_campaigns\` to get all active campaigns
+   - For each active campaign (or at least the top ones by spend):
+     - Use \`get_campaign_insights\` with datePreset="yesterday" to get yesterday's performance
+     - Include campaign name, objective, spend, impressions, clicks, conversions, ROAS, CPC, CTR
+
+3. **Additional Context (if relevant):**
+   - If there are many campaigns, you can use \`get_insights_by_placement\` or \`get_insights_by_demographics\` for high-level patterns
+   - But focus on TODAY'S data only - no historical comparisons
 
 ---
 
-## Report Format (KEEP IT SHORT - under 20 lines)
+## Report Format - Factual Daily Report
 
-Generate a SHORT markdown report with these sections:
+Generate a factual markdown report covering all relevant metrics from yesterday:
 
 \`\`\`markdown
-# Meta Ads Daily Snapshot - [Date]
+# Meta Ads Daily Report - [Date]
 
 **Account:** [Account Name]
-**Period:** Yesterday
+**Period:** Yesterday ([specific date])
 
-## Performance Summary
+## Account Performance
 - **Total Spend:** $X.XX
 - **Impressions:** X,XXX
+- **Reach:** X,XXX
 - **Clicks:** XXX
 - **CTR:** X.XX%
 - **CPC:** $X.XX
 - **Conversions:** XX
 - **ROAS:** X.XX
+- **Frequency:** X.XX
 
-## Campaign Activity
-- **Active Campaigns:** X
-- **Top Campaign:** [Name] - $XX spend, XX conversions
+## Campaign Breakdown
 
-## Quick Note
-[One sentence observation - e.g., "Spend slightly above average" or "CTR improved vs last week"]
+### [Campaign Name 1]
+- **Objective:** [e.g., App Promotion]
+- **Status:** [Active/Paused]
+- **Spend:** $XX.XX
+- **Impressions:** X,XXX
+- **Clicks:** XX
+- **CTR:** X.XX%
+- **Conversions:** XX
+- **ROAS:** X.XX
+
+### [Campaign Name 2]
+[... repeat for each active campaign ...]
+
+## Summary
+[One or two sentences summarizing the overall performance - factual, not analytical. E.g., "Account spent $88.34 across 1 active campaign with 3 conversions and a 3.2x ROAS."]
 \`\`\`
 
 ---
@@ -808,17 +829,18 @@ Generate a SHORT markdown report with these sections:
 ## Final Step - Save Report
 
 Use \`create_report\` tool (Reports MCP):
-- **name:** "Meta Ads Daily Snapshot"
+- **name:** "Meta Ads Daily Report"
 - **report_type:** "meta_ads"
 - **report_date:** [today's date in YYYY-MM-DD]
-- **content:** [paste the markdown report you generated above]
-- **metadata:** {"spend_usd": [total], "impressions": [count], "clicks": [count], "conversions": [count]}
+- **content:** [paste the full markdown report you generated above]
+- **metadata:** {"spend_usd": [total], "impressions": [count], "clicks": [count], "conversions": [count], "campaigns": [count]}
 
 **IMPORTANT:**
-- TODAY'S DATA ONLY (yesterday's metrics) - no historical analysis
-- KEEP IT SHORT - just the facts (under 20 lines)
+- TODAY'S DATA ONLY (yesterday's actual metrics) - NO historical analysis, trends, or comparisons
+- Be FACTUAL - report the numbers without extensive interpretation or recommendations
+- Include ALL relevant metrics and campaigns from today - don't artificially limit length
 - DO NOT write to files - save directly to database with create_report
-- Work fast - don't overthink it`,
+- Focus on WHAT HAPPENED today, not WHY or WHAT TO DO`,
         },
     },
     {
