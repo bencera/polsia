@@ -11,6 +11,8 @@ const ALLOWED_ORIGINS = [
     'http://localhost:5173',        // Local development
     'http://localhost:3000',        // Local production build
     'https://polsia.onrender.com',  // Render production deployment
+    'https://polsia.ai',            // Production domain
+    'https://www.polsia.ai',        // Production domain with www
 ];
 
 /**
