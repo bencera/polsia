@@ -5,6 +5,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
+const { getValidatedFrontendURL } = require('./utils/redirect-validator');
 const {
     addToWaitlist,
     getWaitlistCount,
@@ -29,7 +30,12 @@ if (!JWT_SECRET) {
 }
 
 // Middleware
-app.use(cors());
+// Security: Restrict CORS to validated frontend origin
+const FRONTEND_URL = getValidatedFrontendURL();
+app.use(cors({
+    origin: FRONTEND_URL,
+    credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

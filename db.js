@@ -1117,6 +1117,233 @@ async function createTaskSummary(userId, taskData) {
     }
 }
 
+// ===== TASK WORKFLOW FUNCTIONS (Agent-Driven) =====
+
+/**
+ * Create a new task proposal (suggestion)
+ * Used by agents/modules to propose work for CEO Brain approval
+ */
+async function createTaskProposal(userId, taskData) {
+    const client = await pool.connect();
+    try {
+        const {
+            title,
+            description,
+            suggestion_reasoning,
+            proposed_by_module_id,
+            assigned_to_module_id,
+            brain_decision_id,
+            priority
+        } = taskData;
+
+        const result = await client.query(
+            `INSERT INTO tasks (
+                user_id, title, description, status,
+                suggestion_reasoning, proposed_by_module_id, assigned_to_module_id,
+                brain_decision_id, last_status_change_at, last_status_change_by
+            )
+             VALUES ($1, $2, $3, 'suggested', $4, $5, $6, $7, CURRENT_TIMESTAMP, $8)
+             RETURNING *`,
+            [
+                userId,
+                title,
+                description || null,
+                suggestion_reasoning || null,
+                proposed_by_module_id || null,
+                assigned_to_module_id || null,
+                brain_decision_id || null,
+                `module_${proposed_by_module_id || 'unknown'}`
+            ]
+        );
+
+        return result.rows[0];
+    } catch (err) {
+        console.error('Error creating task proposal:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+/**
+ * Update task status with reasoning and audit trail
+ * Used by agents to transition tasks through workflow states
+ */
+async function updateTaskStatus(taskId, newStatus, updates = {}) {
+    const client = await pool.connect();
+    try {
+        const {
+            changed_by,
+            approval_reasoning,
+            rejection_reasoning,
+            completion_summary,
+            blocked_reason,
+            approved_by,
+            assigned_to_module_id,
+            execution_id
+        } = updates;
+
+        // Build dynamic update query based on status transition
+        const setClauses = ['status = $1', 'last_status_change_at = CURRENT_TIMESTAMP'];
+        const values = [newStatus];
+        let paramCount = 2;
+
+        // Set changed_by audit field
+        if (changed_by) {
+            setClauses.push(`last_status_change_by = $${paramCount++}`);
+            values.push(changed_by);
+        }
+
+        // Status-specific fields
+        if (newStatus === 'approved') {
+            setClauses.push(`approved_at = CURRENT_TIMESTAMP`);
+            if (approved_by) {
+                setClauses.push(`approved_by = $${paramCount++}`);
+                values.push(approved_by);
+            }
+            if (approval_reasoning) {
+                setClauses.push(`approval_reasoning = $${paramCount++}`);
+                values.push(approval_reasoning);
+            }
+            if (assigned_to_module_id) {
+                setClauses.push(`assigned_to_module_id = $${paramCount++}`);
+                values.push(assigned_to_module_id);
+            }
+        } else if (newStatus === 'rejected') {
+            if (rejection_reasoning) {
+                setClauses.push(`rejection_reasoning = $${paramCount++}`);
+                values.push(rejection_reasoning);
+            }
+        } else if (newStatus === 'in_progress') {
+            setClauses.push(`started_at = CURRENT_TIMESTAMP`);
+            if (execution_id) {
+                setClauses.push(`execution_id = $${paramCount++}`);
+                values.push(execution_id);
+            }
+        } else if (newStatus === 'waiting' || newStatus === 'blocked') {
+            setClauses.push(`blocked_at = CURRENT_TIMESTAMP`);
+            if (blocked_reason) {
+                setClauses.push(`blocked_reason = $${paramCount++}`);
+                values.push(blocked_reason);
+            }
+        } else if (newStatus === 'completed') {
+            setClauses.push(`completed_at = CURRENT_TIMESTAMP`);
+            if (completion_summary) {
+                setClauses.push(`completion_summary = $${paramCount++}`);
+                values.push(completion_summary);
+            }
+        }
+
+        // Add task ID for WHERE clause
+        values.push(taskId);
+
+        const query = `UPDATE tasks SET ${setClauses.join(', ')}
+                       WHERE id = $${paramCount++}
+                       RETURNING *`;
+
+        const result = await client.query(query, values);
+        return result.rows[0] || null;
+    } catch (err) {
+        console.error('Error updating task status:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+/**
+ * Get tasks filtered by status
+ * Used by agents to find work and by UI to display task lists
+ */
+async function getTasksByStatus(userId, status, options = {}) {
+    const client = await pool.connect();
+    try {
+        const { limit = 50, offset = 0, assigned_to_module_id } = options;
+
+        let query = 'SELECT * FROM tasks WHERE user_id = $1';
+        const values = [userId];
+        let paramCount = 2;
+
+        if (status) {
+            query += ` AND status = $${paramCount++}`;
+            values.push(status);
+        }
+
+        if (assigned_to_module_id !== undefined) {
+            query += ` AND assigned_to_module_id = $${paramCount++}`;
+            values.push(assigned_to_module_id);
+        }
+
+        query += ` ORDER BY created_at DESC LIMIT $${paramCount++} OFFSET $${paramCount++}`;
+        values.push(limit, offset);
+
+        const result = await client.query(query, values);
+        return result.rows;
+    } catch (err) {
+        console.error('Error getting tasks by status:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+/**
+ * Get single task by ID with full details
+ * Used by agents to read task context before starting work
+ */
+async function getTaskById(taskId, userId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            `SELECT t.*,
+                    pm.name as proposed_by_module_name,
+                    am.name as assigned_to_module_name,
+                    bd.action_description as brain_decision_action
+             FROM tasks t
+             LEFT JOIN modules pm ON t.proposed_by_module_id = pm.id
+             LEFT JOIN modules am ON t.assigned_to_module_id = am.id
+             LEFT JOIN brain_decisions bd ON t.brain_decision_id = bd.id
+             WHERE t.id = $1 AND t.user_id = $2`,
+            [taskId, userId]
+        );
+        return result.rows[0] || null;
+    } catch (err) {
+        console.error('Error getting task by ID:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+/**
+ * Get tasks assigned to a specific module
+ * Used by agents to find tasks assigned to them
+ */
+async function getTasksByModuleId(userId, moduleId, statusFilter = null) {
+    const client = await pool.connect();
+    try {
+        let query = `SELECT * FROM tasks
+                     WHERE user_id = $1 AND assigned_to_module_id = $2`;
+        const values = [userId, moduleId];
+        let paramCount = 3;
+
+        if (statusFilter) {
+            query += ` AND status = $${paramCount++}`;
+            values.push(statusFilter);
+        }
+
+        query += ' ORDER BY created_at DESC';
+
+        const result = await client.query(query, values);
+        return result.rows;
+    } catch (err) {
+        console.error('Error getting tasks by module ID:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
 // ===== SOCIAL MEDIA PROFILE FUNCTIONS =====
 
 // Get all profiles for a user
@@ -2750,6 +2977,12 @@ module.exports = {
     getExecutionLogsSince,
     // Task summary functions
     createTaskSummary,
+    // Task workflow functions
+    createTaskProposal,
+    updateTaskStatus,
+    getTasksByStatus,
+    getTaskById,
+    getTasksByModuleId,
     // Profile functions
     getProfilesByUserId,
     getProfileById,

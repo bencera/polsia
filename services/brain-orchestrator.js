@@ -59,9 +59,32 @@ ${context.connected_services.join(', ') || 'None'}
 
 ---
 
+# Task Management
+
+You have access to a task management system via MCP tools. Before making module execution decisions:
+
+1. **Review Suggested Tasks**: Use \`get_available_tasks\` with status="suggested" to see tasks proposed by agents/modules
+2. **Approve or Reject**: For each suggested task:
+   - Use \`approve_task\` if it aligns with company goals (include approval_reasoning and assign_to_module_id)
+   - Use \`reject_task\` if it doesn't fit priorities (include rejection_reasoning)
+
+**Task Lifecycle**:
+- "suggested" → (Brain reviews) → "approved" → (Agent picks up) → "in_progress" → "completed"
+- Agents can propose tasks via \`create_task_proposal\` with suggestion_reasoning
+- Once approved, agents will pick up and execute the task autonomously
+
+**Your Responsibilities**:
+- Review ALL suggested tasks before proceeding with module execution decisions
+- Prioritize task approvals based on company goals and current state
+- Provide clear reasoning for approvals/rejections to guide future agent behavior
+
+---
+
 # Your Task
 
-Based on this complete context, decide the SINGLE BEST action to take right now.
+Based on this complete context:
+1. FIRST: Review and approve/reject any suggested tasks
+2. THEN: Decide the SINGLE BEST action to take right now (either execute a module OR wait for approved tasks to be completed)
 
 Consider:
 - What goals are most urgent?
@@ -253,10 +276,26 @@ async function runBrainCycle(userId) {
 
     // Step 4: Get Brain decision from Claude
     console.log(`🧠 [Brain] Step 4: Asking Claude for decision...`);
+
+    // Configure MCP servers for Brain
+    const taskMcpPath = require('path').join(__dirname, 'task-management-mcp-server.js');
+    const reportsMcpPath = require('path').join(__dirname, 'reports-custom-mcp-server.js');
+
     const result = await executeTask(prompt, {
       cwd: process.cwd(),
-      maxTurns: 3,
-      mcpServers: {}, // Brain doesn't need MCP tools for decision-making
+      maxTurns: 5, // Increased to allow task review + decision
+      mcpServers: {
+        // Task Management MCP - allows Brain to review, approve, reject tasks
+        tasks: {
+          command: 'node',
+          args: [taskMcpPath, `--user-id=${userId}`],
+        },
+        // Reports MCP - allows Brain to query historical reports for context
+        reports: {
+          command: 'node',
+          args: [reportsMcpPath, `--user-id=${userId}`],
+        }
+      },
       skipFileCollection: true, // Brain only returns JSON, no files to collect
     });
 
