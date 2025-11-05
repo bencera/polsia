@@ -11,6 +11,7 @@ function Modules() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [runningModules, setRunningModules] = useState(new Set());
+  const [expandedModules, setExpandedModules] = useState(new Set());
 
   // Fetch modules from API
   useEffect(() => {
@@ -131,6 +132,18 @@ function Modules() {
       console.error('Error updating guardrails:', err);
       alert('Failed to update guardrails');
     }
+  };
+
+  const toggleModuleExpand = (moduleId) => {
+    setExpandedModules(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(moduleId)) {
+        newSet.delete(moduleId);
+      } else {
+        newSet.add(moduleId);
+      }
+      return newSet;
+    });
   };
 
   const runModuleNow = async (moduleId, moduleName) => {
