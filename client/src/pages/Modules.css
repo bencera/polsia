@@ -82,7 +82,36 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 20px;
+  gap: 15px;
+}
+
+/* Expand Button */
+.expand-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 2px;
+}
+
+.expand-btn:hover {
+  background-color: #f0f0f0;
+}
+
+.chevron {
+  font-size: 14px;
+  transition: transform 0.2s ease;
+  display: inline-block;
+}
+
+.chevron.expanded {
+  transform: rotate(-180deg);
 }
 
 .module-info {
@@ -276,52 +305,112 @@ input:checked + .toggle-slider:before {
   font-size: 0.95em;
 }
 
-/* Module Settings (Expanded) */
-.module-settings {
+/* Module Details (Expanded) */
+.module-details {
   margin-top: 20px;
   padding-top: 20px;
-  border-top: 1px solid #000;
+  border-top: 1px solid #e0e0e0;
+  animation: expandDetails 0.2s ease-out;
 }
 
-.settings-section {
+@keyframes expandDetails {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.detail-section {
   margin-bottom: 20px;
 }
 
-.settings-section:last-child {
+.detail-section:last-child {
   margin-bottom: 0;
 }
 
-.settings-label {
-  display: block;
-  font-size: 1em;
+.detail-label {
+  font-size: 0.95em;
   font-weight: 700;
-  margin-bottom: 10px;
+  margin: 0 0 10px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #000;
 }
 
-.frequency-options,
-.guardrails-options {
+.detail-content {
+  font-size: 0.95em;
+  line-height: 1.6;
+  color: #333;
+}
+
+/* Agent Prompt */
+.prompt-content {
+  padding: 12px;
+  background-color: #f9f9f9;
+  border-left: 3px solid #000;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+/* MCP Mounts */
+.mcp-mounts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mcp-mount-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border: 1px solid #000;
+  background-color: #fff;
+  font-size: 0.85em;
+  font-family: 'Courier New', Courier, monospace;
+  text-transform: lowercase;
+}
+
+/* Config Code */
+.config-code {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.85em;
+  background-color: #f5f5f5;
+  border: 1px solid #ddd;
+  padding: 12px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  margin: 0;
+}
+
+/* Settings Grid */
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.setting-item {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
 }
 
-.radio-option,
-.checkbox-option {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.setting-key {
+  font-size: 0.85em;
+  font-weight: 700;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.setting-value {
   font-size: 0.95em;
-  cursor: pointer;
-}
-
-.radio-option input,
-.checkbox-option input {
-  cursor: pointer;
-}
-
-.radio-option span,
-.checkbox-option span {
-  text-transform: capitalize;
+  color: #000;
+  font-family: 'Courier New', Courier, monospace;
 }
 
 /* Footer */
@@ -378,5 +467,17 @@ input:checked + .toggle-slider:before {
 
   .module-name {
     font-size: 1.2em;
+  }
+
+  .settings-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .config-code {
+    font-size: 0.75em;
+  }
+
+  .expand-btn {
+    align-self: flex-start;
   }
 }

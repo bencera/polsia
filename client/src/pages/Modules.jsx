@@ -257,55 +257,193 @@ function Modules() {
           </div>
         ) : (
           <div className="modules-list">
-            {modules.map((module) => (
-              <div key={module.id} className="module-card">
-                <div className="module-main">
-                  <div className="module-info">
-                    <h3 className={`module-name ${module.status !== 'active' ? 'disabled' : ''}`}>
-                      {module.name}
-                    </h3>
-                    <p className={`module-description ${module.status !== 'active' ? 'disabled' : ''}`}>
-                      {module.description}
-                    </p>
+            {modules.map((module) => {
+              const isExpanded = expandedModules.has(module.id);
+              const config = module.config || {};
 
-                    <div className="module-meta">
-                      <span className={`module-status ${module.status}`}>
-                        {module.status}
-                      </span>
-                      <span className="module-type">
-                        Type: {module.type}
-                      </span>
+              return (
+                <div key={module.id} className="module-card">
+                  <div className="module-main">
+                    <button
+                      className="expand-btn"
+                      onClick={() => toggleModuleExpand(module.id)}
+                      aria-label={isExpanded ? "Collapse details" : "Expand details"}
+                    >
+                      <span className={`chevron ${isExpanded ? 'expanded' : ''}`}>▼</span>
+                    </button>
+
+                    <div className="module-info">
+                      <h3 className={`module-name ${module.status !== 'active' ? 'disabled' : ''}`}>
+                        {module.name}
+                      </h3>
+                      <p className={`module-description ${module.status !== 'active' ? 'disabled' : ''}`}>
+                        {module.description}
+                      </p>
+
+                      <div className="module-meta">
+                        <span className={`module-status ${module.status}`}>
+                          {module.status}
+                        </span>
+                        <span className="module-type">
+                          Type: {module.type}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="module-controls">
+                      <button
+                        className="toggle-status-btn"
+                        onClick={() => toggleModuleStatus(module.id, module.status)}
+                      >
+                        {module.status === 'active' ? 'Disable' : 'Enable'}
+                      </button>
+                      <button
+                        className="run-now-btn"
+                        onClick={() => runModuleNow(module.id, module.name)}
+                        disabled={runningModules.has(module.id)}
+                      >
+                        {runningModules.has(module.id) ? 'Running...' : 'Run Now'}
+                      </button>
+                      <select
+                        className="module-frequency-select"
+                        value={module.frequency}
+                        onChange={(e) => updateFrequency(module.id, e.target.value)}
+                      >
+                        <option value="auto">AUTO</option>
+                        <option value="daily">DAILY</option>
+                        <option value="weekly">WEEKLY</option>
+                        <option value="manual">MANUAL</option>
+                      </select>
                     </div>
                   </div>
 
-                  <div className="module-controls">
-                    <button
-                      className="toggle-status-btn"
-                      onClick={() => toggleModuleStatus(module.id, module.status)}
-                    >
-                      {module.status === 'active' ? 'Disable' : 'Enable'}
-                    </button>
-                    <button
-                      className="run-now-btn"
-                      onClick={() => runModuleNow(module.id, module.name)}
-                      disabled={runningModules.has(module.id)}
-                    >
-                      {runningModules.has(module.id) ? 'Running...' : 'Run Now'}
-                    </button>
-                    <select
-                      className="module-frequency-select"
-                      value={module.frequency}
-                      onChange={(e) => updateFrequency(module.id, e.target.value)}
-                    >
-                      <option value="auto">AUTO</option>
-                      <option value="daily">DAILY</option>
-                      <option value="weekly">WEEKLY</option>
-                      <option value="manual">MANUAL</option>
-                    </select>
-                  </div>
+                  {isExpanded && (
+                    <div className="module-details">
+                      {/* Agent Prompt */}
+                      {config.goal && (
+                        <div className="detail-section">
+                          <h4 className="detail-label">Agent Prompt</h4>
+                          <div className="detail-content prompt-content">
+                            {config.goal}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* MCP Servers */}
+                      {config.mcpMounts && config.mcpMounts.length > 0 && (
+                        <div className="detail-section">
+                          <h4 className="detail-label">MCP Servers Available</h4>
+                          <div className="detail-content">
+                            <div className="mcp-mounts">
+                              {config.mcpMounts.map((mount, idx) => (
+                                <span key={idx} className="mcp-mount-badge">{mount}</span>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* MCP Configuration */}
+                      {config.mcpConfig && Object.keys(config.mcpConfig).length > 0 && (
+                        <div className="detail-section">
+                          <h4 className="detail-label">MCP Configuration</h4>
+                          <div className="detail-content">
+                            <pre className="config-code">
+                              {JSON.stringify(config.mcpConfig, null, 2)}
+                            </pre>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Execution Settings */}
+                      <div className="detail-section">
+                        <h4 className="detail-label">Execution Settings</h4>
+                        <div className="detail-content settings-grid">
+                          {config.maxTurns && (
+                            <div className="setting-item">
+                              <span className="setting-key">Max Turns:</span>
+                              <span className="setting-value">{config.maxTurns}</span>
+                            </div>
+                          )}
+                          {config.guardrails && (
+                            <>
+                              {config.guardrails.requireApproval !== undefined && (
+                                <div className="setting-item">
+                                  <span className="setting-key">Require Approval:</span>
+                                  <span className="setting-value">
+                                    {config.guardrails.requireApproval ? 'Yes' : 'No'}
+                                  </span>
+                                </div>
+                              )}
+                              {config.guardrails.maxCost !== undefined && (
+                                <div className="setting-item">
+                                  <span className="setting-key">Max Cost:</span>
+                                  <span className="setting-value">
+                                    ${config.guardrails.maxCost.toFixed(2)}
+                                  </span>
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Additional Configuration */}
+                      {config.inputs && Object.keys(config.inputs).length > 0 && (
+                        <div className="detail-section">
+                          <h4 className="detail-label">Additional Configuration</h4>
+                          <div className="detail-content">
+                            <pre className="config-code">
+                              {JSON.stringify(config.inputs, null, 2)}
+                            </pre>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Module-specific settings */}
+                      {(config.maxEmails || config.query) && (
+                        <div className="detail-section">
+                          <h4 className="detail-label">Module-Specific Settings</h4>
+                          <div className="detail-content settings-grid">
+                            {config.maxEmails && (
+                              <div className="setting-item">
+                                <span className="setting-key">Max Emails:</span>
+                                <span className="setting-value">{config.maxEmails}</span>
+                              </div>
+                            )}
+                            {config.query && (
+                              <div className="setting-item">
+                                <span className="setting-key">Query:</span>
+                                <span className="setting-value">{config.query}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Timestamps */}
+                      <div className="detail-section">
+                        <h4 className="detail-label">Metadata</h4>
+                        <div className="detail-content settings-grid">
+                          <div className="setting-item">
+                            <span className="setting-key">Created:</span>
+                            <span className="setting-value">
+                              {new Date(module.created_at).toLocaleString()}
+                            </span>
+                          </div>
+                          <div className="setting-item">
+                            <span className="setting-key">Last Updated:</span>
+                            <span className="setting-value">
+                              {new Date(module.updated_at).toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
