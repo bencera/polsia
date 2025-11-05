@@ -7,6 +7,7 @@ const express = require('express');
 const axios = require('axios');
 const crypto = require('crypto');
 const { encryptToken, decryptToken } = require('../utils/encryption');
+const { getValidatedFrontendURL } = require('../utils/redirect-validator');
 const {
   storeSlackConnection,
   getSlackToken,
@@ -20,7 +21,8 @@ module.exports = (authenticateTokenFromQuery, authenticateToken) => {
 const SLACK_CLIENT_ID = process.env.SLACK_CLIENT_ID;
 const SLACK_CLIENT_SECRET = process.env.SLACK_CLIENT_SECRET;
 const SLACK_CALLBACK_URL = process.env.SLACK_CALLBACK_URL || 'http://localhost:3000/api/auth/slack/callback';
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+// Security: Validate frontend URL to prevent open redirect vulnerabilities
+const FRONTEND_URL = getValidatedFrontendURL();
 
 // In-memory store for OAuth state tokens (CSRF protection)
 // Maps state token -> { userId, timestamp }

@@ -7,6 +7,7 @@ const express = require('express');
 const crypto = require('crypto');
 const lateApiService = require('../services/late-api-service');
 const syncService = require('../services/sync-service');
+const { getValidatedFrontendURL } = require('../utils/redirect-validator');
 const {
   getProfilesByUserId,
   createProfile,
@@ -20,18 +21,20 @@ module.exports = (authenticateTokenFromQuery, authenticateToken) => {
 
   // Instagram OAuth configuration (via Late.dev)
   const INSTAGRAM_CALLBACK_URL = process.env.INSTAGRAM_CALLBACK_URL || 'http://localhost:3000/api/auth/instagram/callback';
-  const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+  // Security: Validate frontend URL to prevent open redirect vulnerabilities
+  const FRONTEND_URL = getValidatedFrontendURL();
 
-  // Temporary session store for Instagram OAuth (maps profileId -> { userId, timestamp })
-  const sessionStore = new Map();
+  // Security: Use cryptographic state tokens instead of predictable profileId
+  // Maps state token -> { userId, profileId, lateProfileId, timestamp }
+  const stateStore = new Map();
 
-  // Cleanup expired sessions every 10 minutes
+  // Cleanup expired OAuth states every 10 minutes
   setInterval(() => {
     const now = Date.now();
     const tenMinutes = 10 * 60 * 1000;
-    for (const [key, data] of sessionStore.entries()) {
+    for (const [state, data] of stateStore.entries()) {
       if (now - data.timestamp > tenMinutes) {
-        sessionStore.delete(key);
+        stateStore.delete(state);
       }
     }
   }, 600000);
@@ -132,16 +135,20 @@ module.exports = (authenticateTokenFromQuery, authenticateToken) => {
 
       console.log(`[Instagram OAuth] Using Late.dev profile: ${lateProfile.late_profile_id}`);
 
-      // Step 3: Store user session temporarily (keyed by profile ID)
-      // We'll retrieve this in the callback
-      sessionStore.set(lateProfile.late_profile_id, {
+      // Security: Generate cryptographic state token for CSRF protection
+      // Use state token instead of predictable profileId
+      const state = crypto.randomBytes(32).toString('hex');
+
+      // Store state with user session data
+      stateStore.set(state, {
         userId: req.user.id,
         profileId: lateProfile.id,
+        lateProfileId: lateProfile.late_profile_id,
         timestamp: Date.now()
       });
 
-      // Build callback URL (Late.dev will redirect here after Instagram auth)
-      const redirectUrl = INSTAGRAM_CALLBACK_URL;
+      // Build callback URL with state parameter for security
+      const redirectUrl = `${INSTAGRAM_CALLBACK_URL}?state=${state}`;
 
       console.log(`[Instagram OAuth] Calling Late.dev connect API for profile: ${lateProfile.late_profile_id}`);
 
@@ -177,32 +184,37 @@ module.exports = (authenticateTokenFromQuery, authenticateToken) => {
    * Handle Instagram OAuth callback from Late.dev
    */
   router.get('/callback', async (req, res) => {
-    const { connected, profileId, username, error, platform } = req.query;
+    const { connected, profileId, username, error, platform, state } = req.query;
 
     try {
-      console.log('[Instagram OAuth] Callback received:', { connected, profileId, username, error, platform });
+      console.log('[Instagram OAuth] Callback received:', { connected, profileId, username, error, platform, state });
 
-      // Check for errors from Late.dev FIRST (before session validation)
+      // Security: Validate state token first (CSRF protection)
+      if (!state || !stateStore.has(state)) {
+        console.error('[Instagram OAuth] Invalid or missing state token');
+        return res.redirect(`${FRONTEND_URL}/connections?error=invalid_state`);
+      }
+
+      const session = stateStore.get(state);
+      const userId = session.userId;
+
+      // Check for errors from Late.dev
       if (error) {
         console.error(`[Instagram OAuth] Connection failed: ${error} for platform ${platform}`);
-        // Clean up any session if profileId exists
-        if (profileId && sessionStore.has(profileId)) {
-          sessionStore.delete(profileId);
-        }
+        // Clean up state
+        stateStore.delete(state);
         return res.redirect(`${FRONTEND_URL}/connections?error=instagram_${error}`);
       }
 
-      // Retrieve user session from store using profileId
-      if (!profileId || !sessionStore.has(profileId)) {
-        console.error('[Instagram OAuth] No session found for profileId:', profileId);
-        return res.redirect(`${FRONTEND_URL}/connections?error=instagram_session_expired`);
+      // Validate profileId matches stored session
+      if (!profileId || profileId !== session.lateProfileId) {
+        console.error('[Instagram OAuth] ProfileId mismatch. Expected:', session.lateProfileId, 'Got:', profileId);
+        stateStore.delete(state);
+        return res.redirect(`${FRONTEND_URL}/connections?error=instagram_session_mismatch`);
       }
 
-      const session = sessionStore.get(profileId);
-      const userId = session.userId;
-
-      // Remove used session
-      sessionStore.delete(profileId);
+      // Remove used state token (one-time use)
+      stateStore.delete(state);
 
       console.log('[Instagram OAuth] Retrieved session for user:', userId);
 

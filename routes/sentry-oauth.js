@@ -7,6 +7,7 @@ const express = require('express');
 const axios = require('axios');
 const crypto = require('crypto');
 const { encryptToken, decryptToken } = require('../utils/encryption');
+const { getValidatedFrontendURL } = require('../utils/redirect-validator');
 const {
   storeSentryConnection,
   getSentryToken,
@@ -23,7 +24,8 @@ module.exports = (authenticateTokenFromQuery, authenticateToken) => {
   const SENTRY_CLIENT_SECRET = process.env.SENTRY_CLIENT_SECRET;
   const SENTRY_CALLBACK_URL = process.env.SENTRY_CALLBACK_URL || 'http://localhost:3000/api/auth/sentry/callback';
   const SENTRY_BASE_URL = process.env.SENTRY_BASE_URL || 'https://sentry.io';
-  const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+  // Security: Validate frontend URL to prevent open redirect vulnerabilities
+  const FRONTEND_URL = getValidatedFrontendURL();
 
   // In-memory store for OAuth state tokens (CSRF protection)
   // Maps state token -> { userId, timestamp }

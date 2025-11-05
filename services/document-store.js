@@ -120,9 +120,18 @@ async function updateDocument(userId, docType, content) {
       ? (typeof content === 'string' ? content : JSON.stringify(content))
       : content;
 
+    // Security: Use parameterized CASE statement to avoid SQL injection
+    // Never interpolate column names directly into queries
     const result = await client.query(
-      `UPDATE document_store SET ${docType} = $1 WHERE user_id = $2 RETURNING *`,
-      [value, userId]
+      `UPDATE document_store
+       SET vision_md = CASE WHEN $3 = 'vision_md' THEN $1 ELSE vision_md END,
+           goals_md = CASE WHEN $3 = 'goals_md' THEN $1 ELSE goals_md END,
+           analytics_md = CASE WHEN $3 = 'analytics_md' THEN $1 ELSE analytics_md END,
+           analytics_json = CASE WHEN $3 = 'analytics_json' THEN $1 ELSE analytics_json END,
+           memory_md = CASE WHEN $3 = 'memory_md' THEN $1 ELSE memory_md END
+       WHERE user_id = $2
+       RETURNING *`,
+      [value, userId, docType]
     );
 
     if (result.rows.length > 0) {

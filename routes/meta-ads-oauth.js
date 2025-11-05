@@ -7,6 +7,7 @@ const express = require('express');
 const axios = require('axios');
 const crypto = require('crypto');
 const { encryptToken, decryptToken } = require('../utils/encryption');
+const { getValidatedFrontendURL } = require('../utils/redirect-validator');
 const {
   storeMetaAdsConnection,
   getMetaAdsToken,
@@ -22,7 +23,8 @@ module.exports = (authenticateTokenFromQuery, authenticateToken) => {
   const META_APP_ID = process.env.META_APP_ID;
   const META_APP_SECRET = process.env.META_APP_SECRET;
   const META_CALLBACK_URL = process.env.META_CALLBACK_URL || 'http://localhost:3000/api/auth/meta-ads/callback';
-  const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+  // Security: Validate frontend URL to prevent open redirect vulnerabilities
+  const FRONTEND_URL = getValidatedFrontendURL();
   const META_API_VERSION = 'v21.0'; // Current stable version
 
   // In-memory store for OAuth state tokens (CSRF protection)
