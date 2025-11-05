@@ -9,6 +9,7 @@ import Modules from './pages/Modules';
 import Connections from './pages/Connections';
 import Brain from './pages/Brain';
 import Documents from './pages/Documents';
+import Analytics from './pages/Analytics';
 import './App.css'
 
 // Component that redirects to dashboard if already logged in
@@ -92,6 +93,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Documents />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/analytics"
+              element={
+                <ProtectedRoute>
+                  <Analytics />
                 </ProtectedRoute>
               }
             />
