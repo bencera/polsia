@@ -242,119 +242,131 @@ function Tasks() {
 
         {!loading && !error && tasks.length > 0 && (
           <div className="tasks-list">
-            {tasks.map((task) => (
-              <div key={task.id} className="task-card">
-                <div className="task-header">
-                  <div className="task-title-row">
-                    <h3 className="task-title">
-                      #{task.id} {task.title}
-                    </h3>
-                    <div className="task-badges">
-                      <span
-                        className="status-badge"
-                        style={{ backgroundColor: getStatusColor(task.status), color: '#fff' }}
-                      >
-                        {task.status.replace('_', ' ')}
-                      </span>
-                      {task.priority && (
+            {tasks.map((task) => {
+              const isExpanded = expandedTasks.has(task.id);
+
+              return (
+                <div key={task.id} className={`task-card ${isExpanded ? 'expanded' : ''}`}>
+                  {/* Collapsed view - one liner */}
+                  <div
+                    className="task-header-collapsed"
+                    onClick={() => toggleExpanded(task.id)}
+                  >
+                    <div className="task-title-row">
+                      <h3 className="task-title">
+                        #{task.id} {task.title}
+                      </h3>
+                      <div className="task-badges">
                         <span
-                          className="priority-badge"
-                          style={{ backgroundColor: getPriorityColor(task.priority), color: '#fff' }}
+                          className="status-badge"
+                          style={{ backgroundColor: getStatusColor(task.status), color: '#fff' }}
                         >
-                          {task.priority}
+                          {task.status.replace('_', ' ')}
                         </span>
-                      )}
+                        {task.priority && (
+                          <span
+                            className="priority-badge"
+                            style={{ backgroundColor: getPriorityColor(task.priority), color: '#fff' }}
+                          >
+                            {task.priority}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <div className="task-meta">
-                    <span className="task-timestamp">Created {formatTimeAgo(task.created_at)}</span>
-                    {task.started_at && (
-                      <span className="task-timestamp"> • Started {formatTimeAgo(task.started_at)}</span>
-                    )}
-                  </div>
-                </div>
 
-                <div className="task-body">
-                  {task.description && (
-                    <div className="task-description">
-                      {expandedTasks.has(task.id) || task.description.length < 200 ? (
-                        <p>{task.description}</p>
-                      ) : (
-                        <p>{task.description.substring(0, 200)}...</p>
-                      )}
-                      {task.description.length > 200 && (
-                        <button
-                          className="expand-btn"
-                          onClick={() => toggleExpanded(task.id)}
-                        >
-                          {expandedTasks.has(task.id) ? 'Show less' : 'Show more'}
-                        </button>
-                      )}
-                    </div>
-                  )}
-
-                  {task.suggestion_reasoning && (
-                    <div className="task-reasoning">
-                      <strong>Reasoning:</strong> {task.suggestion_reasoning}
-                    </div>
-                  )}
-
-                  {task.blocked_reason && (
-                    <div className="task-blocked-reason">
-                      <strong>⚠️ Blocked:</strong> {task.blocked_reason}
-                    </div>
-                  )}
-
-                  {(task.proposed_by_module_id || task.assigned_to_module_id) && (
-                    <div className="task-modules">
-                      {task.proposed_by_module_id && (
-                        <span className="module-info">Proposed by Module #{task.proposed_by_module_id}</span>
-                      )}
-                      {task.assigned_to_module_id && (
-                        <span className="module-info">Assigned to Module #{task.assigned_to_module_id}</span>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                <div className="task-actions">
-                  {task.status === 'suggested' && (
+                  {/* Expanded view - full details */}
+                  {isExpanded && (
                     <>
-                      <button
-                        className="action-btn approve-btn"
-                        onClick={() => handleApprove(task.id)}
-                      >
-                        ✓ Approve
-                      </button>
-                      <button
-                        className="action-btn reject-btn"
-                        onClick={() => handleReject(task.id)}
-                      >
-                        ✗ Reject
-                      </button>
+                      <div className="task-meta">
+                        <span className="task-timestamp">Created {formatTimeAgo(task.created_at)}</span>
+                        {task.started_at && (
+                          <span className="task-timestamp"> • Started {formatTimeAgo(task.started_at)}</span>
+                        )}
+                      </div>
+
+                      <div className="task-body">
+                        {task.description && (
+                          <div className="task-description">
+                            <p>{task.description}</p>
+                          </div>
+                        )}
+
+                        {task.suggestion_reasoning && (
+                          <div className="task-reasoning">
+                            <strong>Reasoning:</strong> {task.suggestion_reasoning}
+                          </div>
+                        )}
+
+                        {task.blocked_reason && (
+                          <div className="task-blocked-reason">
+                            <strong>⚠️ Blocked:</strong> {task.blocked_reason}
+                          </div>
+                        )}
+
+                        {(task.proposed_by_module_id || task.assigned_to_module_id) && (
+                          <div className="task-modules">
+                            {task.proposed_by_module_id && (
+                              <span className="module-info">Proposed by Module #{task.proposed_by_module_id}</span>
+                            )}
+                            {task.assigned_to_module_id && (
+                              <span className="module-info">Assigned to Module #{task.assigned_to_module_id}</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="task-actions">
+                        {task.status === 'suggested' && (
+                          <>
+                            <button
+                              className="action-btn approve-btn"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleApprove(task.id);
+                              }}
+                            >
+                              ✓ Approve
+                            </button>
+                            <button
+                              className="action-btn reject-btn"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleReject(task.id);
+                              }}
+                            >
+                              ✗ Reject
+                            </button>
+                          </>
+                        )}
+
+                        {task.status !== 'suggested' && task.status !== 'rejected' && task.status !== 'failed' && (
+                          <div className="status-update-group">
+                            <label htmlFor={`status-update-${task.id}`}>Update Status:</label>
+                            <select
+                              id={`status-update-${task.id}`}
+                              className="status-update-select"
+                              value={task.status}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                handleStatusUpdate(task.id, e.target.value);
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <option value="approved">Approved</option>
+                              <option value="in_progress">In Progress</option>
+                              <option value="waiting">Waiting</option>
+                              <option value="blocked">Blocked</option>
+                              <option value="completed">Completed</option>
+                            </select>
+                          </div>
+                        )}
+                      </div>
                     </>
                   )}
-
-                  {task.status !== 'suggested' && task.status !== 'rejected' && task.status !== 'failed' && (
-                    <div className="status-update-group">
-                      <label htmlFor={`status-update-${task.id}`}>Update Status:</label>
-                      <select
-                        id={`status-update-${task.id}`}
-                        className="status-update-select"
-                        value={task.status}
-                        onChange={(e) => handleStatusUpdate(task.id, e.target.value)}
-                      >
-                        <option value="approved">Approved</option>
-                        <option value="in_progress">In Progress</option>
-                        <option value="waiting">Waiting</option>
-                        <option value="blocked">Blocked</option>
-                        <option value="completed">Completed</option>
-                      </select>
-                    </div>
-                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

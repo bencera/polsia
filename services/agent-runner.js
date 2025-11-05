@@ -418,9 +418,21 @@ Or wait for the Enable module to be run first.`;
         }
     }
 
+    // Add current date for agent context
+    const currentDate = new Date();
+    const formattedDate = currentDate.toISOString().split('T')[0]; // YYYY-MM-DD
+    const fullDateString = currentDate.toDateString(); // e.g., "Tue Nov 05 2025"
+
     let prompt = `
 ${goal}
 ${additionalContext}
+
+## Current Date & Time
+
+**Today's date:** ${fullDateString} (${formattedDate})
+**Current time:** ${currentDate.toISOString()}
+
+When searching for "today's" emails or data, use the date **${formattedDate}** in your queries.
 
 Context:
 ${JSON.stringify(inputs, null, 2)}
