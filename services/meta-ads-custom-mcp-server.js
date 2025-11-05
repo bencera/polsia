@@ -11,12 +11,13 @@ const { StdioServerTransport } = require('@modelcontextprotocol/sdk/server/stdio
 const { CallToolRequestSchema, ListToolsRequestSchema } = require('@modelcontextprotocol/sdk/types.js');
 const { MetaMarketingAPIClient } = require('./meta-marketing-api-service.js');
 
-// Get credentials from command line arguments
-const accessToken = process.argv.find(arg => arg.startsWith('--access-token='))?.split('=')[1];
-const adAccountId = process.argv.find(arg => arg.startsWith('--ad-account-id='))?.split('=')[1];
+// Security: Get credentials from environment variables instead of command-line args
+// Command-line args are visible in process listings (ps, pstree)
+const accessToken = process.env.META_ACCESS_TOKEN;
+const adAccountId = process.env.META_AD_ACCOUNT_ID;
 
 if (!accessToken || !adAccountId) {
-    console.error('Error: --access-token and --ad-account-id arguments are required');
+    console.error('Error: META_ACCESS_TOKEN and META_AD_ACCOUNT_ID environment variables are required');
     process.exit(1);
 }
 

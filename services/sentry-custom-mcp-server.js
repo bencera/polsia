@@ -11,11 +11,12 @@ const { StdioServerTransport } = require('@modelcontextprotocol/sdk/server/stdio
 const { CallToolRequestSchema, ListToolsRequestSchema } = require('@modelcontextprotocol/sdk/types.js');
 const { SentryAPIClient } = require('./sentry-api-service.js');
 
-// Get access token from command line argument
-const accessToken = process.argv.find(arg => arg.startsWith('--access-token='))?.split('=')[1];
+// Security: Get access token from environment variable instead of command-line args
+// Command-line args are visible in process listings (ps, pstree)
+const accessToken = process.env.SENTRY_ACCESS_TOKEN;
 
 if (!accessToken) {
-    console.error('Error: --access-token argument is required');
+    console.error('Error: SENTRY_ACCESS_TOKEN environment variable is required');
     process.exit(1);
 }
 

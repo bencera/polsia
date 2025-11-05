@@ -11,12 +11,13 @@ const { StdioServerTransport } = require('@modelcontextprotocol/sdk/server/stdio
 const { CallToolRequestSchema, ListToolsRequestSchema } = require('@modelcontextprotocol/sdk/types.js');
 const { SlackAPIClient } = require('./slack-api-service.js');
 
-// Get bot and user tokens from command line arguments
-const botToken = process.argv.find(arg => arg.startsWith('--bot-token='))?.split('=')[1];
-const userToken = process.argv.find(arg => arg.startsWith('--user-token='))?.split('=')[1];
+// Security: Get tokens from environment variables instead of command-line args
+// Command-line args are visible in process listings (ps, pstree)
+const botToken = process.env.SLACK_BOT_TOKEN;
+const userToken = process.env.SLACK_USER_TOKEN;
 
 if (!botToken) {
-    console.error('Error: --bot-token argument is required');
+    console.error('Error: SLACK_BOT_TOKEN environment variable is required');
     process.exit(1);
 }
 

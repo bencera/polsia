@@ -509,11 +509,16 @@ async function configureMCPServers(module, userId, config) {
                 const userToken = tokens.user ? decryptToken(tokens.user) : null;
 
                 const serverPath = require('path').join(__dirname, 'slack-custom-mcp-server.js');
-                const args = [serverPath, `--bot-token=${botToken}`];
 
-                // Add user token if available (provides access to all public channels)
+                // Security: Pass tokens via environment variables instead of command-line args
+                // Command-line args are visible in process listings (ps, pstree)
+                // TODO: Consider using temporary credential files with 0600 permissions for even better security
+                const env = {
+                    SLACK_BOT_TOKEN: botToken,
+                };
+
                 if (userToken) {
-                    args.push(`--user-token=${userToken}`);
+                    env.SLACK_USER_TOKEN = userToken;
                     console.log('[Agent Runner] Configured custom Slack MCP server with bot AND user tokens (full channel access)');
                 } else {
                     console.log('[Agent Runner] Configured custom Slack MCP server with bot token only (limited to channels bot is member of)');
@@ -522,7 +527,8 @@ async function configureMCPServers(module, userId, config) {
 
                 mcpServers.slack = {
                     command: 'node',
-                    args: args,
+                    args: [serverPath],
+                    env: env,
                 };
             } else {
                 console.warn('[Agent Runner] Slack MCP requested but user has no Slack connection');
@@ -534,9 +540,14 @@ async function configureMCPServers(module, userId, config) {
             if (encryptedToken) {
                 const token = decryptToken(encryptedToken);
                 const serverPath = require('path').join(__dirname, 'sentry-custom-mcp-server.js');
+
+                // Security: Pass token via environment variable instead of command-line args
                 mcpServers.sentry = {
                     command: 'node',
-                    args: [serverPath, `--access-token=${token}`],
+                    args: [serverPath],
+                    env: {
+                        SENTRY_ACCESS_TOKEN: token,
+                    },
                 };
                 console.log('[Agent Runner] Configured custom Sentry MCP server (direct REST API)');
             } else {
@@ -553,14 +564,16 @@ async function configureMCPServers(module, userId, config) {
                     authTag: connection.private_key_auth_tag
                 });
                 const serverPath = require('path').join(__dirname, 'appstore-connect-custom-mcp-server.js');
+
+                // Security: Pass credentials via environment variables instead of command-line args
                 mcpServers.appstore_connect = {
                     command: 'node',
-                    args: [
-                        serverPath,
-                        `--key-id=${connection.key_id}`,
-                        `--issuer-id=${connection.issuer_id}`,
-                        `--private-key=${privateKey}`
-                    ],
+                    args: [serverPath],
+                    env: {
+                        APPSTORE_KEY_ID: connection.key_id,
+                        APPSTORE_ISSUER_ID: connection.issuer_id,
+                        APPSTORE_PRIVATE_KEY: privateKey,
+                    },
                 };
                 console.log('[Agent Runner] Configured custom App Store Connect MCP server (JWT authentication)');
             } else {
@@ -584,13 +597,15 @@ async function configureMCPServers(module, userId, config) {
                 } else {
                     const adAccountId = primaryAdAccount.id;
                     const serverPath = require('path').join(__dirname, 'meta-ads-custom-mcp-server.js');
+
+                    // Security: Pass credentials via environment variables instead of command-line args
                     mcpServers.meta_ads = {
                         command: 'node',
-                        args: [
-                            serverPath,
-                            `--access-token=${accessToken}`,
-                            `--ad-account-id=${adAccountId}`
-                        ],
+                        args: [serverPath],
+                        env: {
+                            META_ACCESS_TOKEN: accessToken,
+                            META_AD_ACCOUNT_ID: adAccountId,
+                        },
                     };
                     console.log(`[Agent Runner] Configured custom Meta Ads MCP server (ad account: ${primaryAdAccount.name})`);
                 }
@@ -635,8 +650,25 @@ async function configureMCPServers(module, userId, config) {
                 args: [serverPath, `--user-id=${userId}`],
             };
             console.log('[Agent Runner] Configured Reports MCP server (database-backed)');
+        } else if (mcpName === 'tasks') {
+            // Custom Task Management MCP server - allows agents to manage task workflow
+            // Agents can create suggestions, approve, start, block, resume, and complete tasks
+            // No OAuth tokens needed - uses database directly with user_id scope
+            const serverPath = require('path').join(__dirname, 'task-management-mcp-server.js');
+            const args = [`--user-id=${userId}`];
+
+            // Optionally pass module ID for task assignment context
+            if (module && module.id) {
+                args.push(`--module-id=${module.id}`);
+            }
+
+            mcpServers.tasks = {
+                command: 'node',
+                args: [serverPath, ...args],
+            };
+            console.log(`[Agent Runner] Configured Task Management MCP server (database-backed, module: ${module?.id || 'none'})`);
         }
-        // Add more MCP server types here (notion, slack, etc.)
+        // Add more MCP server types here (notion, etc.)
         // Note: 'fal-ai' is handled via prompt augmentation in buildModulePrompt(),
         // not as a true MCP server. Modules call Polsia's /api/ai endpoints directly.
     }

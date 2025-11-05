@@ -11,18 +11,16 @@ const { StdioServerTransport } = require('@modelcontextprotocol/sdk/server/stdio
 const { CallToolRequestSchema, ListToolsRequestSchema } = require('@modelcontextprotocol/sdk/types.js');
 const { AppStoreConnectClient } = require('./appstore-connect-service.js');
 
-// Get credentials from command line arguments
-const keyId = process.argv.find(arg => arg.startsWith('--key-id='))?.split('=')[1];
-const issuerId = process.argv.find(arg => arg.startsWith('--issuer-id='))?.split('=')[1];
-const privateKeyArg = process.argv.find(arg => arg.startsWith('--private-key='));
+// Security: Get credentials from environment variables instead of command-line args
+// Command-line args are visible in process listings (ps, pstree)
+const keyId = process.env.APPSTORE_KEY_ID;
+const issuerId = process.env.APPSTORE_ISSUER_ID;
+const privateKey = process.env.APPSTORE_PRIVATE_KEY;
 
-if (!keyId || !issuerId || !privateKeyArg) {
-    console.error('Error: --key-id, --issuer-id, and --private-key arguments are required');
+if (!keyId || !issuerId || !privateKey) {
+    console.error('Error: APPSTORE_KEY_ID, APPSTORE_ISSUER_ID, and APPSTORE_PRIVATE_KEY environment variables are required');
     process.exit(1);
 }
-
-// Extract private key (handle base64 encoding if needed)
-const privateKey = privateKeyArg.split('=').slice(1).join('='); // Handle = in key
 
 // Initialize App Store Connect API client
 const appStoreClient = new AppStoreConnectClient(keyId, issuerId, privateKey);

@@ -4,6 +4,7 @@ const path = require('path');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 const {
     addToWaitlist,
     getWaitlistCount,
@@ -17,12 +18,35 @@ const slackService = require('./slack');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+
+// Security: JWT_SECRET must be set in environment variables
+// Remove fallback to prevent production deployments with default secrets
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+    console.error('FATAL SECURITY ERROR: JWT_SECRET environment variable is not set.');
+    console.error('Generate a strong secret with: node -e "console.log(require(\'crypto\').randomBytes(64).toString(\'hex\'))"');
+    process.exit(1);
+}
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Security: Rate limiting for authentication endpoints
+// Prevents brute-force attacks and credential stuffing
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 5, // Limit each IP to 5 login attempts per windowMs
+    message: {
+        success: false,
+        message: 'Too many login attempts from this IP, please try again after 15 minutes'
+    },
+    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+    // Skip successful logins from counting towards the limit
+    skipSuccessfulRequests: false,
+});
 
 // JWT Authentication Middleware
 function authenticateToken(req, res, next) {
@@ -98,7 +122,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // Authentication Routes
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', loginLimiter, async (req, res) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
@@ -109,14 +133,14 @@ app.post('/api/auth/login', async (req, res) => {
         // Get user from database
         const user = await getUserByEmail(email.trim().toLowerCase());
 
-        if (!user) {
-            return res.status(401).json({ success: false, message: 'Invalid email or password' });
-        }
+        // Security: Always run bcrypt.compare() to prevent timing attacks
+        // Use a dummy hash if user doesn't exist to ensure constant-time comparison
+        // This prevents attackers from enumerating valid email addresses via timing analysis
+        const dummyHash = '$2b$10$XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
+        const passwordHash = user ? user.password_hash : dummyHash;
+        const validPassword = await bcrypt.compare(password, passwordHash);
 
-        // Verify password
-        const validPassword = await bcrypt.compare(password, user.password_hash);
-
-        if (!validPassword) {
+        if (!user || !validPassword) {
             return res.status(401).json({ success: false, message: 'Invalid email or password' });
         }
 
@@ -382,6 +406,10 @@ app.get('/api/modules/:id/executions/:executionId/logs/stream', authenticateToke
 // Module Routes - Autonomous module management (registered after SSE route)
 const moduleRoutes = require('./routes/module-routes');
 app.use('/api/modules', authenticateToken, moduleRoutes);
+
+// Task Management Routes - Agent-driven task workflow system
+const taskRoutes = require('./routes/task-routes');
+app.use('/api/tasks', authenticateToken, taskRoutes);
 
 // Social Media Routes - Late.dev integration for social media management
 const socialRoutes = require('./routes/social-routes');
