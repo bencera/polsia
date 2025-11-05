@@ -66,11 +66,11 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
                         },
                         description: {
                             type: 'string',
-                            description: 'Detailed task description explaining what needs to be done'
+                            description: 'Detailed task description explaining WHAT needs to be done, HOW to do it, and providing full context (links, stacktraces, etc.). This is the technical details.'
                         },
                         suggestion_reasoning: {
                             type: 'string',
-                            description: 'Why this task is needed (justification for CEO Brain to review)'
+                            description: 'WHY this task is needed - the business justification, impact, and urgency (e.g., "Critical bug affecting 89 users with 247 events"). This is separate from description and helps decision-makers understand the importance. REQUIRED field - do not put this in description.'
                         },
                         suggested_module: {
                             type: 'string',
