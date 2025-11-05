@@ -286,15 +286,17 @@ function Tasks() {
                       </div>
 
                       <div className="task-body">
-                        {task.description && (
-                          <div className="task-description">
-                            <p>{task.description}</p>
+                        {task.suggestion_reasoning && (
+                          <div className="task-reasoning">
+                            <div className="reasoning-label">💡 Suggested Reasoning</div>
+                            <div className="reasoning-content">{task.suggestion_reasoning}</div>
                           </div>
                         )}
 
-                        {task.suggestion_reasoning && (
-                          <div className="task-reasoning">
-                            <strong>Reasoning:</strong> {task.suggestion_reasoning}
+                        {task.description && (
+                          <div className="task-description">
+                            <div className="description-label">Description</div>
+                            <p>{task.description}</p>
                           </div>
                         )}
 
