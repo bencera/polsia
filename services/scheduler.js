@@ -1,7 +1,10 @@
 /**
  * Scheduler Service
- * Checks for modules and routines that need to run and triggers their execution
- * Routines are executed via their owning agents with session persistence
+ * CURRENTLY ONLY MODULES ARE SCHEDULED (routines, brain, and agents are DISABLED)
+ *
+ * Checks for modules that need to run and triggers their execution
+ * Routines, Brain cycles, and agent task listeners are temporarily disabled
+ * to ensure manual-only execution.
  */
 
 const cron = require('node-cron');
@@ -16,12 +19,18 @@ const scheduledTasks = new Map();
 
 /**
  * Start the scheduler
- * Checks every hour for modules and routines that need to run
- * Checks daily for Brain cycles
- * Starts task assignment listener for real-time agent execution
+ * ONLY modules are scheduled - all other automatic execution is disabled
+ *
+ * Active:
+ * - Module checks every hour (legacy modules only)
+ *
+ * Disabled (manual execution only):
+ * - Routine checks (commented out)
+ * - Brain cycles (commented out)
+ * - Task assignment listener for agents (commented out)
  */
 function startScheduler() {
-    console.log('[Scheduler] Starting scheduler (modules + routines)');
+    console.log('[Scheduler] Starting scheduler (MODULES ONLY - routines/brain/agents disabled)');
 
     // Run module checks every hour (legacy support during migration)
     const moduleTask = cron.schedule('0 * * * *', async () => {
@@ -31,25 +40,26 @@ function startScheduler() {
 
     scheduledTasks.set('modules', moduleTask);
 
-    // Run routine checks every hour
-    const routineTask = cron.schedule('0 * * * *', async () => {
-        console.log('[Scheduler] Checking for routines to execute');
-        await checkAndRunRoutines();
-    });
+    // DISABLED: Run routine checks every hour
+    // Temporarily disabled to prevent automatic execution
+    // const routineTask = cron.schedule('0 * * * *', async () => {
+    //     console.log('[Scheduler] Checking for routines to execute');
+    //     await checkAndRunRoutines();
+    // });
+    // scheduledTasks.set('routines', routineTask);
 
-    scheduledTasks.set('routines', routineTask);
+    // DISABLED: Run Brain cycle checks once per day at 9 AM
+    // Temporarily disabled to prevent automatic execution
+    // const brainTask = cron.schedule('0 9 * * *', async () => {
+    //     console.log('[Scheduler] Checking for Brain cycles to execute');
+    //     await checkAndRunBrainCycles();
+    // });
+    // scheduledTasks.set('brain', brainTask);
 
-    // Run Brain cycle checks once per day at 9 AM
-    const brainTask = cron.schedule('0 9 * * *', async () => {
-        console.log('[Scheduler] Checking for Brain cycles to execute');
-        await checkAndRunBrainCycles();
-    });
-
-    scheduledTasks.set('brain', brainTask);
-
-    // Start task assignment listener for real-time agent execution
-    console.log('[Scheduler] Starting task assignment listener for agents');
-    startTaskAssignmentListener();
+    // DISABLED: Start task assignment listener for real-time agent execution
+    // Temporarily disabled to prevent automatic execution
+    // console.log('[Scheduler] Starting task assignment listener for agents');
+    // startTaskAssignmentListener();
 
     console.log('[Scheduler] Scheduler started successfully');
 }
