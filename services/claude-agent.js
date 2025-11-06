@@ -128,6 +128,53 @@ function formatToolUse(toolName, input = {}) {
 }
 
 /**
+ * Create a filesystem restriction hook to prevent agents from accessing files outside their workspace
+ * @param {string} allowedDir - The directory agents are restricted to
+ * @returns {Function} PreToolUse hook function
+ */
+function createFilesystemRestrictionHook(allowedDir) {
+  const normalizedAllowedDir = path.resolve(allowedDir);
+
+  return async (input) => {
+    const toolName = input.tool_name;
+
+    // Only check file operation tools
+    if (!['Read', 'Write', 'Edit', 'Glob', 'Grep'].includes(toolName)) {
+      return { decision: 'approve' };
+    }
+
+    // Extract file path from tool input
+    let filePath = null;
+    if (input.tool_input) {
+      filePath = input.tool_input.file_path || input.tool_input.path || null;
+    }
+
+    // If no path specified, allow it
+    if (!filePath) {
+      return { decision: 'approve' };
+    }
+
+    // Resolve path (handles both absolute and relative paths, including ..)
+    // Relative paths are resolved from the allowed directory (cwd)
+    const normalizedPath = path.resolve(allowedDir, filePath);
+
+    // Check if resolved path is within allowed directory
+    if (!normalizedPath.startsWith(normalizedAllowedDir)) {
+      console.warn(`[Filesystem Guard] 🚫 Blocked ${toolName} access to: ${filePath}`);
+      console.warn(`[Filesystem Guard] Resolved to: ${normalizedPath}`);
+      console.warn(`[Filesystem Guard] Allowed directory: ${normalizedAllowedDir}`);
+      return {
+        decision: 'block',
+        reason: `File access restricted to workspace directory. Attempted path: ${filePath} (resolved to ${normalizedPath})`
+      };
+    }
+
+    // Path is within allowed directory
+    return { decision: 'approve' };
+  };
+}
+
+/**
  * Execute a coding task using Claude Code SDK
  * @param {string} prompt - The task description
  * @param {Object} options - Configuration options
@@ -163,6 +210,7 @@ async function executeTask(prompt, options = {}) {
     console.log('[Claude Agent] Starting task execution');
     console.log(`[Claude Agent] Prompt: ${prompt.substring(0, 100)}...`);
     console.log(`[Claude Agent] Working directory: ${cwd}`);
+    console.log(`[Claude Agent] 🔒 Filesystem restriction enabled - agents restricted to: ${cwd}`);
 
     // Initialize SDK
     const { query } = await initializeSDK();
@@ -171,7 +219,12 @@ async function executeTask(prompt, options = {}) {
     const queryOptions = {
       maxTurns,
       cwd,
-      permissionMode: 'bypassPermissions'
+      permissionMode: 'bypassPermissions',
+      hooks: {
+        PreToolUse: [{
+          hooks: [createFilesystemRestrictionHook(cwd)]
+        }]
+      }
     };
 
     if (model) {
