@@ -1,0 +1,113 @@
+.report-category {
+  margin-bottom: 30px;
+}
+
+.report-category:last-child {
+  margin-bottom: 0;
+}
+
+.report-category-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 0;
+  border-bottom: 2px solid #000;
+  cursor: pointer;
+  user-select: none;
+}
+
+.report-category-header:hover {
+  background-color: #fafafa;
+}
+
+.report-category-title-section {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.report-category-title {
+  font-size: 1.4em;
+  font-weight: 700;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.report-category-count {
+  font-size: 0.85em;
+  color: #666;
+  font-weight: normal;
+  text-transform: none;
+}
+
+.report-category-toggle {
+  font-size: 1.5em;
+  font-weight: 300;
+  color: #000;
+  line-height: 1;
+  width: 24px;
+  text-align: center;
+}
+
+.report-category-content {
+  padding: 16px 0;
+}
+
+.report-category-empty {
+  font-size: 0.95em;
+  color: #999;
+  font-style: italic;
+  margin: 12px 0;
+}
+
+.report-category-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.report-category-load-more {
+  background: linear-gradient(top, #ffffff, #888888);
+  background: -webkit-linear-gradient(top, #ffffff, #888888);
+  border: 1px solid #1a1a1a;
+  color: #000000;
+  padding: 8px 16px;
+  font-family: helvetica, serif;
+  font-size: 12px;
+  cursor: pointer;
+  border-radius: 2px;
+  box-shadow: rgba(255, 255, 255, 0.4) 0 1px 0 0 inset, rgba(255, 255, 255, 0.4) 0 1px 0;
+  margin-top: 16px;
+  width: 100%;
+}
+
+.report-category-load-more:hover {
+  background: linear-gradient(top, #ffffff, #888888);
+  background: -webkit-linear-gradient(top, #ffffff, #888888);
+}
+
+.report-category-load-more:active {
+  background: linear-gradient(top, #888888, #ffffff);
+  background: -webkit-linear-gradient(top, #888888, #ffffff);
+  box-shadow: rgba(0, 0, 0, 0.4) 0 1px 2px 0 inset;
+  padding-top: 9px;
+  padding-bottom: 7px;
+}
+
+.report-category-load-more:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+  .report-category-title {
+    font-size: 1.2em;
+  }
+
+  .report-category-title-section {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+}

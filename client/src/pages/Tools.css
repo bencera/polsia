@@ -1,0 +1,450 @@
+/* Polsia Tools Page - MCP Server Catalog */
+
+.tools-container {
+  font-family: "Times New Roman", Times, serif;
+  background-color: #fff;
+  color: #000;
+  line-height: 1.6;
+  padding: 0;
+  min-height: 100vh;
+  width: 100%;
+}
+
+/* Terminal */
+.terminal {
+  background-color: #000;
+  color: #fff;
+  font-family: 'Courier New', Courier, monospace;
+  padding: 10px 20px;
+  margin: 0 0 30px 0;
+  font-size: 13px;
+  line-height: 1.4;
+  height: 82px;
+  overflow: hidden;
+  width: 100vw;
+  margin-left: calc(-50vw + 50%);
+  box-sizing: border-box;
+}
+
+.terminal div {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Tools Content */
+.tools-content {
+  margin-bottom: 30px;
+  padding: 0 20px 40px 20px;
+}
+
+/* Tools Header */
+.tools-header {
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #000;
+}
+
+.tools-header h1 {
+  font-size: 2.5em;
+  font-weight: 700;
+  margin: 0 0 10px 0;
+  line-height: 1.1;
+}
+
+.tools-subtitle {
+  font-size: 1em;
+  margin: 0;
+  color: #666;
+  font-style: italic;
+}
+
+/* Summary Stats */
+.tools-summary {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 30px;
+  padding: 20px;
+  border: 2px solid #000;
+  background-color: #f9f9f9;
+  flex-wrap: wrap;
+}
+
+.summary-stat {
+  flex: 1;
+  min-width: 100px;
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 2em;
+  font-weight: 700;
+  margin-bottom: 5px;
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 0.85em;
+  text-transform: uppercase;
+  color: #666;
+  letter-spacing: 0.5px;
+}
+
+/* Controls */
+.tools-controls {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 30px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.filter-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.filter-btn {
+  padding: 8px 16px;
+  border: 2px solid #000;
+  background-color: #fff;
+  color: #000;
+  font-family: "Times New Roman", Times, serif;
+  font-size: 0.9em;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.filter-btn:hover {
+  background-color: #f9f9f9;
+}
+
+.filter-btn.active {
+  background-color: #000;
+  color: #fff;
+}
+
+.search-input {
+  flex: 1;
+  min-width: 250px;
+  padding: 8px 12px;
+  border: 2px solid #000;
+  font-family: "Times New Roman", Times, serif;
+  font-size: 0.9em;
+  background-color: #fff;
+}
+
+.search-input:focus {
+  outline: none;
+  background-color: #f9f9f9;
+}
+
+/* MCPs List */
+.mcps-list {
+  margin: 30px 0;
+}
+
+/* MCP Card */
+.mcp-card {
+  border: 2px solid #000;
+  margin-bottom: 10px;
+  background-color: #fff;
+  transition: all 0.2s ease;
+}
+
+.mcp-card.expanded {
+  margin-bottom: 20px;
+  box-shadow: 4px 4px 0 #000;
+}
+
+/* MCP Header (Collapsed) */
+.mcp-header {
+  padding: 15px 20px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background-color 0.2s ease;
+}
+
+.mcp-header:hover {
+  background-color: #f9f9f9;
+}
+
+.mcp-card.expanded .mcp-header {
+  padding: 20px 20px 10px 20px;
+}
+
+.mcp-card.expanded .mcp-header:hover {
+  background-color: transparent;
+}
+
+.mcp-header-left {
+  flex: 1;
+}
+
+.mcp-title-section {
+  flex: 1;
+}
+
+.mcp-name {
+  font-size: 1.3em;
+  font-weight: 700;
+  margin: 0 0 5px 0;
+  line-height: 1.3;
+}
+
+.mcp-meta {
+  display: flex;
+  gap: 10px;
+  font-size: 0.85em;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.mcp-type {
+  padding: 2px 8px;
+  font-weight: 700;
+  font-size: 0.75em;
+  text-transform: uppercase;
+  border-radius: 3px;
+}
+
+.type-third-party {
+  background-color: #3b82f6;
+  color: #fff;
+}
+
+.type-custom {
+  background-color: #10b981;
+  color: #fff;
+}
+
+.type-http {
+  background-color: #8b5cf6;
+  color: #fff;
+}
+
+.mcp-functions {
+  color: #666;
+  font-style: italic;
+}
+
+.oauth-status {
+  padding: 2px 8px;
+  font-weight: 700;
+  font-size: 0.75em;
+  border-radius: 3px;
+}
+
+.oauth-status.connected {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.oauth-status.disconnected {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.expand-indicator {
+  font-family: "Times New Roman", Times, serif;
+  font-size: 1.2em;
+  font-weight: 700;
+  color: #000;
+  user-select: none;
+}
+
+/* MCP Summary (when collapsed) */
+.mcp-summary {
+  padding: 0 20px 15px 20px;
+}
+
+.mcp-description {
+  font-size: 1em;
+  color: #333;
+  line-height: 1.7;
+  margin: 0;
+}
+
+/* MCP Details (Expanded) */
+.mcp-details {
+  padding: 0 20px 20px 20px;
+  border-top: 1px solid #ddd;
+}
+
+.mcp-section {
+  margin-top: 20px;
+}
+
+.mcp-section:first-child {
+  margin-top: 15px;
+}
+
+.section-label {
+  font-size: 0.85em;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #666;
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+}
+
+.mcp-package {
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  background-color: #f9f9f9;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  display: inline-block;
+  border-radius: 3px;
+}
+
+/* Agents List */
+.agents-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.agent-badge {
+  padding: 4px 10px;
+  background-color: #000;
+  color: #fff;
+  font-size: 0.75em;
+  font-weight: 700;
+  text-transform: uppercase;
+  border-radius: 3px;
+}
+
+/* Functions List */
+.functions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.function-item {
+  padding: 12px;
+  border: 1px solid #ddd;
+  background-color: #f9f9f9;
+}
+
+.function-header {
+  margin-bottom: 6px;
+}
+
+.function-name {
+  font-family: 'Courier New', monospace;
+  font-size: 0.9em;
+  font-weight: 700;
+  color: #000;
+}
+
+.function-description {
+  font-size: 0.9em;
+  color: #333;
+  margin-bottom: 6px;
+  line-height: 1.6;
+}
+
+.function-params {
+  font-size: 0.85em;
+  color: #666;
+  font-style: italic;
+}
+
+.function-params strong {
+  font-weight: 700;
+  font-style: normal;
+  color: #000;
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  border: 2px solid #000;
+  background-color: #f9f9f9;
+  margin: 30px 0;
+}
+
+.empty-state p {
+  font-size: 1em;
+  margin: 0;
+  color: #333;
+}
+
+/* Error Message */
+.error-message {
+  padding: 20px;
+  border: 2px solid #ef4444;
+  margin: 30px 0;
+  font-size: 1em;
+  text-align: center;
+  background-color: #fef2f2;
+  color: #991b1b;
+}
+
+/* Loading */
+.loading {
+  text-align: center;
+  padding: 40px;
+  font-size: 1.1em;
+  color: #666;
+  font-style: italic;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .tools-header h1 {
+    font-size: 2em;
+  }
+
+  .mcp-name {
+    font-size: 1.1em;
+  }
+
+  .tools-summary {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .summary-stat {
+    min-width: 100%;
+  }
+
+  .tools-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-buttons {
+    width: 100%;
+  }
+
+  .filter-btn {
+    flex: 1;
+  }
+
+  .search-input {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .tools-content {
+    padding: 0 15px 30px 15px;
+  }
+
+  .tools-header h1 {
+    font-size: 1.8em;
+  }
+
+  .stat-value {
+    font-size: 1.5em;
+  }
+}

@@ -15,12 +15,8 @@ function Navbar() {
     navigate('/connections');
   };
 
-  const handleModules = () => {
-    navigate('/modules');
-  };
-
-  const handleBrain = () => {
-    navigate('/brain');
+  const handleRoutines = () => {
+    navigate('/routines');
   };
 
   const handleDocuments = () => {
@@ -33,6 +29,14 @@ function Navbar() {
 
   const handleTasks = () => {
     navigate('/tasks');
+  };
+
+  const handleAgents = () => {
+    navigate('/agents');
+  };
+
+  const handleTools = () => {
+    navigate('/tools');
   };
 
   const handleHome = () => {
@@ -49,9 +53,6 @@ function Navbar() {
         <button onClick={handleHome} className="nav-button">
           Home
         </button>
-        <button onClick={handleBrain} className="nav-button">
-          Brain
-        </button>
         <button onClick={handleDocuments} className="nav-button">
           Docs
         </button>
@@ -61,8 +62,14 @@ function Navbar() {
         <button onClick={handleTasks} className="nav-button">
           Tasks
         </button>
-        <button onClick={handleModules} className="nav-button">
-          Modules
+        <button onClick={handleAgents} className="nav-button">
+          Agents
+        </button>
+        <button onClick={handleTools} className="nav-button">
+          Tools
+        </button>
+        <button onClick={handleRoutines} className="nav-button">
+          Routines
         </button>
         <button onClick={handleConnections} className="nav-button">
           Connections

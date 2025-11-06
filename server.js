@@ -437,6 +437,18 @@ app.use('/api/brain', authenticateToken, brainRoutes);
 const connectionRoutes = require('./routes/connection-routes');
 app.use('/api/connections', authenticateToken, connectionRoutes);
 
+// Agents Routes - AI agent management
+const agentsRoutes = require('./routes/agents-routes');
+app.use('/api/agents', authenticateToken, agentsRoutes);
+
+// Routines Routes - Routine scheduling and execution
+const routineRoutes = require('./routes/routine-routes');
+app.use('/api/routines', authenticateToken, routineRoutes);
+
+// Tools Routes - MCP server catalog and system tools
+const toolsRoutes = require('./routes/tools-routes');
+app.use('/api/tools', authenticateToken, toolsRoutes);
+
 // 404 for any other routes
 app.get('*', (req, res) => {
     res.status(404).json({ success: false, message: 'Not found' });

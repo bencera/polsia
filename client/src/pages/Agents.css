@@ -1,0 +1,353 @@
+/* Polsia Agents Page - Matching Universal Paperclips Aesthetic */
+
+.agents-container {
+  font-family: "Times New Roman", Times, serif;
+  background-color: #fff;
+  color: #000;
+  line-height: 1.6;
+  padding: 0;
+  min-height: 100vh;
+  width: 100%;
+}
+
+/* Terminal */
+.terminal {
+  background-color: #000;
+  color: #fff;
+  font-family: 'Courier New', Courier, monospace;
+  padding: 10px 20px;
+  margin: 0 0 30px 0;
+  font-size: 13px;
+  line-height: 1.4;
+  height: 82px;
+  overflow: hidden;
+  width: 100vw;
+  margin-left: calc(-50vw + 50%);
+  box-sizing: border-box;
+}
+
+.terminal div {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Agents Content */
+.agents-content {
+  margin-bottom: 30px;
+  padding: 0 20px 40px 20px;
+}
+
+/* Agents Header */
+.agents-header {
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #000;
+}
+
+.agents-header h1 {
+  font-size: 2.5em;
+  font-weight: 700;
+  margin: 0 0 10px 0;
+  line-height: 1.1;
+}
+
+.agents-subtitle {
+  font-size: 1em;
+  margin: 0;
+  color: #666;
+  font-style: italic;
+}
+
+/* Agents List */
+.agents-list {
+  margin: 30px 0;
+}
+
+/* Agent Card */
+.agent-card {
+  border: 2px solid #000;
+  margin-bottom: 10px;
+  background-color: #fff;
+  transition: all 0.2s ease;
+}
+
+.agent-card.expanded {
+  margin-bottom: 20px;
+  box-shadow: 4px 4px 0 #000;
+}
+
+/* Agent Header (Collapsed) */
+.agent-header {
+  padding: 15px 20px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background-color 0.2s ease;
+}
+
+.agent-header:hover {
+  background-color: #f9f9f9;
+}
+
+.agent-card.expanded .agent-header {
+  padding: 20px 20px 10px 20px;
+}
+
+.agent-card.expanded .agent-header:hover {
+  background-color: transparent;
+}
+
+.agent-header-left {
+  flex: 1;
+}
+
+.agent-title-section {
+  flex: 1;
+}
+
+.agent-name {
+  font-size: 1.3em;
+  font-weight: 700;
+  margin: 0 0 5px 0;
+  line-height: 1.3;
+}
+
+.agent-meta {
+  display: flex;
+  gap: 10px;
+  font-size: 0.85em;
+  align-items: center;
+}
+
+.agent-type {
+  color: #666;
+  font-style: italic;
+}
+
+.agent-status {
+  padding: 2px 8px;
+  font-weight: 700;
+  font-size: 0.75em;
+  text-transform: uppercase;
+  border-radius: 3px;
+}
+
+.status-active {
+  background-color: #10b981;
+  color: #fff;
+}
+
+.status-paused {
+  background-color: #f59e0b;
+  color: #fff;
+}
+
+.status-disabled {
+  background-color: #ef4444;
+  color: #fff;
+}
+
+.expand-indicator {
+  font-family: "Times New Roman", Times, serif;
+  font-size: 1.2em;
+  font-weight: 700;
+  color: #000;
+  user-select: none;
+}
+
+/* Agent Details (Expanded) */
+.agent-details {
+  padding: 0 20px 20px 20px;
+  border-top: 1px solid #ddd;
+}
+
+.agent-section {
+  margin-top: 20px;
+}
+
+.agent-section:first-child {
+  margin-top: 15px;
+}
+
+.section-label {
+  font-size: 0.85em;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #666;
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+}
+
+.agent-description {
+  font-size: 1em;
+  color: #333;
+  line-height: 1.7;
+  margin: 0;
+}
+
+.agent-role {
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  line-height: 1.6;
+  color: #000;
+  background-color: #f9f9f9;
+  padding: 15px;
+  border: 1px solid #ddd;
+  white-space: pre-wrap;
+  max-height: 400px;
+  overflow-y: auto;
+  margin: 0;
+}
+
+.config-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.config-item {
+  font-size: 0.95em;
+}
+
+.config-item strong {
+  color: #000;
+  font-weight: 700;
+}
+
+.mcp-mounts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.mcp-mount {
+  padding: 4px 10px;
+  background-color: #000;
+  color: #fff;
+  font-size: 0.75em;
+  font-weight: 700;
+  text-transform: uppercase;
+  border-radius: 3px;
+}
+
+.metadata-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.9em;
+  color: #666;
+  font-style: italic;
+}
+
+/* Info Section */
+.agents-info {
+  margin-top: 40px;
+  padding: 20px;
+  border: 2px solid #000;
+  background-color: #f9f9f9;
+}
+
+.agents-info h3 {
+  font-size: 1.5em;
+  font-weight: 700;
+  margin: 0 0 20px 0;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #000;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 15px;
+}
+
+.info-item {
+  padding: 15px;
+  border: 1px solid #ddd;
+  background-color: #fff;
+}
+
+.info-item h4 {
+  font-size: 1.1em;
+  font-weight: 700;
+  margin: 0 0 10px 0;
+}
+
+.info-item p {
+  font-size: 0.95em;
+  margin: 0;
+  color: #333;
+  line-height: 1.6;
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  border: 2px solid #000;
+  background-color: #f9f9f9;
+  margin: 30px 0;
+}
+
+.empty-state p {
+  font-size: 1em;
+  margin: 0;
+  color: #333;
+}
+
+.empty-state code {
+  font-family: 'Courier New', monospace;
+  background-color: #000;
+  color: #fff;
+  padding: 3px 8px;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+
+/* Error Message */
+.error-message {
+  padding: 20px;
+  border: 2px solid #ef4444;
+  margin: 30px 0;
+  font-size: 1em;
+  text-align: center;
+  background-color: #fef2f2;
+  color: #991b1b;
+}
+
+/* Loading */
+.loading {
+  text-align: center;
+  padding: 40px;
+  font-size: 1.1em;
+  color: #666;
+  font-style: italic;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .agents-header h1 {
+    font-size: 2em;
+  }
+
+  .agent-name {
+    font-size: 1.1em;
+  }
+
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .agents-content {
+    padding: 0 15px 30px 15px;
+  }
+
+  .agents-header h1 {
+    font-size: 1.8em;
+  }
+}

@@ -11,6 +11,8 @@ import Brain from './pages/Brain';
 import Documents from './pages/Documents';
 import Analytics from './pages/Analytics';
 import Tasks from './pages/Tasks';
+import Agents from './pages/Agents';
+import Tools from './pages/Tools';
 import './App.css'
 
 // Component that redirects to dashboard if already logged in
@@ -110,6 +112,22 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Tasks />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/agents"
+              element={
+                <ProtectedRoute>
+                  <Agents />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tools"
+              element={
+                <ProtectedRoute>
+                  <Tools />
                 </ProtectedRoute>
               }
             />
