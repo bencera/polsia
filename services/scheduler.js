@@ -1,31 +1,43 @@
 /**
- * Module Scheduler Service
- * Checks for modules that need to run and triggers their execution
+ * Scheduler Service
+ * Checks for modules and routines that need to run and triggers their execution
+ * Routines are executed via their owning agents with session persistence
  */
 
 const cron = require('node-cron');
-const { getActiveModulesForScheduling, getModuleExecutions, pool } = require('../db');
+const { getActiveModulesForScheduling, getModuleExecutions, getRoutinesDueForExecution, pool } = require('../db');
 const { runModule } = require('./agent-runner');
+const { runRoutine } = require('./routine-executor');
 const { runBrainCycle, getLastBrainDecision } = require('./brain-orchestrator');
+const { startTaskAssignmentListener, stopTaskAssignmentListener } = require('./task-assignment-listener');
 
 // Track scheduled tasks
 const scheduledTasks = new Map();
 
 /**
- * Start the module scheduler
- * Checks every hour for modules that need to run
+ * Start the scheduler
+ * Checks every hour for modules and routines that need to run
  * Checks daily for Brain cycles
+ * Starts task assignment listener for real-time agent execution
  */
 function startScheduler() {
-    console.log('[Scheduler] Starting module scheduler');
+    console.log('[Scheduler] Starting scheduler (modules + routines)');
 
-    // Run module checks every hour
+    // Run module checks every hour (legacy support during migration)
     const moduleTask = cron.schedule('0 * * * *', async () => {
         console.log('[Scheduler] Checking for modules to execute');
         await checkAndRunModules();
     });
 
     scheduledTasks.set('modules', moduleTask);
+
+    // Run routine checks every hour
+    const routineTask = cron.schedule('0 * * * *', async () => {
+        console.log('[Scheduler] Checking for routines to execute');
+        await checkAndRunRoutines();
+    });
+
+    scheduledTasks.set('routines', routineTask);
 
     // Run Brain cycle checks once per day at 9 AM
     const brainTask = cron.schedule('0 9 * * *', async () => {
@@ -35,11 +47,9 @@ function startScheduler() {
 
     scheduledTasks.set('brain', brainTask);
 
-    // Also run immediately on startup
-    setImmediate(async () => {
-        console.log('[Scheduler] Running initial module check');
-        await checkAndRunModules();
-    });
+    // Start task assignment listener for real-time agent execution
+    console.log('[Scheduler] Starting task assignment listener for agents');
+    startTaskAssignmentListener();
 
     console.log('[Scheduler] Scheduler started successfully');
 }
@@ -49,10 +59,16 @@ function startScheduler() {
  */
 function stopScheduler() {
     console.log('[Scheduler] Stopping scheduler');
+
+    // Stop cron tasks
     for (const [name, task] of scheduledTasks.entries()) {
         task.stop();
         scheduledTasks.delete(name);
     }
+
+    // Stop task assignment listener
+    console.log('[Scheduler] Stopping task assignment listener');
+    stopTaskAssignmentListener();
 }
 
 /**
@@ -143,6 +159,34 @@ async function shouldModuleRun(module) {
     }
 
     return shouldRun;
+}
+
+/**
+ * Check for routines that should run and execute them via their owning agents
+ */
+async function checkAndRunRoutines() {
+    try {
+        const routines = await getRoutinesDueForExecution();
+
+        console.log(`[Scheduler] Found ${routines.length} routines due for execution`);
+
+        for (const routine of routines) {
+            try {
+                console.log(`[Scheduler] Triggering routine: ${routine.name} (ID: ${routine.id}) via agent ${routine.agent_name || routine.agent_id}`);
+
+                // Run routine asynchronously via agent (don't await to prevent blocking)
+                runRoutine(routine.id, routine.user_id, {
+                    trigger_type: 'scheduled',
+                }).catch((error) => {
+                    console.error(`[Scheduler] Error running routine ${routine.id}:`, error);
+                });
+            } catch (error) {
+                console.error(`[Scheduler] Error processing routine ${routine.id}:`, error);
+            }
+        }
+    } catch (error) {
+        console.error('[Scheduler] Error checking routines:', error);
+    }
 }
 
 /**

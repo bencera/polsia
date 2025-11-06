@@ -643,6 +643,502 @@ async function updateModuleSessionId(moduleId, sessionId) {
     }
 }
 
+// ============================================
+// AGENT FUNCTIONS (Task-Driven AI Agents)
+// ============================================
+
+// Get all agents for a user
+async function getAgentsByUserId(userId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            'SELECT * FROM agents WHERE user_id = $1 ORDER BY created_at DESC',
+            [userId]
+        );
+        return result.rows;
+    } catch (err) {
+        console.error('Error getting agents:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Get a specific agent by ID
+async function getAgentById(agentId, userId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            'SELECT * FROM agents WHERE id = $1 AND user_id = $2',
+            [agentId, userId]
+        );
+        return result.rows[0] || null;
+    } catch (err) {
+        console.error('Error getting agent by ID:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Create a new agent
+async function createAgent(userId, agentData) {
+    const client = await pool.connect();
+    try {
+        const { name, description, role, agent_type, status, config, metadata } = agentData;
+        const result = await client.query(
+            `INSERT INTO agents (user_id, name, description, role, agent_type, status, config, metadata)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+             RETURNING *`,
+            [
+                userId,
+                name,
+                description || null,
+                role,
+                agent_type,
+                status || 'active',
+                config || null,
+                metadata || null
+            ]
+        );
+        return result.rows[0];
+    } catch (err) {
+        console.error('Error creating agent:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Update an agent
+async function updateAgent(agentId, userId, updates) {
+    const client = await pool.connect();
+    try {
+        const setClauses = [];
+        const values = [];
+        let paramCount = 1;
+
+        // Build dynamic SET clause
+        if (updates.name !== undefined) {
+            setClauses.push(`name = $${paramCount++}`);
+            values.push(updates.name);
+        }
+        if (updates.description !== undefined) {
+            setClauses.push(`description = $${paramCount++}`);
+            values.push(updates.description);
+        }
+        if (updates.role !== undefined) {
+            setClauses.push(`role = $${paramCount++}`);
+            values.push(updates.role);
+        }
+        if (updates.agent_type !== undefined) {
+            setClauses.push(`agent_type = $${paramCount++}`);
+            values.push(updates.agent_type);
+        }
+        if (updates.status !== undefined) {
+            setClauses.push(`status = $${paramCount++}`);
+            values.push(updates.status);
+        }
+        if (updates.config !== undefined) {
+            setClauses.push(`config = $${paramCount++}`);
+            values.push(updates.config);
+        }
+        if (updates.metadata !== undefined) {
+            setClauses.push(`metadata = $${paramCount++}`);
+            values.push(updates.metadata);
+        }
+
+        // Always update updated_at
+        setClauses.push(`updated_at = CURRENT_TIMESTAMP`);
+
+        // Add WHERE clause params
+        values.push(agentId, userId);
+
+        const query = `UPDATE agents SET ${setClauses.join(', ')}
+                       WHERE id = $${paramCount++} AND user_id = $${paramCount++}
+                       RETURNING *`;
+
+        const result = await client.query(query, values);
+        return result.rows[0] || null;
+    } catch (err) {
+        console.error('Error updating agent:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Delete an agent
+async function deleteAgent(agentId, userId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            'DELETE FROM agents WHERE id = $1 AND user_id = $2 RETURNING *',
+            [agentId, userId]
+        );
+        return result.rows.length > 0;
+    } catch (err) {
+        console.error('Error deleting agent:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Get tasks assigned to an agent
+async function getTasksByAgentId(userId, agentId, status = null) {
+    const client = await pool.connect();
+    try {
+        let query = `SELECT * FROM tasks
+                     WHERE user_id = $1 AND assigned_to_agent_id = $2`;
+        const params = [userId, agentId];
+
+        if (status) {
+            query += ' AND status = $3';
+            params.push(status);
+        }
+
+        query += ' ORDER BY created_at DESC';
+
+        const result = await client.query(query, params);
+        return result.rows;
+    } catch (err) {
+        console.error('Error getting tasks by agent ID:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Get execution history for an agent (via tasks linked to module_executions)
+async function getAgentExecutions(agentId, userId, limit = 50) {
+    const client = await pool.connect();
+    try {
+        // Get executions linked to tasks assigned to this agent
+        const result = await client.query(
+            `SELECT me.* FROM module_executions me
+             INNER JOIN tasks t ON t.execution_id = me.id
+             WHERE t.assigned_to_agent_id = $1 AND me.user_id = $2
+             ORDER BY me.created_at DESC
+             LIMIT $3`,
+            [agentId, userId, limit]
+        );
+        return result.rows;
+    } catch (err) {
+        console.error('Error getting agent executions:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Update agent session (for session persistence)
+async function updateAgentSession(agentId, sessionId, workspacePath) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            `UPDATE agents
+             SET session_id = $1, workspace_path = $2, last_active_at = CURRENT_TIMESTAMP
+             WHERE id = $3
+             RETURNING *`,
+            [sessionId, workspacePath, agentId]
+        );
+        return result.rows[0] || null;
+    } catch (err) {
+        console.error('Error updating agent session:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Increment agent routine run counter
+async function incrementAgentRoutineRuns(agentId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            `UPDATE agents
+             SET total_routine_runs = total_routine_runs + 1, last_active_at = CURRENT_TIMESTAMP
+             WHERE id = $1
+             RETURNING *`,
+            [agentId]
+        );
+        return result.rows[0] || null;
+    } catch (err) {
+        console.error('Error incrementing agent routine runs:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Increment agent task completion counter
+async function incrementAgentTaskCompletions(agentId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            `UPDATE agents
+             SET total_task_completions = total_task_completions + 1, last_active_at = CURRENT_TIMESTAMP
+             WHERE id = $1
+             RETURNING *`,
+            [agentId]
+        );
+        return result.rows[0] || null;
+    } catch (err) {
+        console.error('Error incrementing agent task completions:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Get agent with routines
+async function getAgentWithRoutines(agentId, userId) {
+    const client = await pool.connect();
+    try {
+        const agentResult = await client.query(
+            'SELECT * FROM agents WHERE id = $1 AND user_id = $2',
+            [agentId, userId]
+        );
+
+        if (agentResult.rows.length === 0) {
+            return null;
+        }
+
+        const routinesResult = await client.query(
+            'SELECT * FROM routines WHERE agent_id = $1 AND user_id = $2 ORDER BY created_at DESC',
+            [agentId, userId]
+        );
+
+        return {
+            ...agentResult.rows[0],
+            routines: routinesResult.rows
+        };
+    } catch (err) {
+        console.error('Error getting agent with routines:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// ============================================
+// ROUTINE FUNCTIONS (Scheduled Agent Tasks)
+// ============================================
+
+// Get all routines for a user
+async function getRoutinesByUserId(userId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            `SELECT r.*, a.name as agent_name, a.status as agent_status
+             FROM routines r
+             INNER JOIN agents a ON a.id = r.agent_id
+             WHERE r.user_id = $1
+             ORDER BY r.created_at DESC`,
+            [userId]
+        );
+        return result.rows;
+    } catch (err) {
+        console.error('Error getting routines:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Get routines by agent ID
+async function getRoutinesByAgentId(agentId, userId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            'SELECT * FROM routines WHERE agent_id = $1 AND user_id = $2 ORDER BY created_at DESC',
+            [agentId, userId]
+        );
+        return result.rows;
+    } catch (err) {
+        console.error('Error getting routines by agent:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Get a specific routine by ID
+async function getRoutineById(routineId, userId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            `SELECT r.*, a.name as agent_name, a.status as agent_status
+             FROM routines r
+             INNER JOIN agents a ON a.id = r.agent_id
+             WHERE r.id = $1 AND r.user_id = $2`,
+            [routineId, userId]
+        );
+        return result.rows[0] || null;
+    } catch (err) {
+        console.error('Error getting routine by ID:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Create a new routine
+async function createRoutine(userId, routineData) {
+    const client = await pool.connect();
+    try {
+        const { agent_id, name, description, type, status, frequency, config } = routineData;
+        const result = await client.query(
+            `INSERT INTO routines (user_id, agent_id, name, description, type, status, frequency, config)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+             RETURNING *`,
+            [
+                userId,
+                agent_id,
+                name,
+                description || null,
+                type,
+                status || 'active',
+                frequency || 'manual',
+                config || null
+            ]
+        );
+        return result.rows[0];
+    } catch (err) {
+        console.error('Error creating routine:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Update a routine
+async function updateRoutine(routineId, userId, updates) {
+    const client = await pool.connect();
+    try {
+        const setClauses = [];
+        const values = [];
+        let paramCount = 1;
+
+        // Build dynamic SET clause
+        if (updates.name !== undefined) {
+            setClauses.push(`name = $${paramCount++}`);
+            values.push(updates.name);
+        }
+        if (updates.description !== undefined) {
+            setClauses.push(`description = $${paramCount++}`);
+            values.push(updates.description);
+        }
+        if (updates.type !== undefined) {
+            setClauses.push(`type = $${paramCount++}`);
+            values.push(updates.type);
+        }
+        if (updates.status !== undefined) {
+            setClauses.push(`status = $${paramCount++}`);
+            values.push(updates.status);
+        }
+        if (updates.frequency !== undefined) {
+            setClauses.push(`frequency = $${paramCount++}`);
+            values.push(updates.frequency);
+        }
+        if (updates.config !== undefined) {
+            setClauses.push(`config = $${paramCount++}`);
+            values.push(updates.config);
+        }
+        if (updates.last_run_at !== undefined) {
+            setClauses.push(`last_run_at = $${paramCount++}`);
+            values.push(updates.last_run_at);
+        }
+        if (updates.next_run_at !== undefined) {
+            setClauses.push(`next_run_at = $${paramCount++}`);
+            values.push(updates.next_run_at);
+        }
+
+        // Always update updated_at
+        setClauses.push(`updated_at = CURRENT_TIMESTAMP`);
+
+        // Add WHERE clause params
+        values.push(routineId, userId);
+
+        const query = `UPDATE routines SET ${setClauses.join(', ')}
+                       WHERE id = $${paramCount++} AND user_id = $${paramCount++}
+                       RETURNING *`;
+
+        const result = await client.query(query, values);
+        return result.rows[0] || null;
+    } catch (err) {
+        console.error('Error updating routine:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Delete a routine
+async function deleteRoutine(routineId, userId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            'DELETE FROM routines WHERE id = $1 AND user_id = $2 RETURNING *',
+            [routineId, userId]
+        );
+        return result.rows.length > 0;
+    } catch (err) {
+        console.error('Error deleting routine:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Get routines due for execution
+async function getRoutinesDueForExecution(currentTime = new Date()) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            `SELECT r.*, a.session_id as agent_session_id, a.workspace_path as agent_workspace_path
+             FROM routines r
+             INNER JOIN agents a ON a.id = r.agent_id
+             WHERE r.status = 'active'
+             AND a.status = 'active'
+             AND (r.next_run_at IS NULL OR r.next_run_at <= $1)
+             ORDER BY r.next_run_at ASC NULLS FIRST`,
+            [currentTime]
+        );
+        return result.rows;
+    } catch (err) {
+        console.error('Error getting routines due for execution:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Get execution history for a routine
+async function getRoutineExecutions(routineId, userId, limit = 50) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            `SELECT * FROM module_executions
+             WHERE routine_id = $1 AND user_id = $2 AND is_routine_execution = true
+             ORDER BY created_at DESC
+             LIMIT $3`,
+            [routineId, userId, limit]
+        );
+        return result.rows;
+    } catch (err) {
+        console.error('Error getting routine executions:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// ============================================
+// MODULE EXECUTION FUNCTIONS
+// ============================================
+
 // Get execution history for a module
 async function getModuleExecutions(moduleId, userId, limit = 50) {
     const client = await pool.connect();
@@ -1180,6 +1676,7 @@ async function updateTaskStatus(taskId, newStatus, updates = {}) {
             blocked_reason,
             approved_by,
             assigned_to_module_id,
+            assigned_to_agent_id,
             execution_id
         } = updates;
 
@@ -1208,6 +1705,10 @@ async function updateTaskStatus(taskId, newStatus, updates = {}) {
             if (assigned_to_module_id) {
                 setClauses.push(`assigned_to_module_id = $${paramCount++}`);
                 values.push(assigned_to_module_id);
+            }
+            if (assigned_to_agent_id) {
+                setClauses.push(`assigned_to_agent_id = $${paramCount++}`);
+                values.push(assigned_to_agent_id);
             }
         } else if (newStatus === 'rejected') {
             if (rejection_reasoning) {
@@ -2838,7 +3339,7 @@ async function createReport(userId, reportData) {
 }
 
 // Get reports by user ID with optional filters
-async function getReportsByUserId(userId, filters = {}, limit = 50) {
+async function getReportsByUserId(userId, filters = {}, limit = 50, offset = 0) {
     const client = await pool.connect();
     try {
         const {
@@ -2869,8 +3370,8 @@ async function getReportsByUserId(userId, filters = {}, limit = 50) {
             paramCount++;
         }
 
-        query += ` ORDER BY report_date DESC, created_at DESC LIMIT $${paramCount}`;
-        values.push(limit);
+        query += ` ORDER BY report_date DESC, created_at DESC LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
+        values.push(limit, offset);
 
         const result = await client.query(query, values);
         return result.rows;
@@ -2900,6 +3401,23 @@ async function getReportsByDate(userId, reportDate, reportType = null) {
         return result.rows;
     } catch (err) {
         console.error('Error getting reports by date:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Get a specific report by ID
+async function getReportById(reportId, userId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            'SELECT * FROM reports WHERE id = $1 AND user_id = $2',
+            [reportId, userId]
+        );
+        return result.rows[0] || null;
+    } catch (err) {
+        console.error('Error getting report by ID:', err);
         throw err;
     } finally {
         client.release();
@@ -2971,6 +3489,27 @@ module.exports = {
     createModuleExecution,
     updateModuleExecution,
     getActiveModulesForScheduling,
+    // Agent functions (task-driven AI agents)
+    getAgentsByUserId,
+    getAgentById,
+    createAgent,
+    updateAgent,
+    deleteAgent,
+    getTasksByAgentId,
+    getAgentExecutions,
+    updateAgentSession,
+    incrementAgentRoutineRuns,
+    incrementAgentTaskCompletions,
+    getAgentWithRoutines,
+    // Routine functions (scheduled agent tasks)
+    getRoutinesByUserId,
+    getRoutinesByAgentId,
+    getRoutineById,
+    createRoutine,
+    updateRoutine,
+    deleteRoutine,
+    getRoutinesDueForExecution,
+    getRoutineExecutions,
     // Execution log functions
     saveExecutionLog,
     getExecutionLogs,
@@ -3017,4 +3556,5 @@ module.exports = {
     createReport,
     getReportsByUserId,
     getReportsByDate,
+    getReportById,
 };

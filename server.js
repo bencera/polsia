@@ -113,7 +113,7 @@ function authenticateTokenFromQuery(req, res, next) {
 }
 
 // Serve React app for all routes (including landing page)
-app.get(['/', '/login', '/dashboard', '/modules', '/connections'], (req, res) => {
+app.get(['/', '/login', '/dashboard', '/modules', '/connections', '/brain', '/documents', '/analytics', '/tasks', '/agents'], (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'app', 'index.html'));
 });
 
@@ -417,6 +417,14 @@ app.use('/api/modules', authenticateToken, moduleRoutes);
 const taskRoutes = require('./routes/task-routes');
 app.use('/api/tasks', authenticateToken, taskRoutes);
 
+// Agents Routes - Task-driven AI agents system
+const agentsRoutes = require('./routes/agents-routes');
+app.use('/api/agents', authenticateToken, agentsRoutes);
+
+// Routine Routes - Scheduled agent tasks with session persistence
+const routineRoutes = require('./routes/routine-routes');
+app.use('/api/routines', authenticateToken, routineRoutes);
+
 // Social Media Routes - Late.dev integration for social media management
 const socialRoutes = require('./routes/social-routes');
 app.use('/api/social', authenticateToken, socialRoutes);
@@ -428,6 +436,14 @@ app.use('/api/ai', authenticateToken, aiGenerationRoutes);
 // Document Store Routes - Manage company documents (vision, goals, analytics, memory)
 const documentRoutes = require('./routes/document-routes');
 app.use('/api/documents', authenticateToken, documentRoutes);
+
+// Reports Routes - Access and manage reports by category
+const reportRoutes = require('./routes/reports-routes');
+app.use('/api/reports', authenticateToken, reportRoutes);
+
+// Tools Routes - MCP server catalog and system tools
+const toolsRoutes = require('./routes/tools-routes');
+app.use('/api/tools', authenticateToken, toolsRoutes);
 
 // Brain Routes - Brain orchestrator status and control
 const brainRoutes = require('./routes/brain-routes');

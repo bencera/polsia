@@ -6,7 +6,6 @@ import './Dashboard.css';
 
 function Dashboard() {
   const [tasks, setTasks] = useState([]);
-  const [brainStatus, setBrainStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const { token } = useAuth();
@@ -14,7 +13,6 @@ function Dashboard() {
 
   useEffect(() => {
     fetchTasks();
-    fetchBrainStatus();
   }, []);
 
   const fetchTasks = async () => {
@@ -36,24 +34,6 @@ function Dashboard() {
       setError('Failed to load tasks. Please try again.');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchBrainStatus = async () => {
-    try {
-      const response = await fetch('/api/brain/status', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setBrainStatus(data);
-      }
-    } catch (err) {
-      console.error('Failed to fetch Brain status:', err);
     }
   };
 
@@ -124,32 +104,6 @@ function Dashboard() {
         {error && (
           <div className="status-message error">
             <p>{error}</p>
-          </div>
-        )}
-
-        {/* Brain Status Card */}
-        {brainStatus && (
-          <div className="brain-status-preview">
-            <div className="brain-status-header">
-              <h3>🧠 Brain Status</h3>
-              <a href="/brain" className="view-brain-link">View Details →</a>
-            </div>
-            {brainStatus.status === 'never_run' ? (
-              <p className="brain-status-text">The Brain has not run yet. <a href="/brain">Trigger your first cycle →</a></p>
-            ) : (
-              <div className="brain-status-content">
-                <p className="brain-last-run">Last run: {formatTimeAgo(brainStatus.last_decision.created_at)}</p>
-                <p className="brain-last-action">
-                  <strong>Action:</strong> {brainStatus.last_decision.action}
-                </p>
-                <p className="brain-execution-status">
-                  <strong>Status:</strong>{' '}
-                  <span className={`status-badge status-${brainStatus.last_decision.execution_status}`}>
-                    {brainStatus.last_decision.execution_status || 'pending'}
-                  </span>
-                </p>
-              </div>
-            )}
           </div>
         )}
 

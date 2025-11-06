@@ -23,6 +23,8 @@ const { generateTaskSummary } = require('./summary-generator');
 const { summarizeRecentEmails } = require('./email-summarizer');
 const { setupGmailMCPCredentials, cleanupGmailMCPCredentials } = require('./gmail-mcp-setup');
 const { runDataAgent } = require('./data-agent');
+const { getDocumentStore } = require('./document-store');
+const { runAgentWithTask } = require('./agent-executor');
 
 /**
  * Run a module and track its execution
@@ -30,9 +32,17 @@ const { runDataAgent } = require('./data-agent');
  * @param {number} userId - The user ID who owns the module
  * @param {Object} options - Execution options
  * @param {string} options.trigger_type - How was this triggered? ('manual', 'scheduled', 'auto')
+ * @param {number} options.agentId - Agent ID (for agent execution)
+ * @param {number} options.taskId - Task ID (for agent execution)
  * @returns {Promise<Object>} Execution result
  */
 async function runModule(moduleId, userId, options = {}) {
+    // Check if this is an agent execution (task-driven)
+    if (options.agentId && options.taskId) {
+        console.log(`[Agent Runner] Routing to agent executor: Agent ${options.agentId}, Task ${options.taskId}`);
+        return await runAgentWithTask(options.agentId, options.taskId, userId, options);
+    }
+
     const startTime = Date.now();
     const { trigger_type = 'manual' } = options;
 
@@ -134,7 +144,8 @@ async function runModule(moduleId, userId, options = {}) {
         console.log(`[Agent Runner] 🤖 Starting AI execution...`);
         console.log(`[Agent Runner] Prompt: ${context.prompt.substring(0, 100)}...`);
 
-        const result = await executeTask(context.prompt, {
+        // Build executeTask options
+        const executeOptions = {
             cwd: workspace,
             maxTurns: context.maxTurns || 20,
             mcpServers: context.mcpServers,
@@ -183,7 +194,15 @@ async function runModule(moduleId, userId, options = {}) {
                     });
                 }
             },
-        });
+        };
+
+        // Add claudeMd parameter if Brain CEO module (loads vision/goals as system prompt)
+        if (context.claudeMd) {
+            executeOptions.claudeMd = context.claudeMd;
+            console.log('[Agent Runner] Including claudeMd system prompt (vision/goals)');
+        }
+
+        const result = await executeTask(context.prompt, executeOptions);
 
         console.log(`[Agent Runner] ✓ AI execution completed. Success: ${result.success}`);
 
@@ -355,10 +374,34 @@ async function prepareModuleContext(module, userId) {
     // 3. Set execution parameters
     const maxTurns = config.maxTurns || 20;
 
+    // 4. For Brain CEO module, load vision and goals as claudeMd system prompt
+    let claudeMd = null;
+    if (module.type === 'brain_ceo') {
+        console.log('[Agent Runner] Brain CEO module detected - loading vision and goals as claudeMd');
+        try {
+            const documents = await getDocumentStore(userId);
+            if (documents) {
+                // Combine vision and goals into a single markdown document
+                const visionMd = documents.vision_md || '# Company Vision\n\n(No vision document defined yet)';
+                const goalsMd = documents.goals_md || '# Company Goals\n\n(No goals defined yet)';
+
+                claudeMd = `${visionMd}\n\n---\n\n${goalsMd}`;
+                console.log(`[Agent Runner] Loaded vision and goals (${claudeMd.length} chars)`);
+            } else {
+                console.warn('[Agent Runner] No document store found for user - using default vision/goals');
+                claudeMd = `# Company Vision\n\n(No vision document defined yet)\n\n---\n\n# Company Goals\n\n(No goals defined yet)`;
+            }
+        } catch (err) {
+            console.error('[Agent Runner] Failed to load document store:', err);
+            claudeMd = `# Company Vision\n\n(Error loading vision)\n\n---\n\n# Company Goals\n\n(Error loading goals)`;
+        }
+    }
+
     return {
         prompt,
         mcpServers,
         maxTurns,
+        claudeMd,
     };
 }
 
@@ -678,6 +721,16 @@ async function configureMCPServers(module, userId, config) {
                 args: [serverPath, ...args],
             };
             console.log(`[Agent Runner] Configured Task Management MCP server (database-backed, module: ${module?.id || 'none'})`);
+        } else if (mcpName === 'capabilities') {
+            // Custom Capabilities MCP server - allows agents to query system capabilities
+            // Exposes available modules, their tools, and MCP server catalog
+            // No OAuth tokens needed - uses database directly with user_id scope
+            const serverPath = require('path').join(__dirname, 'capabilities-custom-mcp-server.js');
+            mcpServers.capabilities = {
+                command: 'node',
+                args: [serverPath, `--user-id=${userId}`],
+            };
+            console.log('[Agent Runner] Configured Capabilities MCP server (system introspection)');
         }
         // Add more MCP server types here (notion, etc.)
         // Note: 'fal-ai' is handled via prompt augmentation in buildModulePrompt(),

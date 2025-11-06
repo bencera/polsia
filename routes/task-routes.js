@@ -379,4 +379,69 @@ router.post('/:id/reject', async (req, res) => {
     }
 });
 
+/**
+ * POST /api/tasks/:id/assign
+ * Assign a task to an agent or module
+ * Body: { agentId?: number, moduleId?: number }
+ */
+router.post('/:id/assign', async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const taskId = parseInt(req.params.id);
+        const { agentId, moduleId } = req.body;
+
+        // Validate that either agentId or moduleId is provided (but not both)
+        if (!agentId && !moduleId) {
+            return res.status(400).json({
+                success: false,
+                error: 'Either agentId or moduleId must be provided'
+            });
+        }
+
+        if (agentId && moduleId) {
+            return res.status(400).json({
+                success: false,
+                error: 'Cannot assign to both agent and module. Choose one.'
+            });
+        }
+
+        // Verify task belongs to user
+        const existingTask = await getTaskById(taskId, userId);
+        if (!existingTask) {
+            return res.status(404).json({
+                success: false,
+                error: 'Task not found'
+            });
+        }
+
+        // Update task assignment
+        const updates = {
+            changed_by: 'user'
+        };
+
+        if (agentId) {
+            updates.assigned_to_agent_id = agentId;
+            updates.assigned_to_module_id = null; // Clear module assignment
+        } else {
+            updates.assigned_to_module_id = moduleId;
+            updates.assigned_to_agent_id = null; // Clear agent assignment
+        }
+
+        const task = await updateTaskStatus(taskId, existingTask.status, updates);
+
+        res.json({
+            success: true,
+            message: `Task assigned to ${agentId ? 'agent' : 'module'}`,
+            task
+        });
+    } catch (error) {
+        console.error('Error assigning task:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to assign task',
+            message: error.message
+        });
+    }
+});
+
 module.exports = router;

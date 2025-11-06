@@ -223,7 +223,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             },
             {
                 name: 'approve_task',
-                description: 'Approve a suggested task and optionally assign it to a module. CEO Brain agent uses this to approve proposed work.',
+                description: 'Approve a suggested task and optionally assign it to a module or agent. CEO Brain uses this to approve proposed work.',
                 inputSchema: {
                     type: 'object',
                     properties: {
@@ -237,7 +237,11 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
                         },
                         assign_to_module_id: {
                             type: 'number',
-                            description: 'Module ID to assign this task to'
+                            description: 'Module ID to assign this task to (for scheduled modules)'
+                        },
+                        assign_to_agent_id: {
+                            type: 'number',
+                            description: 'Agent ID to assign this task to (for task-driven agents)'
                         },
                         approved_by: {
                             type: 'string',
@@ -506,21 +510,32 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             }
 
             case 'approve_task': {
-                const { task_id, approval_reasoning, assign_to_module_id, approved_by = 'ceo_brain' } = args;
+                const { task_id, approval_reasoning, assign_to_module_id, assign_to_agent_id, approved_by = 'ceo_brain' } = args;
 
-                const task = await updateTaskStatus(task_id, 'approved', {
+                // Prepare updates object
+                const updates = {
                     changed_by: approved_by,
                     approval_reasoning,
                     approved_by,
-                    assigned_to_module_id: assign_to_module_id || null
-                });
+                };
+
+                // Handle assignment (agent takes precedence over module if both provided)
+                if (assign_to_agent_id) {
+                    updates.assigned_to_agent_id = assign_to_agent_id;
+                    updates.assigned_to_module_id = null; // Clear module assignment
+                } else if (assign_to_module_id) {
+                    updates.assigned_to_module_id = assign_to_module_id;
+                    updates.assigned_to_agent_id = null; // Clear agent assignment
+                }
+
+                const task = await updateTaskStatus(task_id, 'approved', updates);
 
                 return {
                     content: [{
                         type: 'text',
                         text: JSON.stringify({
                             success: true,
-                            message: 'Task approved successfully. Status: approved (ready for execution)',
+                            message: `Task approved successfully. Status: approved (ready for execution)${assign_to_agent_id ? ' - Assigned to agent' : assign_to_module_id ? ' - Assigned to module' : ''}`,
                             task: {
                                 id: task.id,
                                 title: task.title,
@@ -528,7 +543,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                                 approval_reasoning: task.approval_reasoning,
                                 approved_by: task.approved_by,
                                 approved_at: task.approved_at,
-                                assigned_to_module_id: task.assigned_to_module_id
+                                assigned_to_module_id: task.assigned_to_module_id,
+                                assigned_to_agent_id: task.assigned_to_agent_id
                             }
                         }, null, 2)
                     }]

@@ -2,21 +2,28 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTerminal } from '../contexts/TerminalContext';
 import Navbar from '../components/Navbar';
+import ReportCategory from '../components/ReportCategory';
+import DocumentViewer from '../components/DocumentViewer';
 import './Documents.css';
 
 function Documents() {
   const [documents, setDocuments] = useState(null);
-  const [activeTab, setActiveTab] = useState('vision');
-  const [editing, setEditing] = useState(false);
-  const [editContent, setEditContent] = useState('');
-  const [saving, setSaving] = useState(false);
+  const [reportTypes, setReportTypes] = useState([]);
+  const [reportsByType, setReportsByType] = useState({});
+  const [reportOffsets, setReportOffsets] = useState({});
   const [loading, setLoading] = useState(true);
+  const [loadingReports, setLoadingReports] = useState({});
   const [error, setError] = useState('');
+
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerData, setViewerData] = useState(null);
+
   const { token } = useAuth();
   const { terminalLogs } = useTerminal();
 
   useEffect(() => {
     fetchDocuments();
+    fetchReportTypes();
   }, []);
 
   const fetchDocuments = async () => {
@@ -41,29 +48,102 @@ function Documents() {
     }
   };
 
-  const startEditing = () => {
-    const content = activeTab === 'vision' ? documents.vision_md : documents.goals_md;
-    setEditContent(content);
-    setEditing(true);
+  const fetchReportTypes = async () => {
+    try {
+      const response = await fetch('/api/reports/types', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setReportTypes(data.types || []);
+        // Load initial reports for each type
+        data.types.forEach(type => {
+          fetchReportsForType(type.report_type, 0);
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching report types:', err);
+    }
   };
 
-  const cancelEditing = () => {
-    setEditing(false);
-    setEditContent('');
-  };
-
-  const saveDocument = async () => {
-    setSaving(true);
-    setError('');
+  const fetchReportsForType = async (reportType, offset = 0) => {
+    setLoadingReports(prev => ({ ...prev, [reportType]: true }));
 
     try {
-      const response = await fetch(`/api/documents/${activeTab}`, {
+      const response = await fetch(
+        `/api/reports/type/${encodeURIComponent(reportType)}?limit=5&offset=${offset}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setReportsByType(prev => ({
+          ...prev,
+          [reportType]: offset === 0
+            ? data.reports
+            : [...(prev[reportType] || []), ...data.reports]
+        }));
+
+        setReportOffsets(prev => ({
+          ...prev,
+          [reportType]: offset + data.reports.length
+        }));
+      }
+    } catch (err) {
+      console.error(`Error fetching reports for ${reportType}:`, err);
+    } finally {
+      setLoadingReports(prev => ({ ...prev, [reportType]: false }));
+    }
+  };
+
+  const handleLoadMoreReports = (reportType) => {
+    const currentOffset = reportOffsets[reportType] || 0;
+    fetchReportsForType(reportType, currentOffset);
+  };
+
+  const openDocumentViewer = (title, content, lastUpdated, canEdit, docType) => {
+    setViewerData({
+      title,
+      content,
+      lastUpdated,
+      canEdit,
+      type: 'document',
+      docType
+    });
+    setViewerOpen(true);
+  };
+
+  const openReportViewer = (report) => {
+    setViewerData({
+      title: report.name,
+      content: report.content,
+      lastUpdated: report.created_at,
+      canEdit: false,
+      type: 'report'
+    });
+    setViewerOpen(true);
+  };
+
+  const handleSaveDocument = async (content) => {
+    if (!viewerData || !viewerData.docType) return;
+
+    try {
+      const response = await fetch(`/api/documents/${viewerData.docType}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ content: editContent })
+        body: JSON.stringify({ content })
       });
 
       const data = await response.json();
@@ -72,21 +152,24 @@ function Documents() {
         // Update local state
         setDocuments({
           ...documents,
-          [`${activeTab}_md`]: editContent,
+          [`${viewerData.docType}_md`]: content,
           updated_at: data.document.updated_at
         });
-        setEditing(false);
-        setEditContent('');
+
+        // Update viewer data
+        setViewerData({
+          ...viewerData,
+          content: content,
+          lastUpdated: data.document.updated_at
+        });
+
         alert('Document saved successfully!');
       } else {
-        setError(data.message || 'Failed to save document');
-        alert('Failed to save document: ' + (data.message || 'Unknown error'));
+        throw new Error(data.message || 'Failed to save document');
       }
     } catch (err) {
-      setError('Failed to save document. Please try again.');
-      alert('Failed to save document. Please try again.');
-    } finally {
-      setSaving(false);
+      console.error('Error saving document:', err);
+      throw err;
     }
   };
 
@@ -97,31 +180,29 @@ function Documents() {
 
   const displayLogs = terminalLogs.slice(-4);
 
-  const getTabContent = () => {
-    if (!documents) return '';
-
-    switch (activeTab) {
-      case 'vision':
-        return documents.vision_md;
-      case 'goals':
-        return documents.goals_md;
-      case 'analytics':
-        return documents.analytics_md;
-      case 'memory':
-        return documents.memory_md;
-      default:
-        return '';
+  const highLevelDocs = documents ? [
+    {
+      id: 'vision',
+      title: 'Vision',
+      description: 'Your company\'s long-term vision and strategic direction',
+      content: documents.vision_md,
+      canEdit: true
+    },
+    {
+      id: 'goals',
+      title: 'Goals',
+      description: 'Current objectives and key results (OKRs)',
+      content: documents.goals_md,
+      canEdit: true
     }
-  };
-
-  const canEdit = activeTab === 'vision' || activeTab === 'goals';
+  ] : [];
 
   return (
     <div className="documents-container">
       <div className="terminal">
         {displayLogs.length === 0 ? (
           <>
-            <div>&gt; Document Store Manager</div>
+            <div>&gt; Document Library</div>
             <div>&nbsp;</div>
             <div>&nbsp;</div>
             <div>&nbsp;</div>
@@ -158,103 +239,90 @@ function Documents() {
         {!loading && documents && (
           <>
             <div className="documents-header">
-              <h1>📄 Company Documents</h1>
+              <h1>Documents & Reports</h1>
               <p className="documents-subtitle">
-                Manage your company's vision, goals, and view analytics generated by the Brain.
+                Strategic documents and auto-generated business reports
               </p>
             </div>
 
-            {/* Tab Navigation */}
-            <div className="tab-navigation">
-              <button
-                className={`tab-button ${activeTab === 'vision' ? 'active' : ''}`}
-                onClick={() => { setActiveTab('vision'); setEditing(false); }}
-              >
-                🎯 Vision
-              </button>
-              <button
-                className={`tab-button ${activeTab === 'goals' ? 'active' : ''}`}
-                onClick={() => { setActiveTab('goals'); setEditing(false); }}
-              >
-                🎯 Goals
-              </button>
-              <button
-                className={`tab-button ${activeTab === 'analytics' ? 'active' : ''}`}
-                onClick={() => { setActiveTab('analytics'); setEditing(false); }}
-              >
-                📊 Analytics
-              </button>
-              <button
-                className={`tab-button ${activeTab === 'memory' ? 'active' : ''}`}
-                onClick={() => { setActiveTab('memory'); setEditing(false); }}
-              >
-                🧠 Memory
-              </button>
-            </div>
-
-            {/* Document Content */}
-            <div className="document-viewer">
-              <div className="document-header">
-                <h2>{activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</h2>
-                <div className="document-actions">
-                  {canEdit && !editing && (
-                    <button className="edit-button" onClick={startEditing}>
-                      Edit
-                    </button>
-                  )}
-                  {editing && (
-                    <>
-                      <button className="cancel-button" onClick={cancelEditing}>
-                        Cancel
-                      </button>
-                      <button
-                        className="save-button"
-                        onClick={saveDocument}
-                        disabled={saving}
-                      >
-                        {saving ? 'Saving...' : 'Save'}
-                      </button>
-                    </>
-                  )}
-                  {!canEdit && (
-                    <span className="read-only-badge">Read-only (Auto-managed by Brain)</span>
-                  )}
-                </div>
+            {/* High-Level Documents */}
+            <section className="documents-section">
+              <h2 className="section-title">Strategic Documents</h2>
+              <div className="documents-list">
+                {highLevelDocs.map(doc => (
+                  <div
+                    key={doc.id}
+                    className="document-list-item"
+                    onClick={() => openDocumentViewer(
+                      doc.title,
+                      doc.content,
+                      documents.updated_at,
+                      doc.canEdit,
+                      doc.id
+                    )}
+                  >
+                    <div className="document-list-item-main">
+                      <h3 className="document-list-item-title">{doc.title}</h3>
+                      <p className="document-list-item-description">{doc.description}</p>
+                      <div className="document-list-item-meta">
+                        {doc.canEdit ? (
+                          <span className="document-list-item-badge">Editable</span>
+                        ) : (
+                          <span className="document-list-item-badge auto">Auto-managed</span>
+                        )}
+                        {doc.content && doc.content.trim().length > 0 && (
+                          <span className="document-list-item-status">
+                            {doc.content.length} characters
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <button className="document-list-item-view">View →</button>
+                  </div>
+                ))}
               </div>
+            </section>
 
-              {editing ? (
-                <textarea
-                  className="document-editor"
-                  value={editContent}
-                  onChange={(e) => setEditContent(e.target.value)}
-                  placeholder={`Enter your company's ${activeTab}...`}
-                />
+            {/* Reports by Category */}
+            <section className="reports-section">
+              <h2 className="section-title">Business Reports</h2>
+
+              {reportTypes.length === 0 ? (
+                <p className="empty-state">
+                  No reports yet. Reports will appear here as your agents generate them.
+                </p>
               ) : (
-                <div className="document-content">
-                  {getTabContent() ? (
-                    <pre>{getTabContent()}</pre>
-                  ) : (
-                    <p className="empty-state">No content yet. {canEdit && 'Click Edit to get started!'}</p>
-                  )}
+                <div className="reports-categories">
+                  {reportTypes.map(type => (
+                    <ReportCategory
+                      key={type.report_type}
+                      categoryName={type.report_type}
+                      reportCount={type.count}
+                      reports={reportsByType[type.report_type] || []}
+                      onReportClick={openReportViewer}
+                      onLoadMore={() => handleLoadMoreReports(type.report_type)}
+                      hasMore={(reportsByType[type.report_type]?.length || 0) < type.count}
+                      loading={loadingReports[type.report_type] || false}
+                    />
+                  ))}
                 </div>
               )}
-
-              {activeTab === 'analytics' && documents.analytics_json && Object.keys(documents.analytics_json).length > 0 && (
-                <details className="analytics-json">
-                  <summary>View Structured Data (JSON)</summary>
-                  <pre>{JSON.stringify(documents.analytics_json, null, 2)}</pre>
-                </details>
-              )}
-            </div>
-
-            {documents.updated_at && (
-              <div className="document-footer">
-                Last updated: {new Date(documents.updated_at).toLocaleString()}
-              </div>
-            )}
+            </section>
           </>
         )}
       </div>
+
+      {/* Document/Report Viewer Modal */}
+      <DocumentViewer
+        isOpen={viewerOpen}
+        onClose={() => setViewerOpen(false)}
+        title={viewerData?.title || ''}
+        content={viewerData?.content || ''}
+        lastUpdated={viewerData?.lastUpdated}
+        canEdit={viewerData?.canEdit || false}
+        onSave={viewerData?.canEdit ? handleSaveDocument : null}
+        type={viewerData?.type || 'document'}
+      />
 
       <footer className="footer">
         <p className="footer-contact">Contact: <a href="mailto:system@polsia.ai">system@polsia.ai</a></p>

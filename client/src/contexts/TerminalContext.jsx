@@ -209,6 +209,62 @@ export function TerminalProvider({ children }) {
     }
   };
 
+  // Manually trigger a routine execution (called from Routines page)
+  const runRoutine = async (routineId, routineName) => {
+    try {
+      // Add a starting log message
+      const startLog = {
+        id: Date.now(),
+        timestamp: new Date().toISOString(),
+        log_level: 'info',
+        stage: 'init',
+        message: `Starting routine: ${routineName}`
+      };
+      setTerminalLogs(prev => [...prev, startLog]);
+
+      const response = await fetch(`/api/routines/${routineId}/run`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to trigger routine execution');
+      }
+
+      const data = await response.json();
+
+      // Get the execution ID from the response
+      if (data.execution && data.execution.id) {
+        // Note: For routines, we need to use a different stream endpoint
+        // For now, we'll just show the trigger log
+        // TODO: Implement routine-specific log streaming if needed
+        const successLog = {
+          id: Date.now() + 1,
+          timestamp: new Date().toISOString(),
+          log_level: 'info',
+          stage: 'triggered',
+          message: `Routine "${routineName}" triggered successfully (Execution ID: ${data.execution.id})`
+        };
+        setTerminalLogs(prev => [...prev, successLog]);
+      }
+
+      return true;
+    } catch (err) {
+      console.error('[TerminalContext] Error running routine:', err);
+      const errorLog = {
+        id: Date.now() + 2,
+        timestamp: new Date().toISOString(),
+        log_level: 'error',
+        stage: 'error',
+        message: `Failed to run routine: ${err.message}`
+      };
+      setTerminalLogs(prev => [...prev, errorLog]);
+      return false;
+    }
+  };
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -224,6 +280,7 @@ export function TerminalProvider({ children }) {
     activeExecutionId,
     activeModuleId,
     runModule,
+    runRoutine,
     isStreaming: activeExecutionId !== null,
   };
 

@@ -5,7 +5,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
-import Modules from './pages/Modules';
+import Routines from './pages/Routines';
 import Connections from './pages/Connections';
 import Brain from './pages/Brain';
 import Documents from './pages/Documents';
@@ -68,10 +68,10 @@ function App() {
               }
             />
             <Route
-              path="/modules"
+              path="/routines"
               element={
                 <ProtectedRoute>
-                  <Modules />
+                  <Routines />
                 </ProtectedRoute>
               }
             />
