@@ -138,6 +138,18 @@ function createFilesystemRestrictionHook(allowedDir) {
   return async (input) => {
     const toolName = input.tool_name;
 
+    // Block git commands in Bash - agents should use GitHub MCP instead
+    if (toolName === 'Bash' && input.tool_input?.command) {
+      const command = input.tool_input.command.toLowerCase();
+      if (command.includes('git ') || command.startsWith('git')) {
+        console.warn(`[Filesystem Guard] 🚫 Blocked git command: ${input.tool_input.command}`);
+        return {
+          decision: 'block',
+          reason: 'Git commands are not allowed via Bash. Please use the GitHub MCP server for git operations on user repositories.'
+        };
+      }
+    }
+
     // Only check file operation tools
     if (!['Read', 'Write', 'Edit', 'Glob', 'Grep'].includes(toolName)) {
       return { decision: 'approve' };
