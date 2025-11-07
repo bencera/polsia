@@ -74,7 +74,10 @@ function Landing() {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ email: trimmedEmail }),
+          body: JSON.stringify({
+            email: trimmedEmail,
+            variant: variant // Send variant to backend for tracking
+          }),
         });
 
         const data = await response.json();
@@ -83,10 +86,10 @@ function Landing() {
           setButtonText('ADDED TO QUEUE');
           setEmail('');
 
+          // Redirect to Typeform with pre-filled email
           setTimeout(() => {
-            setButtonText('Join Waitlist');
-            setButtonDisabled(false);
-          }, 3000);
+            window.location.href = `https://form.typeform.com/to/W4lyrtBc#email=${encodeURIComponent(trimmedEmail)}`;
+          }, 800);
         } else {
           throw new Error(data.message || 'Failed to join waitlist');
         }

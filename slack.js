@@ -39,9 +39,24 @@ class SlackNotificationService {
         }
     }
 
-    async notifyWaitlistSignup(email) {
+    async notifyWaitlistSignup(email, variant = 'autonomous') {
+        const variantEmojis = {
+            cofounder: '🤝',
+            autonomous: '🤖',
+            invest: '💰'
+        };
+
+        const variantNames = {
+            cofounder: 'AI Co-Founder',
+            autonomous: 'Autonomous',
+            invest: 'Investment'
+        };
+
+        const emoji = variantEmojis[variant] || '🤖';
+        const variantName = variantNames[variant] || 'Autonomous';
+
         const message = {
-            text: `New waitlist signup: ${email}`,
+            text: `New waitlist signup: ${email} (${variantName} variant)`,
             blocks: [
                 {
                     type: 'header',
@@ -60,6 +75,10 @@ class SlackNotificationService {
                         {
                             type: 'mrkdwn',
                             text: `*Time:*\n${new Date().toLocaleString()}`
+                        },
+                        {
+                            type: 'mrkdwn',
+                            text: `*Landing Variant:*\n${emoji} ${variantName}`
                         }
                     ]
                 },

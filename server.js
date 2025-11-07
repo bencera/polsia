@@ -230,7 +230,7 @@ app.put('/api/connections/:id', authenticateToken, async (req, res) => {
 
 // API endpoint for waitlist
 app.post('/api/waitlist', async (req, res) => {
-    const { email } = req.body;
+    const { email, variant } = req.body;
 
     if (!email || !email.trim()) {
         return res.status(400).json({ success: false, message: 'Email is required' });
@@ -238,11 +238,11 @@ app.post('/api/waitlist', async (req, res) => {
 
     try {
         const result = await addToWaitlist(email.trim().toLowerCase());
-        console.log('Waitlist signup:', email);
+        console.log('Waitlist signup:', email, 'from variant:', variant || 'default');
 
         // Send Slack notification for new signups
         if (result.success && result.data) {
-            await slackService.notifyWaitlistSignup(email.trim().toLowerCase());
+            await slackService.notifyWaitlistSignup(email.trim().toLowerCase(), variant);
         }
 
         res.json(result);
