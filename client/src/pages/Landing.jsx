@@ -86,6 +86,16 @@ function Landing() {
           setButtonText('ADDED TO QUEUE');
           setEmail('');
 
+          // Fire Meta Pixel Lead event
+          if (window.fbq) {
+            window.fbq('track', 'Lead', {
+              content_name: 'Waitlist Signup',
+              content_category: variant,
+              value: 0,
+              currency: 'USD'
+            });
+          }
+
           // Redirect to Typeform with pre-filled email and variant
           setTimeout(() => {
             window.location.href = `https://form.typeform.com/to/W4lyrtBc#email=${encodeURIComponent(trimmedEmail)}&variant=${variant}`;
