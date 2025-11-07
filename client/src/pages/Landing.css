@@ -6,6 +6,7 @@
   color: #000;
   line-height: 1.6;
   padding: 0 20px 40px 20px;
+  padding-top: 0;
   min-height: 100vh;
   max-width: 850px;
   margin: 0 auto;
@@ -17,7 +18,7 @@
   color: #fff;
   font-family: 'Courier New', Courier, monospace;
   padding: 10px 15px;
-  margin-top: 10px;
+  margin-top: 0;
   margin-bottom: 30px;
   font-size: 13px;
 }
@@ -160,7 +161,7 @@
 /* Responsive Design */
 @media (max-width: 768px) {
   .landing-container {
-    padding: 20px 15px;
+    padding: 0 15px 20px 15px;
   }
 
   .intro h1 {
