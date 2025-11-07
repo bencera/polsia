@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import './Landing.css';
 
 const STATUS_MESSAGES = [
@@ -12,7 +12,29 @@ const STATUS_MESSAGES = [
   '> Fixing security holes...',
 ];
 
+// Landing page copy variants for A/B testing
+const COPY_VARIANTS = {
+  cofounder: {
+    tagline: 'Your AI Co-Founder Who Never Sleeps.',
+    description: 'Polsia works alongside your team like a technical co-founder. It builds features, fixes bugs, ships products, and runs marketing campaigns while you focus on vision and strategy. Available 24/7, learning your business, and scaling with your ambitions.'
+  },
+  autonomous: {
+    tagline: 'AI That Runs Your Company While You Sleep.',
+    description: 'Polsia thinks, builds, and markets your projects autonomously. It plans, codes, and promotes your ideas continuously — operating 24/7, adapting to data, and improving itself without human intervention.'
+  },
+  invest: {
+    tagline: 'Invest in a Portfolio of AI-Run Companies.',
+    description: 'Polsia lets you build a portfolio of fully autonomous companies that run without human labor. From product development to customer acquisition to scaling — every function is AI-driven. Invest in ventures that compound 24/7 while you sleep.'
+  }
+};
+
 function Landing() {
+  const [searchParams] = useSearchParams();
+  const variant = searchParams.get('variant') || 'autonomous'; // Default to autonomous
+
+  // Get copy for current variant, fallback to autonomous if invalid variant
+  const copy = COPY_VARIANTS[variant] || COPY_VARIANTS.autonomous;
+
   const [email, setEmail] = useState('');
   const [buttonText, setButtonText] = useState('Join Waitlist');
   const [buttonDisabled, setButtonDisabled] = useState(false);
@@ -100,11 +122,9 @@ function Landing() {
       {/* Main Intro Section */}
       <section className="intro">
         <h1>Polsia</h1>
-        <p className="tagline">The Autonomous System that Runs Your Company While You Sleep.</p>
+        <p className="tagline">{copy.tagline}</p>
         <p className="description">
-          Polsia thinks, builds, and markets your projects autonomously.
-          It plans, codes, and promotes your ideas continuously — operating 24/7,
-          adapting to data, and improving itself without human intervention.
+          {copy.description}
         </p>
 
         {/* CTA */}
