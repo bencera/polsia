@@ -86,9 +86,9 @@ function Landing() {
           setButtonText('ADDED TO QUEUE');
           setEmail('');
 
-          // Redirect to Typeform with pre-filled email
+          // Redirect to Typeform with pre-filled email and variant
           setTimeout(() => {
-            window.location.href = `https://form.typeform.com/to/W4lyrtBc#email=${encodeURIComponent(trimmedEmail)}`;
+            window.location.href = `https://form.typeform.com/to/W4lyrtBc#email=${encodeURIComponent(trimmedEmail)}&variant=${variant}`;
           }, 800);
         } else {
           throw new Error(data.message || 'Failed to join waitlist');
