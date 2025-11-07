@@ -164,7 +164,7 @@ function Landing() {
       {/* Footer */}
       <footer className="footer">
         <p className="footer-note">Warning: System operates independently. Human oversight recommended.</p>
-        <p className="footer-contact">Contact: <a href="mailto:system@polsia.ai">system@polsia.ai</a></p>
+        <p className="footer-contact">Contact: <a href="mailto:system@polsia.com">system@polsia.com</a></p>
       </footer>
     </div>
   );

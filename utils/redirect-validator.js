@@ -13,6 +13,8 @@ const ALLOWED_ORIGINS = [
     'https://polsia.onrender.com',  // Render production deployment
     'https://polsia.ai',            // Production domain
     'https://www.polsia.ai',        // Production domain with www
+    'https://polsia.com',           // Production domain (.com)
+    'https://www.polsia.com',       // Production domain with www (.com)
 ];
 
 /**
