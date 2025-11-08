@@ -15,6 +15,7 @@ const ALLOWED_ORIGINS = [
     'https://www.polsia.ai',        // Production domain with www
     'https://polsia.com',           // Production domain (.com)
     'https://www.polsia.com',       // Production domain with www (.com)
+    'https://polsia-com.l.ink',     // Temporary: Link shortener redirect (should fix DNS instead)
 ];
 
 /**
