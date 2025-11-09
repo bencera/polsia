@@ -113,7 +113,7 @@ function authenticateTokenFromQuery(req, res, next) {
 }
 
 // Serve React app for all routes (including landing page)
-app.get(['/', '/login', '/dashboard', '/modules', '/connections', '/brain', '/documents', '/analytics', '/tasks', '/agents'], (req, res) => {
+app.get(['/', '/about', '/login', '/dashboard', '/modules', '/connections', '/brain', '/documents', '/analytics', '/tasks', '/agents'], (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'app', 'index.html'));
 });
 

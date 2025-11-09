@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { TerminalProvider } from './contexts/TerminalContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import Landing from './pages/Landing';
+import About from './pages/About';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Routines from './pages/Routines';
@@ -58,6 +59,7 @@ function App() {
         <Router>
           <Routes>
             <Route path="/" element={<LandingOrDashboard />} />
+            <Route path="/about" element={<About />} />
             <Route path="/login" element={<LoginOrDashboard />} />
             <Route
               path="/dashboard"
