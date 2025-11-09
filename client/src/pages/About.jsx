@@ -50,7 +50,7 @@ function About() {
 
           <p>
             My name is Victor-Benjamin<br />
-            But everybody calls me Ben
+            But everybody calls me <a href="https://x.com/bencera_" target="_blank" rel="noopener noreferrer">Ben</a>
           </p>
 
           <p>
