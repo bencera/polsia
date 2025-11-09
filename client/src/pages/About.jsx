@@ -49,12 +49,12 @@ function About() {
           </p>
 
           <p>
-            My name is Ben Cera<br />
+            My name is Victor-Benjamin<br />
             But everybody calls me Ben
           </p>
 
           <p>
-            Once you free your mind about the concept of Work<br />
+            Once you free your mind about the concept of a company<br />
             and what it means to build a company "the right way"<br />
             You can do whatever you want<br />
             So nobody told me what to build<br />
