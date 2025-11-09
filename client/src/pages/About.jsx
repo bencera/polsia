@@ -11,7 +11,7 @@ function About() {
 
         <div className="about-story">
           <p>
-            When I was thirty-nine, forty, when I really started to build products<br />
+            When I was 38, 39, when I really started to build AI products<br />
             I definitely wanted to build companies that could run themselves<br />
             It was almost impossible because the dream was so big<br />
             That I didn't see any chance because
@@ -36,15 +36,15 @@ function About() {
           </p>
 
           <p>
-            I wanted to create a platform that could build companies the way people build apps<br />
-            The way people used to build startups in the 2010s<br />
-            And then have a system that could build the future<br />
+            I wanted to create a platform that could build companies<br />
+            Like people would build startups in the 2010s, the 2020s<br />
+            Really have a system that could build the companies of the future<br />
             And I said, "Wait a second, I know the Claude Agent SDK<br />
-            Why don't I use the Claude Agent SDK as the operating system of the company?"<br />
+            Why don't I use the Claude Agent SDK as the brain of the company?"<br />
             And I didn't have any idea what it would become<br />
             But I knew I needed agents, so I built loops and connected APIs<br />
             Which then were synced to real products running in production<br />
-            I knew that could be the company of the future<br />
+            I knew that could be the platform of the future<br />
             But I didn't realize how much the impact would be
           </p>
 
