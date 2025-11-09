@@ -26,7 +26,7 @@ function About() {
           </p>
 
           <p>
-            At that time, around '24, '25, AI was exploding<br />
+            At that time, around '24, '25, in San Francisco, AI was exploding<br />
             So, I would stay up all night, writing code, designing, testing loops<br />
             Running maybe five or six small SaaS products<br />
             I think I had about seven, eight modules<br />
