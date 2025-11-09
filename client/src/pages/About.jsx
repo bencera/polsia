@@ -61,10 +61,6 @@ function About() {
             And there was no preconception of what to build
           </p>
         </div>
-
-        <footer className="about-footer">
-          <Link to="/" className="cta-link">Get Started with Polsia →</Link>
-        </footer>
       </div>
     </div>
   );
