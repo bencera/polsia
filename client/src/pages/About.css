@@ -1,91 +1,104 @@
+/* About Page - Matching Landing Page Design */
+
 .about-container {
+  font-family: "Times New Roman", Times, serif;
+  background-color: #fff;
+  color: #000;
+  line-height: 1.6;
+  padding: 0 20px 40px 20px;
+  padding-top: 0;
   min-height: 100vh;
-  background-color: #ffffff;
-  color: #000000;
-  font-family: 'Georgia', 'Times New Roman', serif;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 40px 20px;
+  max-width: 850px;
+  margin: 0 auto;
 }
 
 .about-content {
-  max-width: 800px;
   width: 100%;
 }
 
 .back-link {
   display: inline-block;
-  margin-bottom: 40px;
-  color: #666;
+  margin: 20px 0 30px 0;
+  color: #000;
   text-decoration: none;
+  border-bottom: 1px solid #000;
   font-size: 14px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  transition: color 0.2s;
+  padding-bottom: 1px;
 }
 
 .back-link:hover {
-  color: #000;
+  color: #333;
+  border-bottom-color: #333;
 }
 
 .about-content h1 {
-  font-size: 48px;
-  font-weight: 400;
-  margin-bottom: 60px;
-  letter-spacing: -0.5px;
+  font-size: 2.5em;
+  font-weight: 700;
+  margin-bottom: 1em;
+  line-height: 1.1;
 }
 
 .about-story {
-  line-height: 1.8;
-  font-size: 18px;
-  color: #333;
+  font-size: 1.05em;
+  line-height: 1.7;
+  color: #000;
 }
 
 .about-story p {
-  margin-bottom: 32px;
+  margin-bottom: 1.5em;
   text-align: left;
 }
 
 .about-footer {
   margin-top: 60px;
-  padding-top: 40px;
-  border-top: 1px solid #e0e0e0;
+  padding-top: 20px;
+  border-top: 1px solid #000;
   text-align: center;
 }
 
 .cta-link {
   display: inline-block;
-  padding: 16px 32px;
-  background-color: #000;
-  color: #fff;
+  padding: 8px 16px;
+  background: linear-gradient(top, #ffffff, #888888);
+  background: -webkit-linear-gradient(top, #ffffff, #888888);
+  border: 1px solid #1a1a1a;
+  color: #000000;
   text-decoration: none;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  font-size: 16px;
-  border-radius: 4px;
-  transition: background-color 0.2s;
+  font-family: helvetica, serif;
+  font-size: 14px;
+  border-radius: 2px;
+  box-shadow: rgba(255, 255, 255, 0.4) 0 1px 0 0 inset, rgba(255, 255, 255, 0.4) 0 1px 0;
+  transition: all 0.2s;
 }
 
 .cta-link:hover {
-  background-color: #333;
+  background: linear-gradient(top, #ffffff, #888888);
+  background: -webkit-linear-gradient(top, #ffffff, #888888);
+}
+
+.cta-link:active {
+  background: linear-gradient(top, #888888, #ffffff);
+  background: -webkit-linear-gradient(top, #888888, #ffffff);
+  box-shadow: rgba(0, 0, 0, 0.4) 0 1px 2px 0 inset;
+  padding-top: 9px;
+  padding-bottom: 7px;
 }
 
 /* Mobile responsiveness */
 @media (max-width: 768px) {
   .about-container {
-    padding: 20px;
+    padding: 0 15px 20px 15px;
   }
 
   .about-content h1 {
-    font-size: 36px;
-    margin-bottom: 40px;
+    font-size: 2em;
   }
 
   .about-story {
-    font-size: 16px;
-    line-height: 1.7;
+    font-size: 1em;
   }
 
   .about-story p {
-    margin-bottom: 24px;
+    margin-bottom: 1.2em;
   }
 }
