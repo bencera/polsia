@@ -77,6 +77,34 @@ async function runRoutine(routineId, userId, options = {}) {
         // Log start
         await saveExecutionLog(executionRecord.id, {
             log_level: 'info',
+            stage: 'initialization',
+            message: `Starting routine ${routineId} for user ${userId}`,
+            metadata: { routine_id: routineId },
+        });
+
+        await saveExecutionLog(executionRecord.id, {
+            log_level: 'info',
+            stage: 'initialization',
+            message: `Routine found: ${routine.name} (${routine.type})`,
+            metadata: { routine_name: routine.name, routine_type: routine.type },
+        });
+
+        await saveExecutionLog(executionRecord.id, {
+            log_level: 'info',
+            stage: 'initialization',
+            message: `Owning agent: ${agent.name} (${agent.agent_type})`,
+            metadata: { agent_id: agent.id, agent_name: agent.name, agent_type: agent.agent_type },
+        });
+
+        await saveExecutionLog(executionRecord.id, {
+            log_level: 'info',
+            stage: 'initialization',
+            message: `Execution record created: ${executionRecord.id}`,
+            metadata: { execution_id: executionRecord.id },
+        });
+
+        await saveExecutionLog(executionRecord.id, {
+            log_level: 'info',
             stage: 'started',
             message: `Routine "${routine.name}" starting via agent ${agent.name}`,
             metadata: { routine_id: routineId, agent_id: agent.id },
@@ -86,12 +114,33 @@ async function runRoutine(routineId, userId, options = {}) {
         const prompt = await buildRoutinePrompt(agent, routine, userId);
         console.log(`[Routine Executor] Built routine prompt (${prompt.length} chars)`);
 
+        await saveExecutionLog(executionRecord.id, {
+            log_level: 'info',
+            stage: 'preparation',
+            message: `Built routine prompt (${prompt.length} chars)`,
+            metadata: { prompt_length: prompt.length },
+        });
+
         // 5. Configure MCP servers based on routine config
         const config = routine.config || {};
         mcpMounts = config.mcpMounts || agent.config?.mcpMounts || [];
+
+        // Always include 'tasks' MCP for dashboard activity logging
+        if (!mcpMounts.includes('tasks')) {
+            mcpMounts = [...mcpMounts, 'tasks'];
+            console.log('[Routine Executor] ✓ Auto-added tasks MCP for dashboard activity logging');
+        }
+
         const mcpServers = await configureMCPServersForRoutine(agent, routine, userId, config, mcpMounts);
 
         console.log(`[Routine Executor] Configured ${Object.keys(mcpServers).length} MCP servers: ${Object.keys(mcpServers).join(', ')}`);
+
+        await saveExecutionLog(executionRecord.id, {
+            log_level: 'info',
+            stage: 'preparation',
+            message: `Configured ${Object.keys(mcpServers).length} MCP servers: ${Object.keys(mcpServers).join(', ')}`,
+            metadata: { mcp_servers: Object.keys(mcpServers), mcp_count: Object.keys(mcpServers).length },
+        });
 
         // 6. Setup Gmail credentials if needed
         if (mcpMounts.includes('gmail')) {
@@ -105,109 +154,225 @@ async function runRoutine(routineId, userId, options = {}) {
         }
         console.log(`[Routine Executor] Workspace: ${workspace}`);
 
+        await saveExecutionLog(executionRecord.id, {
+            log_level: 'info',
+            stage: 'preparation',
+            message: `Workspace: ${workspace}`,
+            metadata: { workspace },
+        });
+
         // 8. Clone GitHub repo for render_analytics routines
         let repoPath = null;
+        let repoCloned = false;
         if (routine.type === 'render_analytics') {
             console.log(`[Routine Executor] 🔍 Checking for GitHub repo to clone (routine type: ${routine.type})`);
+
+            await saveExecutionLog(executionRecord.id, {
+                log_level: 'info',
+                stage: 'setup',
+                message: `Checking for GitHub repo to clone (routine type: ${routine.type})`,
+                metadata: { routine_type: routine.type },
+            });
 
             try {
                 const primaryRepo = await getGitHubPrimaryRepo(userId);
                 console.log(`[Routine Executor] Primary repo result:`, primaryRepo ? primaryRepo.full_name : 'None configured');
 
-                if (primaryRepo && primaryRepo.full_name) {
-                    // Construct clone URL from full_name (owner/repo)
-                    const cloneUrl = `https://github.com/${primaryRepo.full_name}.git`;
+                await saveExecutionLog(executionRecord.id, {
+                    log_level: 'info',
+                    stage: 'setup',
+                    message: `Primary repo result: ${primaryRepo ? primaryRepo.full_name : 'None configured'}`,
+                    metadata: { primary_repo: primaryRepo ? primaryRepo.full_name : null },
+                });
+
+                if (!primaryRepo || !primaryRepo.full_name) {
+                    const errorMsg = 'No primary GitHub repository configured - required for render_analytics routine';
+                    console.log(`[Routine Executor] ❌ ${errorMsg}`);
                     await saveExecutionLog(executionRecord.id, {
-                        log_level: 'info',
+                        log_level: 'error',
                         stage: 'setup',
-                        message: `Starting clone of repository: ${primaryRepo.full_name}`,
+                        message: errorMsg,
                     });
 
-                    // Create a temp directory for this execution
-                    const tempDir = path.join(workspace, 'github-repo');
-                    repoPath = tempDir;
-
-                    console.log(`[Routine Executor] 📦 Cloning primary repo: ${primaryRepo.full_name} to ${tempDir}`);
-
-                    // Remove existing repo if it exists (including old 'repo' directory)
-                    try {
-                        await fs.rm(tempDir, { recursive: true, force: true });
-                        console.log(`[Routine Executor] 🗑️  Cleaned up existing ${tempDir}`);
-                    } catch (err) {
-                        // Ignore if directory doesn't exist
-                    }
-
-                    // Also clean up old 'repo' directory if it exists
-                    try {
-                        const oldRepoDir = path.join(workspace, 'repo');
-                        await fs.rm(oldRepoDir, { recursive: true, force: true });
-                        console.log(`[Routine Executor] 🗑️  Cleaned up old ${oldRepoDir}`);
-                    } catch (err) {
-                        // Ignore if directory doesn't exist
-                    }
-
-                    // Get GitHub token for cloning
-                    const githubToken = await getGitHubToken(userId);
-                    if (githubToken) {
-                        const decryptedToken = decryptToken(githubToken);
-
-                        console.log(`[Routine Executor] 🔑 GitHub token obtained, starting clone...`);
-
-                        // Clone the repo with authentication
-                        const authenticatedCloneUrl = cloneUrl.replace('https://', `https://${decryptedToken}@`);
-                        const cloneOutput = execSync(`git clone --depth 1 "${authenticatedCloneUrl}" "${tempDir}"`, {
-                            encoding: 'utf8',
-                            timeout: 60000, // 60 second timeout
-                        });
-
-                        console.log(`[Routine Executor] ✅ Repository cloned successfully to ${tempDir}`);
-                        console.log(`[Routine Executor] Clone output:`, cloneOutput.substring(0, 200));
-
-                        await saveExecutionLog(executionRecord.id, {
-                            log_level: 'info',
-                            stage: 'setup',
-                            message: `✅ Repository cloned successfully: ${primaryRepo.full_name} → ./github-repo`,
-                            metadata: { repo: primaryRepo.full_name, path: tempDir },
-                        });
-                    } else {
-                        console.log(`[Routine Executor] ⚠️  No GitHub token found, skipping clone`);
-                        await saveExecutionLog(executionRecord.id, {
-                            log_level: 'warning',
-                            stage: 'setup',
-                            message: `Cannot clone repository: No GitHub token configured`,
-                        });
-                    }
-                } else {
-                    console.log(`[Routine Executor] ℹ️  No primary repo configured, skipping clone`);
-                    await saveExecutionLog(executionRecord.id, {
-                        log_level: 'info',
-                        stage: 'setup',
-                        message: `No primary GitHub repository configured for cloning`,
+                    // Fail the execution immediately
+                    await updateModuleExecution(executionRecord.id, {
+                        status: 'failed',
+                        completed_at: new Date(),
+                        duration_ms: Date.now() - startTime,
+                        error_message: errorMsg,
                     });
+
+                    throw new Error(errorMsg);
                 }
+
+                // Construct clone URL from full_name (owner/repo)
+                const cloneUrl = `https://github.com/${primaryRepo.full_name}.git`;
+                console.log(`[Routine Executor] 📦 Cloning primary repo: ${primaryRepo.full_name}`);
+
+                await saveExecutionLog(executionRecord.id, {
+                    log_level: 'info',
+                    stage: 'setup',
+                    message: `Cloning primary repo: ${primaryRepo.full_name}`,
+                    metadata: { repo: primaryRepo.full_name, clone_url: cloneUrl },
+                });
+
+                // Create a temp directory for this execution
+                const tempDir = path.join(workspace, 'github-repo');
+                repoPath = tempDir;
+
+                // Remove existing repo if it exists (including old 'repo' directory)
+                try {
+                    await fs.rm(tempDir, { recursive: true, force: true });
+                    console.log(`[Routine Executor] 🗑️  Cleaned up existing ${tempDir}`);
+
+                    await saveExecutionLog(executionRecord.id, {
+                        log_level: 'info',
+                        stage: 'setup',
+                        message: `Cleaned up existing directory: ${tempDir}`,
+                        metadata: { cleaned_path: tempDir },
+                    });
+                } catch (err) {
+                    // Ignore if directory doesn't exist
+                }
+
+                // Also clean up old 'repo' directory if it exists
+                try {
+                    const oldRepoDir = path.join(workspace, 'repo');
+                    await fs.rm(oldRepoDir, { recursive: true, force: true });
+                    console.log(`[Routine Executor] 🗑️  Cleaned up old ${oldRepoDir}`);
+
+                    await saveExecutionLog(executionRecord.id, {
+                        log_level: 'info',
+                        stage: 'setup',
+                        message: `Cleaned up old directory: ${oldRepoDir}`,
+                        metadata: { cleaned_path: oldRepoDir },
+                    });
+                } catch (err) {
+                    // Ignore if directory doesn't exist
+                }
+
+                // Get GitHub token for cloning
+                const githubToken = await getGitHubToken(userId);
+                if (!githubToken) {
+                    const errorMsg = 'No GitHub token configured - required for render_analytics routine';
+                    console.log(`[Routine Executor] ❌ ${errorMsg}`);
+                    await saveExecutionLog(executionRecord.id, {
+                        log_level: 'error',
+                        stage: 'setup',
+                        message: errorMsg,
+                    });
+
+                    // Fail the execution immediately
+                    await updateModuleExecution(executionRecord.id, {
+                        status: 'failed',
+                        completed_at: new Date(),
+                        duration_ms: Date.now() - startTime,
+                        error_message: errorMsg,
+                    });
+
+                    throw new Error(errorMsg);
+                }
+
+                const decryptedToken = decryptToken(githubToken);
+
+                console.log(`[Routine Executor] 🔑 GitHub token obtained, starting clone...`);
+                console.log(`[Routine Executor] 📍 Clone destination: ${tempDir}`);
+
+                await saveExecutionLog(executionRecord.id, {
+                    log_level: 'info',
+                    stage: 'setup',
+                    message: `GitHub token obtained, starting clone...`,
+                });
+
+                await saveExecutionLog(executionRecord.id, {
+                    log_level: 'info',
+                    stage: 'setup',
+                    message: `Clone destination: ${tempDir}`,
+                    metadata: { clone_destination: tempDir },
+                });
+
+                // Clone the repo with authentication
+                const authenticatedCloneUrl = cloneUrl.replace('https://', `https://${decryptedToken}@`);
+                const cloneOutput = execSync(`git clone --depth 1 --single-branch "${authenticatedCloneUrl}" "${tempDir}"`, {
+                    encoding: 'utf8',
+                    timeout: 180000, // 3 minute timeout (increased for large repos)
+                    maxBuffer: 10 * 1024 * 1024, // 10MB buffer
+                    stdio: 'pipe', // Capture stdout/stderr
+                });
+
+                console.log(`[Routine Executor] ✅ Repository cloned successfully to ${tempDir}`);
+                console.log(`[Routine Executor] Clone output:`, cloneOutput.substring(0, 200));
+
+                await saveExecutionLog(executionRecord.id, {
+                    log_level: 'info',
+                    stage: 'setup',
+                    message: `Repository cloned successfully to ${tempDir}`,
+                    metadata: { repo: primaryRepo.full_name, path: tempDir },
+                });
+
+                await saveExecutionLog(executionRecord.id, {
+                    log_level: 'info',
+                    stage: 'setup',
+                    message: `Clone output: ${cloneOutput.substring(0, 200)}`,
+                    metadata: { clone_output: cloneOutput.substring(0, 500) },
+                });
+
+                repoCloned = true;
+
             } catch (error) {
-                console.error(`[Routine Executor] ❌ Failed to clone repository:`, error.message);
+                // If error already handled (no repo/token configured), re-throw
+                if (error.message.includes('required for render_analytics')) {
+                    throw error;
+                }
+
+                // Handle clone failure
+                const errorMsg = error.code === 'ETIMEDOUT'
+                    ? `Git clone timed out after ${Math.floor(error.timeout / 1000)}s - repository may be too large or network is slow`
+                    : error.message;
+
+                console.error(`[Routine Executor] ❌ Failed to clone repository:`, errorMsg);
+                console.error(`[Routine Executor] Error code:`, error.code);
                 console.error(`[Routine Executor] Stack:`, error.stack);
+
                 await saveExecutionLog(executionRecord.id, {
                     log_level: 'error',
                     stage: 'setup',
-                    message: `Failed to clone repository: ${error.message}`,
-                    metadata: { error: error.stack },
+                    message: `Failed to clone repository: ${errorMsg}`,
+                    metadata: {
+                        error_code: error.code,
+                        error_message: error.message,
+                        timeout: error.timeout,
+                    },
                 });
-                // Continue execution even if cloning fails
+
+                // Fail the execution immediately for render_analytics routines
+                await updateModuleExecution(executionRecord.id, {
+                    status: 'failed',
+                    completed_at: new Date(),
+                    duration_ms: Date.now() - startTime,
+                    error_message: `Repository clone failed: ${errorMsg}`,
+                });
+
+                throw new Error(`Repository clone failed: ${errorMsg}`);
             }
         }
 
         // 9. Load agent's session ID for session resumption
         const resumeSessionId = agent.session_id || null;
-        if (resumeSessionId) {
-            console.log(`[Routine Executor] 📂 Resuming agent session: ${resumeSessionId.substring(0, 8)}...`);
-        } else {
-            console.log(`[Routine Executor] 🆕 Starting new session for agent`);
-        }
 
         // 10. Execute routine using Claude Agent SDK with session resumption
-        console.log(`[Routine Executor] 🤖 Starting AI execution...`);
+        const sessionInfo = resumeSessionId ? ` (resuming session ${resumeSessionId.substring(0, 8)}...)` : ' (new session)';
+        console.log(`[Routine Executor] 🤖 Starting AI execution${sessionInfo}`);
+
+        await saveExecutionLog(executionRecord.id, {
+            log_level: 'info',
+            stage: 'execution',
+            message: `Starting AI execution${sessionInfo}`,
+            metadata: {
+                resume_session_id: resumeSessionId ? resumeSessionId.substring(0, 8) : null,
+                is_new_session: !resumeSessionId
+            },
+        });
 
         const result = await executeTask(prompt, {
             cwd: workspace,
@@ -270,10 +435,24 @@ async function runRoutine(routineId, userId, options = {}) {
             // First-time session creation
             await updateAgentSession(agent.id, newSessionId, workspace);
             console.log(`[Routine Executor] 💾 Saved new session ID for agent: ${newSessionId.substring(0, 8)}...`);
+
+            await saveExecutionLog(executionRecord.id, {
+                log_level: 'info',
+                stage: 'completed',
+                message: `Saved new session ID for agent: ${newSessionId.substring(0, 8)}...`,
+                metadata: { session_id_prefix: newSessionId.substring(0, 8) },
+            });
         } else if (newSessionId && newSessionId !== resumeSessionId) {
             // Session ID changed (shouldn't normally happen, but handle it)
             await updateAgentSession(agent.id, newSessionId, workspace);
             console.log(`[Routine Executor] 💾 Updated session ID for agent: ${newSessionId.substring(0, 8)}...`);
+
+            await saveExecutionLog(executionRecord.id, {
+                log_level: 'info',
+                stage: 'completed',
+                message: `Updated session ID for agent: ${newSessionId.substring(0, 8)}...`,
+                metadata: { session_id_prefix: newSessionId.substring(0, 8) },
+            });
         }
 
         // 10. Update execution record with results
@@ -285,6 +464,20 @@ async function runRoutine(routineId, userId, options = {}) {
         console.log(`   - Cost: $${cost.toFixed(4)}`);
         console.log(`   - Turns: ${result.metadata?.num_turns || 'N/A'}`);
         console.log(`   - Status: ${result.success ? '✓ completed' : '✗ failed'}`);
+
+        await saveExecutionLog(executionRecord.id, {
+            log_level: 'info',
+            stage: 'completed',
+            message: `Execution stats - Duration: ${(duration / 1000).toFixed(2)}s, Cost: $${cost.toFixed(4)}, Turns: ${result.metadata?.num_turns || 'N/A'}, Status: ${result.success ? 'completed' : 'failed'}`,
+            metadata: {
+                duration_seconds: (duration / 1000).toFixed(2),
+                cost_usd: cost,
+                turns: result.metadata?.num_turns,
+                status: result.success ? 'completed' : 'failed',
+                input_tokens: result.metadata?.input_tokens,
+                output_tokens: result.metadata?.output_tokens,
+            },
+        });
 
         await updateModuleExecution(executionRecord.id, {
             status: result.success ? 'completed' : 'failed',
@@ -323,6 +516,19 @@ async function runRoutine(routineId, userId, options = {}) {
 
             console.log(`[Routine Executor] ✅ Routine ${routineId} marked as completed`);
             console.log(`[Routine Executor] ⏰ Next run scheduled for: ${nextRunAt ? nextRunAt.toISOString() : 'manual only'}`);
+
+            await saveExecutionLog(executionRecord.id, {
+                log_level: 'info',
+                stage: 'completed',
+                message: `Routine ${routineId} marked as completed`,
+            });
+
+            await saveExecutionLog(executionRecord.id, {
+                log_level: 'info',
+                stage: 'completed',
+                message: `Next run scheduled for: ${nextRunAt ? nextRunAt.toISOString() : 'manual only'}`,
+                metadata: { next_run_at: nextRunAt ? nextRunAt.toISOString() : null },
+            });
         } else {
             // Still update last_run_at but don't schedule next run on failure
             await updateRoutine(routineId, userId, {
@@ -429,7 +635,24 @@ async function buildRoutinePrompt(agent, routine, userId) {
 
     prompt += `## Instructions\n\n`;
     prompt += `Execute this routine as defined. You have access to the tools mounted via MCP servers. `;
-    prompt += `This is a scheduled routine that runs automatically. Provide a summary of what you accomplished.\n\n`;
+    prompt += `This is a scheduled routine that runs automatically.\n\n`;
+    prompt += `**IMPORTANT - Dashboard Summary (REQUIRED):**\n`;
+    prompt += `When you finish this routine, you MUST call the \`log_activity\` tool to post a summary to the dashboard.\n\n`;
+    prompt += `**Tool:** \`tasks:log_activity\`\n`;
+    prompt += `**Parameters:**\n`;
+    prompt += `- \`title\` (required): Short outcome-focused summary with specific metrics (1-8 words)\n`;
+    prompt += `  - ✓ Good: "Generated daily analytics: 1,579 users, 56 premium, $47 AI costs"\n`;
+    prompt += `  - ✗ Bad: "Ran analytics routine" or "Generated report"\n`;
+    prompt += `- \`description\` (required): 2-4 sentences with key findings, metrics, trends, and actions taken\n`;
+    prompt += `- \`execution_id\` (optional): Current execution ID if available\n\n`;
+    prompt += `**Example:**\n`;
+    prompt += `\`\`\`\n`;
+    prompt += `tasks:log_activity({\n`;
+    prompt += `  title: "Generated daily analytics: 1,579 users, 56 premium",\n`;
+    prompt += `  description: "Queried production database and generated daily snapshot..."\n`;
+    prompt += `})\n`;
+    prompt += `\`\`\`\n\n`;
+    prompt += `This summary appears in the user's dashboard feed - it's how they see what you accomplished.\n\n`;
 
     // Add session awareness instructions for recurring routines
     if (routine.frequency && routine.frequency !== 'manual') {
@@ -470,6 +693,7 @@ async function configureMCPServersForRoutine(agent, routine, userId, config, mcp
         filteredMounts = mcpMounts.filter(mount => mount !== 'github');
         if (mcpMounts.includes('github')) {
             console.log('[Routine Executor] ℹ️  Filtered out GitHub MCP for render_analytics (repo already cloned)');
+            // Note: Can't log to execution_logs here because we don't have executionRecord in this function
         }
     }
 
@@ -499,10 +723,7 @@ async function configureMCPServersForRoutine(agent, routine, userId, config, mcp
             const serverPath = path.join(process.cwd(), 'services', 'task-management-mcp-server.js');
             mcpServers.tasks = {
                 command: 'node',
-                args: [serverPath],
-                env: {
-                    USER_ID: userId.toString(),
-                },
+                args: [serverPath, `--user-id=${userId}`],
             };
         } else if (mount === 'reports') {
             const serverPath = path.join(process.cwd(), 'services', 'reports-custom-mcp-server.js');

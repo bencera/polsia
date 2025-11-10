@@ -16,6 +16,7 @@ const {
     createTaskSummary,
     getExecutionLogs,
     getServiceConnectionByName,
+    taskExistsForExecution,
 } = require('../db');
 const { getGitHubToken, getGmailToken, getSlackToken, getSlackTokens, getSentryToken, getAppStoreConnectConnection, getMetaAdsConnection, getRenderApiKey, getRenderConnection } = require('../db');
 const { decryptToken } = require('../utils/encryption');
@@ -274,44 +275,51 @@ async function runModule(moduleId, userId, options = {}) {
             }
         }
 
-        // 8. Create task summary for the feed if successful
+        // 8. Create task summary for the feed if successful (fallback if agent didn't post one)
         if (result.success) {
             try {
-                console.log(`[Agent Runner] 📝 Generating AI task summary...`);
+                // Check if agent already created a dashboard summary via log_activity
+                const taskAlreadyExists = await taskExistsForExecution(executionRecord.id);
 
-                // Get execution logs for AI summary generation
-                const executionLogs = await getExecutionLogs(executionRecord.id);
+                if (taskAlreadyExists) {
+                    console.log(`[Agent Runner] ℹ️  Agent already posted dashboard summary via log_activity - skipping AI generation`);
+                } else {
+                    console.log(`[Agent Runner] 📝 No dashboard summary posted by agent - generating AI fallback summary...`);
 
-                // Generate AI-powered summary
-                const aiSummary = await generateTaskSummary(executionLogs, {
-                    duration: duration,
-                    cost: cost,
-                    turns: result.metadata?.num_turns,
-                }, module);
+                    // Get execution logs for AI summary generation
+                    const executionLogs = await getExecutionLogs(executionRecord.id);
 
-                // Get service connections used for this module
-                const usedServices = await getServiceConnectionsByUserId(userId);
-                const moduleConfig = module.config || {};
-                const serviceIds = moduleConfig.mcpMounts?.map(serviceName => {
-                    const service = usedServices.find(s => s.service_name === serviceName);
-                    return service?.id;
-                }).filter(Boolean) || [];
+                    // Generate AI-powered summary
+                    const aiSummary = await generateTaskSummary(executionLogs, {
+                        duration: duration,
+                        cost: cost,
+                        turns: result.metadata?.num_turns,
+                    }, module);
 
-                // Create summary with AI-generated title and description
-                await createTaskSummary(userId, {
-                    title: aiSummary.title,
-                    description: aiSummary.description,
-                    status: 'completed',
-                    serviceIds: serviceIds,
-                    execution_id: executionRecord.id,
-                    module_id: moduleId,
-                    cost_usd: cost,
-                    duration_ms: duration,
-                    num_turns: result.metadata?.num_turns || 0,
-                    completed_at: new Date(), // Use actual completion time
-                });
+                    // Get service connections used for this module
+                    const usedServices = await getServiceConnectionsByUserId(userId);
+                    const moduleConfig = module.config || {};
+                    const serviceIds = moduleConfig.mcpMounts?.map(serviceName => {
+                        const service = usedServices.find(s => s.service_name === serviceName);
+                        return service?.id;
+                    }).filter(Boolean) || [];
 
-                console.log(`[Agent Runner] ✅ Task summary created for user ${userId}`);
+                    // Create summary with AI-generated title and description
+                    await createTaskSummary(userId, {
+                        title: aiSummary.title,
+                        description: aiSummary.description,
+                        status: 'completed',
+                        serviceIds: serviceIds,
+                        execution_id: executionRecord.id,
+                        module_id: moduleId,
+                        cost_usd: cost,
+                        duration_ms: duration,
+                        num_turns: result.metadata?.num_turns || 0,
+                        completed_at: new Date(), // Use actual completion time
+                    });
+
+                    console.log(`[Agent Runner] ✅ AI fallback task summary created for user ${userId}`);
+                }
             } catch (err) {
                 console.error(`[Agent Runner] ⚠️  Failed to create task summary:`, err.message);
                 // Don't fail the entire execution if summary creation fails

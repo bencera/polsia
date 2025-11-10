@@ -226,16 +226,32 @@ router.post('/:id/run', async (req, res) => {
             });
         }
 
-        // Trigger routine execution asynchronously
-        runRoutine(req.params.id, req.user.id, {
+        // Trigger routine execution and get execution ID for streaming
+        const executionPromise = runRoutine(req.params.id, req.user.id, {
             trigger_type: 'manual',
-        }).catch((error) => {
+        });
+
+        // Wait briefly for execution record to be created (happens very early in runRoutine)
+        // This allows us to return execution_id to frontend for log streaming
+        executionPromise.catch((error) => {
             console.error(`Error running routine ${req.params.id}:`, error);
         });
+
+        // Poll for the execution record (created within first 100ms of runRoutine)
+        let execution = null;
+        for (let i = 0; i < 5; i++) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            const executions = await getRoutineExecutions(req.params.id, req.user.id, 1);
+            if (executions && executions.length > 0 && executions[0].status === 'running') {
+                execution = executions[0];
+                break;
+            }
+        }
 
         res.json({
             success: true,
             message: 'Routine execution triggered',
+            execution: execution ? { id: execution.id } : null,
         });
     } catch (error) {
         console.error('Error triggering routine:', error);
@@ -279,6 +295,23 @@ router.get('/:id/executions/:executionId/logs', async (req, res) => {
  */
 router.get('/:id/executions/:executionId/logs/stream', async (req, res) => {
     try {
+        // Authenticate token from query parameter (SSE can't send custom headers)
+        const token = req.query.token;
+        if (!token) {
+            return res.status(401).json({ success: false, message: 'No token provided' });
+        }
+
+        // Verify JWT token
+        const jwt = require('jsonwebtoken');
+        const JWT_SECRET = process.env.JWT_SECRET;
+        let userId;
+        try {
+            const decoded = jwt.verify(token, JWT_SECRET);
+            userId = decoded.id;
+        } catch (err) {
+            return res.status(401).json({ success: false, message: 'Invalid token' });
+        }
+
         // Set SSE headers
         res.setHeader('Content-Type', 'text/event-stream');
         res.setHeader('Cache-Control', 'no-cache');
@@ -289,6 +322,7 @@ router.get('/:id/executions/:executionId/logs/stream', async (req, res) => {
 
         // Send initial logs
         const initialLogs = await getExecutionLogs(executionId);
+        console.log(`[SSE] Streaming ${initialLogs.length} initial logs for execution ${executionId}`);
         res.write(`data: ${JSON.stringify({ logs: initialLogs })}\n\n`);
 
         if (initialLogs.length > 0) {
@@ -301,11 +335,12 @@ router.get('/:id/executions/:executionId/logs/stream', async (req, res) => {
                 const newLogs = await getExecutionLogsSince(executionId, lastLogId);
 
                 if (newLogs.length > 0) {
+                    console.log(`[SSE] Streaming ${newLogs.length} new logs for execution ${executionId}`);
                     res.write(`data: ${JSON.stringify({ logs: newLogs })}\n\n`);
                     lastLogId = newLogs[newLogs.length - 1].id;
                 }
             } catch (error) {
-                console.error('Error fetching new logs:', error);
+                console.error('[SSE] Error fetching new logs:', error);
             }
         }, 1000);
 

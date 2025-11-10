@@ -15,7 +15,8 @@ const {
     updateTaskStatus,
     getTasksByStatus,
     getTaskById,
-    getTasksByModuleId
+    getTasksByModuleId,
+    createTaskSummary
 } = require('../db.js');
 
 // Get user ID from command line argument
@@ -295,6 +296,45 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
                         }
                     },
                     required: ['task_id', 'error_message', 'agent_name']
+                }
+            },
+            {
+                name: 'log_activity',
+                description: 'Log a completed activity to the user\'s dashboard. Use this at the end of ANY execution to post a summary of what you accomplished. This is not for task workflow - it\'s for posting activity summaries that appear in the dashboard feed.',
+                inputSchema: {
+                    type: 'object',
+                    properties: {
+                        title: {
+                            type: 'string',
+                            description: 'Short, outcome-focused activity title (1-8 words). Be specific about what was accomplished, not just what action was taken. Good: "Generated daily analytics report with 156 users". Bad: "Ran analytics routine".'
+                        },
+                        description: {
+                            type: 'string',
+                            description: 'Detailed description of what was accomplished (2-4 sentences). Include specific metrics, numbers, outcomes, and any important findings or actions taken. Use markdown formatting if helpful.'
+                        },
+                        services_used: {
+                            type: 'array',
+                            items: { type: 'string' },
+                            description: 'Optional: Array of service/MCP names used during execution (e.g., ["render", "reports", "github"])'
+                        },
+                        execution_id: {
+                            type: 'number',
+                            description: 'Optional: Execution ID to link this activity to a specific routine/agent run'
+                        },
+                        module_id: {
+                            type: 'number',
+                            description: 'Optional: Module ID if this activity is associated with a specific module'
+                        },
+                        cost_usd: {
+                            type: 'number',
+                            description: 'Optional: Cost of this execution in USD'
+                        },
+                        duration_ms: {
+                            type: 'number',
+                            description: 'Optional: Duration of execution in milliseconds'
+                        }
+                    },
+                    required: ['title', 'description']
                 }
             }
         ]
@@ -595,6 +635,51 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                                 title: task.title,
                                 status: task.status,
                                 error_message
+                            }
+                        }, null, 2)
+                    }]
+                };
+            }
+
+            case 'log_activity': {
+                const {
+                    title,
+                    description,
+                    services_used,
+                    execution_id,
+                    module_id,
+                    cost_usd,
+                    duration_ms
+                } = args;
+
+                // Map services_used array to service IDs (will need to look them up)
+                // For now, we'll just create the task without service mapping
+                // The agent-runner already handles service mapping via mcpMounts
+
+                const taskData = {
+                    title,
+                    description,
+                    status: 'completed',
+                    completed_at: new Date(),
+                    execution_id: execution_id || null,
+                    module_id: module_id || null,
+                    cost_usd: cost_usd || null,
+                    duration_ms: duration_ms || null
+                };
+
+                const task = await createTaskSummary(userId, taskData);
+
+                return {
+                    content: [{
+                        type: 'text',
+                        text: JSON.stringify({
+                            success: true,
+                            message: 'Activity logged successfully to dashboard! 📊',
+                            activity: {
+                                id: task.id,
+                                title: task.title,
+                                description: task.description,
+                                created_at: task.created_at
                             }
                         }, null, 2)
                     }]

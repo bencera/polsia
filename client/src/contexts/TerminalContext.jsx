@@ -101,21 +101,23 @@ export function TerminalProvider({ children }) {
   };
 
   // Start streaming logs for a specific execution
-  const startLogStream = (moduleId, executionId) => {
+  const startLogStream = (moduleOrRoutineId, executionId, isRoutine = false) => {
     // Close existing connection if any
     if (eventSourceRef.current) {
       console.log('[TerminalContext] Closing existing SSE connection');
       eventSourceRef.current.close();
     }
 
-    const streamUrl = `/api/modules/${moduleId}/executions/${executionId}/logs/stream?token=${token}`;
+    // Use different endpoint for routines vs modules
+    const endpoint = isRoutine ? 'routines' : 'modules';
+    const streamUrl = `/api/${endpoint}/${moduleOrRoutineId}/executions/${executionId}/logs/stream?token=${token}`;
     console.log('[TerminalContext] Connecting to SSE:', streamUrl);
 
     const eventSource = new EventSource(streamUrl);
     eventSourceRef.current = eventSource;
 
     setActiveExecutionId(executionId);
-    setActiveModuleId(moduleId);
+    setActiveModuleId(moduleOrRoutineId);
 
     eventSource.onopen = () => {
       console.log('[TerminalContext] SSE connection opened');
@@ -124,11 +126,11 @@ export function TerminalProvider({ children }) {
     eventSource.onmessage = (event) => {
       console.log('[TerminalContext] Received message:', event.data);
       try {
-        const log = JSON.parse(event.data);
+        const data = JSON.parse(event.data);
 
         // Check if this is a completion event
-        if (log.type === 'completion') {
-          console.log('[TerminalContext] Execution completed:', log.status);
+        if (data.type === 'completion') {
+          console.log('[TerminalContext] Execution completed:', data.status);
           setActiveExecutionId(null);
           setActiveModuleId(null);
           eventSource.close();
@@ -136,9 +138,12 @@ export function TerminalProvider({ children }) {
           return;
         }
 
-        // Add log to terminal (keep last 100 logs)
-        console.log('[TerminalContext] Adding log to terminal:', log.message);
-        setTerminalLogs(prev => [...prev, log].slice(-100));
+        // Handle both single log object and array of logs
+        const logsToAdd = data.logs ? data.logs : [data];
+
+        // Add log(s) to terminal (keep last 100 logs)
+        console.log('[TerminalContext] Adding logs to terminal:', logsToAdd.length);
+        setTerminalLogs(prev => [...prev, ...logsToAdd].slice(-100));
       } catch (err) {
         console.error('[TerminalContext] Error parsing log:', err);
       }
@@ -235,11 +240,12 @@ export function TerminalProvider({ children }) {
 
       const data = await response.json();
 
-      // Get the execution ID from the response
+      // Get the execution ID from the response and start streaming logs
       if (data.execution && data.execution.id) {
-        // Note: For routines, we need to use a different stream endpoint
-        // For now, we'll just show the trigger log
-        // TODO: Implement routine-specific log streaming if needed
+        // Start streaming logs for this routine execution
+        // Pass isRoutine=true to use /api/routines endpoint instead of /api/modules
+        startLogStream(routineId, data.execution.id, true);
+
         const successLog = {
           id: Date.now() + 1,
           timestamp: new Date().toISOString(),

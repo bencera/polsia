@@ -953,14 +953,11 @@ async function getRoutinesByUserId(userId) {
     const client = await pool.connect();
     try {
         const result = await client.query(
-            `SELECT r.*, a.name as agent_name, a.status as agent_status,
-                    MAX(me.created_at) as last_run_at
+            `SELECT r.*, a.name as agent_name, a.status as agent_status
              FROM routines r
              INNER JOIN agents a ON a.id = r.agent_id
-             LEFT JOIN module_executions me ON me.routine_id = r.id AND me.is_routine_execution = true
              WHERE r.user_id = $1
-             GROUP BY r.id, a.name, a.status
-             ORDER BY MAX(me.created_at) DESC NULLS LAST, r.created_at DESC`,
+             ORDER BY r.last_run_at DESC NULLS LAST, r.created_at DESC`,
             [userId]
         );
         return result.rows;
@@ -1835,6 +1832,26 @@ async function getTaskById(taskId, userId) {
         return result.rows[0] || null;
     } catch (err) {
         console.error('Error getting task by ID:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+/**
+ * Check if a task summary already exists for an execution
+ * Used to prevent duplicate dashboard entries
+ */
+async function taskExistsForExecution(executionId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            'SELECT id FROM tasks WHERE execution_id = $1 LIMIT 1',
+            [executionId]
+        );
+        return result.rows.length > 0;
+    } catch (err) {
+        console.error('Error checking task existence for execution:', err);
         throw err;
     } finally {
         client.release();
@@ -3637,6 +3654,7 @@ module.exports = {
     getExecutionLogsSince,
     // Task summary functions
     createTaskSummary,
+    taskExistsForExecution,
     // Task workflow functions
     createTaskProposal,
     updateTaskStatus,
