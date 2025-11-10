@@ -333,6 +333,28 @@ async function getGitHubToken(userId) {
     }
 }
 
+// Get GitHub primary repository info
+async function getGitHubPrimaryRepo(userId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            'SELECT metadata FROM service_connections WHERE user_id = $1 AND service_name = $2 AND status = $3',
+            [userId, 'github', 'connected']
+        );
+
+        if (result.rows.length === 0 || !result.rows[0].metadata) {
+            return null;
+        }
+
+        return result.rows[0].metadata.primary_repo || null;
+    } catch (err) {
+        console.error('Error getting GitHub primary repo:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
 // Delete GitHub connection
 async function deleteGitHubConnection(connectionId, userId) {
     const client = await pool.connect();
@@ -3441,6 +3463,7 @@ module.exports = {
     updateServiceConnectionMetadata,
     storeGitHubConnection,
     getGitHubToken,
+    getGitHubPrimaryRepo,
     deleteGitHubConnection,
     // Slack connection functions
     storeSlackConnection,

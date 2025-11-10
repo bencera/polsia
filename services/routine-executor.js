@@ -16,10 +16,12 @@ const {
     updateAgentSession,
     incrementAgentRoutineRuns,
 } = require('../db');
-const { getGitHubToken, getGmailToken, getSlackTokens, getSentryToken, getAppStoreConnectConnection, getMetaAdsConnection, getRenderApiKey, getRenderConnection } = require('../db');
+const { getGitHubToken, getGmailToken, getSlackTokens, getSentryToken, getAppStoreConnectConnection, getMetaAdsConnection, getRenderApiKey, getRenderConnection, getGitHubPrimaryRepo } = require('../db');
 const { decryptToken } = require('../utils/encryption');
 const { setupGmailMCPCredentials, cleanupGmailMCPCredentials } = require('./gmail-mcp-setup');
 const path = require('path');
+const fs = require('fs').promises;
+const { execSync } = require('child_process');
 
 /**
  * Execute a routine via its owning agent
@@ -103,7 +105,59 @@ async function runRoutine(routineId, userId, options = {}) {
         }
         console.log(`[Routine Executor] Workspace: ${workspace}`);
 
-        // 8. Load agent's session ID for session resumption
+        // 8. Clone GitHub repo for render_analytics routines
+        let repoPath = null;
+        if (routine.type === 'render_analytics') {
+            try {
+                const primaryRepo = await getGitHubPrimaryRepo(userId);
+                if (primaryRepo && primaryRepo.clone_url) {
+                    console.log(`[Routine Executor] 📦 Cloning primary repo: ${primaryRepo.full_name}`);
+
+                    // Create a temp directory for this execution
+                    const tempDir = path.join(workspace, 'github-repo');
+                    repoPath = tempDir;
+
+                    // Remove existing repo if it exists
+                    try {
+                        await fs.rm(tempDir, { recursive: true, force: true });
+                    } catch (err) {
+                        // Ignore if directory doesn't exist
+                    }
+
+                    // Get GitHub token for cloning
+                    const githubToken = await getGitHubToken(userId);
+                    if (githubToken) {
+                        const decryptedToken = decryptToken(githubToken);
+
+                        // Clone the repo with authentication
+                        const cloneUrl = primaryRepo.clone_url.replace('https://', `https://${decryptedToken}@`);
+                        execSync(`git clone ${cloneUrl} "${tempDir}"`, {
+                            stdio: 'pipe',
+                            timeout: 60000, // 60 second timeout
+                        });
+
+                        console.log(`[Routine Executor] ✓ Repository cloned to ${tempDir}`);
+
+                        await saveExecutionLog(executionRecord.id, {
+                            log_level: 'info',
+                            stage: 'setup',
+                            message: `Cloned repository: ${primaryRepo.full_name}`,
+                            metadata: { repo: primaryRepo.full_name, path: tempDir },
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error(`[Routine Executor] ⚠️  Failed to clone repository:`, error.message);
+                await saveExecutionLog(executionRecord.id, {
+                    log_level: 'warning',
+                    stage: 'setup',
+                    message: `Failed to clone repository: ${error.message}`,
+                });
+                // Continue execution even if cloning fails
+            }
+        }
+
+        // 9. Load agent's session ID for session resumption
         const resumeSessionId = agent.session_id || null;
         if (resumeSessionId) {
             console.log(`[Routine Executor] 📂 Resuming agent session: ${resumeSessionId.substring(0, 8)}...`);
@@ -111,7 +165,7 @@ async function runRoutine(routineId, userId, options = {}) {
             console.log(`[Routine Executor] 🆕 Starting new session for agent`);
         }
 
-        // 9. Execute routine using Claude Agent SDK with session resumption
+        // 10. Execute routine using Claude Agent SDK with session resumption
         console.log(`[Routine Executor] 🤖 Starting AI execution...`);
 
         const result = await executeTask(prompt, {
@@ -310,6 +364,17 @@ async function buildRoutinePrompt(agent, routine, userId) {
     prompt += `## Context\n\n`;
     prompt += `**Today's Date:** ${dateStr}\n`;
     prompt += `**Current Time:** ${timeStr}\n\n`;
+
+    // Add special context for render_analytics routines
+    if (routine.type === 'render_analytics') {
+        const primaryRepo = await getGitHubPrimaryRepo(userId);
+        if (primaryRepo) {
+            prompt += `## Repository Information\n\n`;
+            prompt += `The GitHub repository **${primaryRepo.full_name}** has been cloned to \`./github-repo\` in your working directory.\n`;
+            prompt += `You can read the code files directly to understand the database schema and important metrics.\n`;
+            prompt += `Do NOT attempt to clone the repository - it is already available locally.\n\n`;
+        }
+    }
 
     if (config.guardrails) {
         prompt += `## Guardrails\n\n${config.guardrails}\n\n`;
