@@ -108,18 +108,38 @@ async function runRoutine(routineId, userId, options = {}) {
         // 8. Clone GitHub repo for render_analytics routines
         let repoPath = null;
         if (routine.type === 'render_analytics') {
+            console.log(`[Routine Executor] 🔍 Checking for GitHub repo to clone (routine type: ${routine.type})`);
+
             try {
                 const primaryRepo = await getGitHubPrimaryRepo(userId);
+                console.log(`[Routine Executor] Primary repo result:`, primaryRepo ? primaryRepo.full_name : 'None configured');
+
                 if (primaryRepo && primaryRepo.clone_url) {
-                    console.log(`[Routine Executor] 📦 Cloning primary repo: ${primaryRepo.full_name}`);
+                    await saveExecutionLog(executionRecord.id, {
+                        log_level: 'info',
+                        stage: 'setup',
+                        message: `Starting clone of repository: ${primaryRepo.full_name}`,
+                    });
 
                     // Create a temp directory for this execution
                     const tempDir = path.join(workspace, 'github-repo');
                     repoPath = tempDir;
 
-                    // Remove existing repo if it exists
+                    console.log(`[Routine Executor] 📦 Cloning primary repo: ${primaryRepo.full_name} to ${tempDir}`);
+
+                    // Remove existing repo if it exists (including old 'repo' directory)
                     try {
                         await fs.rm(tempDir, { recursive: true, force: true });
+                        console.log(`[Routine Executor] 🗑️  Cleaned up existing ${tempDir}`);
+                    } catch (err) {
+                        // Ignore if directory doesn't exist
+                    }
+
+                    // Also clean up old 'repo' directory if it exists
+                    try {
+                        const oldRepoDir = path.join(workspace, 'repo');
+                        await fs.rm(oldRepoDir, { recursive: true, force: true });
+                        console.log(`[Routine Executor] 🗑️  Cleaned up old ${oldRepoDir}`);
                     } catch (err) {
                         // Ignore if directory doesn't exist
                     }
@@ -129,29 +149,48 @@ async function runRoutine(routineId, userId, options = {}) {
                     if (githubToken) {
                         const decryptedToken = decryptToken(githubToken);
 
+                        console.log(`[Routine Executor] 🔑 GitHub token obtained, starting clone...`);
+
                         // Clone the repo with authentication
                         const cloneUrl = primaryRepo.clone_url.replace('https://', `https://${decryptedToken}@`);
-                        execSync(`git clone ${cloneUrl} "${tempDir}"`, {
-                            stdio: 'pipe',
+                        const cloneOutput = execSync(`git clone --depth 1 "${cloneUrl}" "${tempDir}"`, {
+                            encoding: 'utf8',
                             timeout: 60000, // 60 second timeout
                         });
 
-                        console.log(`[Routine Executor] ✓ Repository cloned to ${tempDir}`);
+                        console.log(`[Routine Executor] ✅ Repository cloned successfully to ${tempDir}`);
+                        console.log(`[Routine Executor] Clone output:`, cloneOutput.substring(0, 200));
 
                         await saveExecutionLog(executionRecord.id, {
                             log_level: 'info',
                             stage: 'setup',
-                            message: `Cloned repository: ${primaryRepo.full_name}`,
+                            message: `✅ Repository cloned successfully: ${primaryRepo.full_name} → ./github-repo`,
                             metadata: { repo: primaryRepo.full_name, path: tempDir },
                         });
+                    } else {
+                        console.log(`[Routine Executor] ⚠️  No GitHub token found, skipping clone`);
+                        await saveExecutionLog(executionRecord.id, {
+                            log_level: 'warning',
+                            stage: 'setup',
+                            message: `Cannot clone repository: No GitHub token configured`,
+                        });
                     }
+                } else {
+                    console.log(`[Routine Executor] ℹ️  No primary repo configured, skipping clone`);
+                    await saveExecutionLog(executionRecord.id, {
+                        log_level: 'info',
+                        stage: 'setup',
+                        message: `No primary GitHub repository configured for cloning`,
+                    });
                 }
             } catch (error) {
-                console.error(`[Routine Executor] ⚠️  Failed to clone repository:`, error.message);
+                console.error(`[Routine Executor] ❌ Failed to clone repository:`, error.message);
+                console.error(`[Routine Executor] Stack:`, error.stack);
                 await saveExecutionLog(executionRecord.id, {
-                    log_level: 'warning',
+                    log_level: 'error',
                     stage: 'setup',
                     message: `Failed to clone repository: ${error.message}`,
+                    metadata: { error: error.stack },
                 });
                 // Continue execution even if cloning fails
             }

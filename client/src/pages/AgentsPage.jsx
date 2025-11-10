@@ -369,13 +369,41 @@ function AgentsPage() {
 
                         {isExpanded && (
                           <div className="routine-details">
+                            {/* COMPLETE EXECUTION CONFIGURATION */}
+                            <div className="detail-section" style={{ backgroundColor: '#f9f9f9', padding: '15px', borderLeft: '3px solid #000' }}>
+                              <h4 className="detail-label" style={{ fontSize: '1.1em', marginBottom: '15px' }}>📋 Complete Execution Configuration</h4>
+                              <div style={{ fontSize: '.9em', lineHeight: '1.7' }}>
+                                <p style={{ margin: '0 0 10px', fontWeight: '600' }}>What runs:</p>
+                                <ul style={{ margin: '0 0 15px', paddingLeft: '20px' }}>
+                                  <li><strong>Routine:</strong> {routine.name}</li>
+                                  <li><strong>Type:</strong> {routine.type}</li>
+                                  <li><strong>Frequency:</strong> {routine.frequency}</li>
+                                  <li><strong>Owning Agent:</strong> {routine.agent_name} ({routine.agent_status})</li>
+                                </ul>
+
+                                <p style={{ margin: '0 0 10px', fontWeight: '600' }}>How it runs:</p>
+                                <ul style={{ margin: '0 0 15px', paddingLeft: '20px' }}>
+                                  <li><strong>MCP Tools Available:</strong> {config.mcpMounts?.length > 0 ? config.mcpMounts.join(', ') : 'None'}</li>
+                                  <li><strong>Max Turns:</strong> {config.maxTurns || 'Default (100)'}</li>
+                                  {routine.type === 'render_analytics' && (
+                                    <li><strong>Pre-execution:</strong> GitHub repo auto-cloned to ./github-repo</li>
+                                  )}
+                                </ul>
+
+                                <p style={{ margin: '0 0 10px', fontWeight: '600' }}>What it does:</p>
+                                <div style={{ backgroundColor: '#fff', padding: '10px', border: '1px solid #ddd', whiteSpace: 'pre-wrap' }}>
+                                  {config.goal || routine.description || 'No goal specified'}
+                                </div>
+                              </div>
+                            </div>
+
                             {/* Special note for render_analytics */}
                             {routine.type === 'render_analytics' && (
                               <div className="detail-section" style={{ backgroundColor: '#f0f9ff', padding: '15px', borderLeft: '3px solid #0066cc' }}>
-                                <h4 className="detail-label" style={{ color: '#0066cc' }}>🔄 Auto-Clone Configuration</h4>
+                                <h4 className="detail-label" style={{ color: '#0066cc' }}>🔄 Auto-Clone Behavior</h4>
                                 <div className="detail-content" style={{ fontSize: '.95em', lineHeight: '1.6' }}>
                                   <p style={{ margin: '0 0 8px 0' }}>
-                                    <strong>Before execution:</strong> The primary GitHub repository will be automatically cloned to <code>./github-repo</code> in the agent's workspace.
+                                    <strong>Before execution:</strong> The primary GitHub repository will be automatically cloned to <code>./github-repo</code>.
                                   </p>
                                   <p style={{ margin: '0 0 8px 0' }}>
                                     The agent will use standard file reading tools (cat, grep, etc.) to explore the repository and understand the database schema.
@@ -387,38 +415,34 @@ function AgentsPage() {
                               </div>
                             )}
 
-                            {/* Agent Prompt */}
-                            {config.goal && (
-                              <div className="detail-section">
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                                  <h4 className="detail-label" style={{ margin: 0 }}>Agent Goal</h4>
-                                  <button
-                                    onClick={() => fetchPromptPreview(routine.id)}
-                                    disabled={loadingPrompts[routine.id]}
-                                    className="toggle-status-btn"
-                                    style={{ fontSize: '11px', padding: '3px 10px' }}
-                                  >
-                                    {loadingPrompts[routine.id] ? 'Loading...' : 'View Full Prompt'}
-                                  </button>
-                                </div>
-                                <div className="detail-content prompt-content">
-                                  {config.goal}
-                                </div>
-                                {!promptPreviews[routine.id] && (
-                                  <div style={{ marginTop: '10px', fontSize: '.85em', color: '#666', fontStyle: 'italic' }}>
-                                    Note: The actual prompt sent to the agent includes additional context (date/time, routine info, workspace details, and instructions). Click "View Full Prompt" to see it.
-                                  </div>
-                                )}
-                                {promptPreviews[routine.id] && (
-                                  <div style={{ marginTop: '15px' }}>
-                                    <h4 className="detail-label" style={{ fontSize: '.9em', color: '#0066cc' }}>Full Prompt (As Sent to Agent)</h4>
-                                    <div className="detail-content prompt-content" style={{ backgroundColor: '#f9f9f9', whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '.85em' }}>
-                                      {promptPreviews[routine.id]}
-                                    </div>
-                                  </div>
-                                )}
+                            {/* Full Prompt Preview */}
+                            <div className="detail-section">
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                <h4 className="detail-label" style={{ margin: 0 }}>Complete Prompt Sent to Agent</h4>
+                                <button
+                                  onClick={() => fetchPromptPreview(routine.id)}
+                                  disabled={loadingPrompts[routine.id]}
+                                  className="toggle-status-btn"
+                                  style={{ fontSize: '11px', padding: '3px 10px' }}
+                                >
+                                  {loadingPrompts[routine.id] ? 'Loading...' : promptPreviews[routine.id] ? 'Refresh' : 'View Full Prompt'}
+                                </button>
                               </div>
-                            )}
+                              {!promptPreviews[routine.id] ? (
+                                <div style={{ padding: '15px', backgroundColor: '#f9f9f9', border: '1px solid #ddd', fontSize: '.9em', color: '#666' }}>
+                                  Click "View Full Prompt" to see the exact prompt that will be sent to the agent, including:<br/>
+                                  • Agent role and identity<br/>
+                                  • Routine goal and instructions<br/>
+                                  • Current date/time context<br/>
+                                  • Workspace and repository information<br/>
+                                  • Available MCP tools
+                                </div>
+                              ) : (
+                                <div className="detail-content prompt-content" style={{ backgroundColor: '#f9f9f9', whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '.85em', maxHeight: '400px', overflow: 'auto' }}>
+                                  {promptPreviews[routine.id]}
+                                </div>
+                              )}
+                            </div>
 
                             {/* MCP Servers */}
                             {config.mcpMounts && config.mcpMounts.length > 0 && (
