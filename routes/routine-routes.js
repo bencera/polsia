@@ -17,7 +17,7 @@ const {
     getExecutionLogsSince,
     getAgentById,
 } = require('../db');
-const { runRoutine } = require('../services/routine-executor');
+const { runRoutine, buildRoutinePrompt } = require('../services/routine-executor');
 
 // Note: All routes require authenticateToken middleware (applied in server.js)
 // req.user is available in all routes
@@ -171,6 +171,43 @@ router.delete('/:id', async (req, res) => {
     } catch (error) {
         console.error('Error deleting routine:', error);
         res.status(500).json({ success: false, message: 'Failed to delete routine' });
+    }
+});
+
+/**
+ * GET /api/routines/:id/prompt-preview
+ * Preview the full prompt that will be sent to the agent
+ */
+router.get('/:id/prompt-preview', async (req, res) => {
+    try {
+        const routine = await getRoutineById(req.params.id, req.user.id);
+
+        if (!routine) {
+            return res.status(404).json({
+                success: false,
+                message: 'Routine not found',
+            });
+        }
+
+        // Load owning agent
+        const agent = await getAgentById(routine.agent_id, req.user.id);
+        if (!agent) {
+            return res.status(404).json({
+                success: false,
+                message: 'Agent not found',
+            });
+        }
+
+        // Build the prompt
+        const prompt = await buildRoutinePrompt(agent, routine, req.user.id);
+
+        res.json({
+            success: true,
+            prompt,
+        });
+    } catch (error) {
+        console.error('Error building prompt preview:', error);
+        res.status(500).json({ success: false, message: 'Failed to build prompt preview' });
     }
 });
 

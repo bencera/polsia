@@ -495,4 +495,5 @@ function calculateNextRunTime(frequency) {
 
 module.exports = {
     runRoutine,
+    buildRoutinePrompt,
 };

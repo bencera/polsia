@@ -12,6 +12,8 @@ function AgentsPage() {
   const [error, setError] = useState(null);
   const [runningRoutines, setRunningRoutines] = useState(new Set());
   const [expandedRoutines, setExpandedRoutines] = useState(new Set());
+  const [promptPreviews, setPromptPreviews] = useState({});
+  const [loadingPrompts, setLoadingPrompts] = useState({});
 
   // Fetch routines from API
   useEffect(() => {
@@ -160,6 +162,29 @@ function AgentsPage() {
         newSet.delete(routineId);
         return newSet;
       });
+    }
+  };
+
+  const fetchPromptPreview = async (routineId) => {
+    setLoadingPrompts(prev => ({ ...prev, [routineId]: true }));
+    try {
+      const response = await fetch(`/api/routines/${routineId}/prompt-preview`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch prompt preview');
+      }
+
+      const data = await response.json();
+      setPromptPreviews(prev => ({ ...prev, [routineId]: data.prompt }));
+    } catch (err) {
+      console.error('Error fetching prompt preview:', err);
+      alert('Failed to load prompt preview');
+    } finally {
+      setLoadingPrompts(prev => ({ ...prev, [routineId]: false }));
     }
   };
 
@@ -344,13 +369,51 @@ function AgentsPage() {
 
                         {isExpanded && (
                           <div className="routine-details">
+                            {/* Special note for render_analytics */}
+                            {routine.type === 'render_analytics' && (
+                              <div className="detail-section" style={{ backgroundColor: '#f0f9ff', padding: '15px', borderLeft: '3px solid #0066cc' }}>
+                                <h4 className="detail-label" style={{ color: '#0066cc' }}>🔄 Auto-Clone Configuration</h4>
+                                <div className="detail-content" style={{ fontSize: '.95em', lineHeight: '1.6' }}>
+                                  <p style={{ margin: '0 0 8px 0' }}>
+                                    <strong>Before execution:</strong> The primary GitHub repository will be automatically cloned to <code>./github-repo</code> in the agent's workspace.
+                                  </p>
+                                  <p style={{ margin: '0' }}>
+                                    The agent can directly read code files to understand the database schema without needing to clone via GitHub MCP.
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+
                             {/* Agent Prompt */}
                             {config.goal && (
                               <div className="detail-section">
-                                <h4 className="detail-label">Agent Prompt</h4>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                  <h4 className="detail-label" style={{ margin: 0 }}>Agent Goal</h4>
+                                  <button
+                                    onClick={() => fetchPromptPreview(routine.id)}
+                                    disabled={loadingPrompts[routine.id]}
+                                    className="toggle-status-btn"
+                                    style={{ fontSize: '11px', padding: '3px 10px' }}
+                                  >
+                                    {loadingPrompts[routine.id] ? 'Loading...' : 'View Full Prompt'}
+                                  </button>
+                                </div>
                                 <div className="detail-content prompt-content">
                                   {config.goal}
                                 </div>
+                                {!promptPreviews[routine.id] && (
+                                  <div style={{ marginTop: '10px', fontSize: '.85em', color: '#666', fontStyle: 'italic' }}>
+                                    Note: The actual prompt sent to the agent includes additional context (date/time, routine info, workspace details, and instructions). Click "View Full Prompt" to see it.
+                                  </div>
+                                )}
+                                {promptPreviews[routine.id] && (
+                                  <div style={{ marginTop: '15px' }}>
+                                    <h4 className="detail-label" style={{ fontSize: '.9em', color: '#0066cc' }}>Full Prompt (As Sent to Agent)</h4>
+                                    <div className="detail-content prompt-content" style={{ backgroundColor: '#f9f9f9', whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '.85em' }}>
+                                      {promptPreviews[routine.id]}
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             )}
 
