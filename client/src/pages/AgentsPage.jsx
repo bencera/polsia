@@ -147,10 +147,6 @@ function AgentsPage() {
   };
 
   const runRoutineNow = async (routineId, routineName) => {
-    if (!confirm(`Run "${routineName}" now?`)) {
-      return;
-    }
-
     // Mark routine as running
     setRunningRoutines(prev => new Set([...prev, routineId]));
 
