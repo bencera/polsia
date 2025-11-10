@@ -67,7 +67,7 @@ function Dashboard() {
   const displayLogs = terminalLogs.slice(-4);
 
   return (
-    <div className="dashboard-container">
+    <>
       <div className="terminal">
         {displayLogs.length === 0 ? (
           // Show 4 lines when idle
@@ -93,6 +93,8 @@ function Dashboard() {
       </div>
 
       <Navbar />
+
+      <div className="dashboard-container">
 
       <div className="dashboard-content">
         {loading && (
@@ -143,10 +145,11 @@ function Dashboard() {
         )}
       </div>
 
-      <footer className="footer">
-        <p className="footer-contact">Contact: <a href="mailto:system@polsia.ai">system@polsia.ai</a></p>
-      </footer>
-    </div>
+        <footer className="footer">
+          <p className="footer-contact">Contact: <a href="mailto:system@polsia.ai">system@polsia.ai</a></p>
+        </footer>
+      </div>
+    </>
   );
 }
 

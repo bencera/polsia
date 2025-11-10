@@ -383,12 +383,12 @@ async function configureMCPServersForRoutine(agent, routine, userId, config, mcp
                 },
             };
         } else if (mount === 'render') {
-            const renderConnection = await getRenderConnection(userId);
-            if (!renderConnection) {
+            const encryptedApiKey = await getRenderApiKey(userId);
+            if (!encryptedApiKey) {
                 console.warn('[Routine Executor] Render MCP mount requested but no connection found');
                 continue;
             }
-            const renderApiKey = decryptToken(renderConnection.api_key);
+            const renderApiKey = decryptToken(encryptedApiKey);
 
             mcpServers.render = {
                 type: 'http',

@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import { useAuth } from '../contexts/AuthContext';
 import { useTerminal } from '../contexts/TerminalContext';
-import './Routines.css';
+import './AgentsPage.css';
 
-function Routines() {
+function AgentsPage() {
   const { token } = useAuth();
   const { terminalLogs, runRoutine, isStreaming } = useTerminal();
   const [routines, setRoutines] = useState([]);
@@ -287,7 +287,7 @@ function Routines() {
   const displayLogs = terminalLogs.slice(-4);
 
   return (
-    <div className="routines-container">
+    <>
       <div className="terminal">
         {displayLogs.length === 0 ? (
           // Show 4 lines when idle
@@ -314,23 +314,24 @@ function Routines() {
 
       <Navbar />
 
+      <div className="routines-container">
+
       <div className="routines-content">
         <div className="routines-header">
-          <h2>Routines</h2>
+          <h2>Agents</h2>
           <p className="routines-subtitle">
-            Active routines will run automatically based on their frequency.
-            You can adjust settings or disable specific routines.
+            Autonomous AI agents that run on schedules to handle your tasks
           </p>
           <p className="routines-status">
-            {activeCount} {activeCount === 1 ? 'routine' : 'routines'} active
+            {activeCount} {activeCount === 1 ? 'agent' : 'agents'} active
           </p>
         </div>
 
         {routines.length === 0 ? (
           <div style={{ textAlign: 'center', marginTop: '40px', color: '#666' }}>
-            <p>No routines created yet.</p>
+            <p>No agents created yet.</p>
             <p style={{ fontSize: '14px', marginTop: '10px' }}>
-              Routines will appear here once created via the API.
+              Agents will appear here once created via the API.
             </p>
           </div>
         ) : (
@@ -543,11 +544,12 @@ function Routines() {
         )}
       </div>
 
-      <footer className="footer">
-        <p className="footer-contact">Contact: <a href="mailto:system@polsia.ai">system@polsia.ai</a></p>
-      </footer>
-    </div>
+        <footer className="footer">
+          <p className="footer-contact">Contact: <a href="mailto:system@polsia.ai">system@polsia.ai</a></p>
+        </footer>
+      </div>
+    </>
   );
 }
 
-export default Routines;
+export default AgentsPage;

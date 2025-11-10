@@ -174,7 +174,7 @@ function Tasks() {
   const displayLogs = terminalLogs.slice(-4);
 
   return (
-    <div className="tasks-container">
+    <>
       <div className="terminal">
         {displayLogs.length === 0 ? (
           <>
@@ -198,6 +198,8 @@ function Tasks() {
       </div>
 
       <Navbar />
+
+      <div className="tasks-container">
 
       <div className="tasks-content">
         <div className="tasks-header">
@@ -372,7 +374,8 @@ function Tasks() {
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </>
   );
 }
 

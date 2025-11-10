@@ -11,20 +11,8 @@ function Navbar() {
     navigate('/login');
   };
 
-  const handleConnections = () => {
-    navigate('/connections');
-  };
-
-  const handleRoutines = () => {
-    navigate('/routines');
-  };
-
-  const handleDocuments = () => {
-    navigate('/documents');
-  };
-
-  const handleAnalytics = () => {
-    navigate('/analytics');
+  const handleHome = () => {
+    navigate('/dashboard');
   };
 
   const handleTasks = () => {
@@ -35,12 +23,8 @@ function Navbar() {
     navigate('/agents');
   };
 
-  const handleTools = () => {
-    navigate('/tools');
-  };
-
-  const handleHome = () => {
-    navigate('/dashboard');
+  const handleSettings = () => {
+    navigate('/settings');
   };
 
   return (
@@ -53,29 +37,14 @@ function Navbar() {
         <button onClick={handleHome} className="nav-button">
           Home
         </button>
-        <button onClick={handleDocuments} className="nav-button">
-          Docs
-        </button>
-        <button onClick={handleAnalytics} className="nav-button">
-          Analytics
-        </button>
         <button onClick={handleTasks} className="nav-button">
           Tasks
         </button>
         <button onClick={handleAgents} className="nav-button">
           Agents
         </button>
-        <button onClick={handleTools} className="nav-button">
-          Tools
-        </button>
-        <button onClick={handleRoutines} className="nav-button">
-          Routines
-        </button>
-        <button onClick={handleConnections} className="nav-button">
-          Connections
-        </button>
-        <button onClick={handleLogout} className="nav-button">
-          Logout
+        <button onClick={handleSettings} className="nav-button">
+          Settings
         </button>
       </div>
     </nav>

@@ -6,14 +6,10 @@ import Landing from './pages/Landing';
 import About from './pages/About';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
-import Routines from './pages/Routines';
-import Connections from './pages/Connections';
+import AgentsPage from './pages/AgentsPage';
 import Brain from './pages/Brain';
-import Documents from './pages/Documents';
-import Analytics from './pages/Analytics';
 import Tasks from './pages/Tasks';
-import Agents from './pages/Agents';
-import Tools from './pages/Tools';
+import Settings from './pages/Settings';
 import './App.css'
 
 // Component that redirects to dashboard if already logged in
@@ -70,42 +66,10 @@ function App() {
               }
             />
             <Route
-              path="/routines"
-              element={
-                <ProtectedRoute>
-                  <Routines />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/connections"
-              element={
-                <ProtectedRoute>
-                  <Connections />
-                </ProtectedRoute>
-              }
-            />
-            <Route
               path="/brain"
               element={
                 <ProtectedRoute>
                   <Brain />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/documents"
-              element={
-                <ProtectedRoute>
-                  <Documents />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/analytics"
-              element={
-                <ProtectedRoute>
-                  <Analytics />
                 </ProtectedRoute>
               }
             />
@@ -121,15 +85,15 @@ function App() {
               path="/agents"
               element={
                 <ProtectedRoute>
-                  <Agents />
+                  <AgentsPage />
                 </ProtectedRoute>
               }
             />
             <Route
-              path="/tools"
+              path="/settings"
               element={
                 <ProtectedRoute>
-                  <Tools />
+                  <Settings />
                 </ProtectedRoute>
               }
             />
