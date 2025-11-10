@@ -10,6 +10,10 @@ import AgentsPage from './pages/AgentsPage';
 import Brain from './pages/Brain';
 import Tasks from './pages/Tasks';
 import Settings from './pages/Settings';
+import Connections from './pages/Connections';
+import Documents from './pages/Documents';
+import Analytics from './pages/Analytics';
+import Tools from './pages/Tools';
 import './App.css'
 
 // Component that redirects to dashboard if already logged in
@@ -94,6 +98,38 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Settings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/connections"
+              element={
+                <ProtectedRoute>
+                  <Connections />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/documents"
+              element={
+                <ProtectedRoute>
+                  <Documents />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/analytics"
+              element={
+                <ProtectedRoute>
+                  <Analytics />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tools"
+              element={
+                <ProtectedRoute>
+                  <Tools />
                 </ProtectedRoute>
               }
             />

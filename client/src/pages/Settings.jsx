@@ -1,140 +1,108 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import { useAuth } from '../contexts/AuthContext';
-import Documents from './Documents';
-import Analytics from './Analytics';
-import Tools from './Tools';
-import Connections from './Connections';
+import { useTerminal } from '../contexts/TerminalContext';
 import './Settings.css';
 
 function Settings() {
   const navigate = useNavigate();
   const { logout } = useAuth();
-  const [expandedSections, setExpandedSections] = useState(new Set(['connections']));
+  const { terminalLogs } = useTerminal();
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
-  const toggleSection = (sectionId) => {
-    const newExpanded = new Set(expandedSections);
-    if (newExpanded.has(sectionId)) {
-      newExpanded.delete(sectionId);
-    } else {
-      newExpanded.add(sectionId);
-    }
-    setExpandedSections(newExpanded);
+  // Format log for terminal display
+  const formatLogMessage = (log) => {
+    const time = new Date(log.timestamp).toLocaleTimeString('en-US', {
+      hour12: false,
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+    return `[${time}] [${log.stage || 'info'}] ${log.message}`;
   };
 
+  // Get last 4 logs for terminal display
+  const displayLogs = terminalLogs.slice(-4);
+
   return (
-    <div className="settings-page">
+    <>
+      <div className="terminal">
+        {displayLogs.length === 0 ? (
+          <>
+            <div>&gt; System Configuration</div>
+            <div>&nbsp;</div>
+            <div>&nbsp;</div>
+            <div>&nbsp;</div>
+          </>
+        ) : (
+          <>
+            {displayLogs.map((log, index) => (
+              <div key={`${log.id}-${index}`}>&gt; {formatLogMessage(log)}</div>
+            ))}
+            {displayLogs.length < 4 &&
+              Array.from({ length: 4 - displayLogs.length }).map((_, i) => (
+                <div key={`empty-${i}`}>&nbsp;</div>
+              ))
+            }
+          </>
+        )}
+      </div>
+
       <Navbar />
 
-      <div className="settings-content">
-        <div className="settings-header">
-          <h2>Settings</h2>
-          <p className="settings-subtitle">
-            Manage your connections, tools, documents, and analytics
-          </p>
-        </div>
+      <div className="settings-container">
+        <div className="settings-content">
+          <div className="settings-header">
+            <h2>Settings</h2>
+            <p className="settings-subtitle">
+              Manage your connections, tools, documents, and analytics
+            </p>
+          </div>
 
         <div className="settings-sections">
-          {/* Connections Section */}
-          <div className="settings-section">
-            <div
-              className="section-header"
-              onClick={() => toggleSection('connections')}
-            >
-              <h3>
-                <span className="section-icon">🔌</span>
-                Connections
-              </h3>
-              <span className="toggle-icon">
-                {expandedSections.has('connections') ? '−' : '+'}
-              </span>
-            </div>
-            {expandedSections.has('connections') && (
-              <div className="section-content">
-                <Connections embedded={true} />
-              </div>
-            )}
-          </div>
+          <button
+            className="settings-link-button"
+            onClick={() => navigate('/connections')}
+          >
+            Connections
+          </button>
 
-          {/* Tools Section */}
-          <div className="settings-section">
-            <div
-              className="section-header"
-              onClick={() => toggleSection('tools')}
-            >
-              <h3>
-                <span className="section-icon">🛠️</span>
-                Tools
-              </h3>
-              <span className="toggle-icon">
-                {expandedSections.has('tools') ? '−' : '+'}
-              </span>
-            </div>
-            {expandedSections.has('tools') && (
-              <div className="section-content">
-                <Tools embedded={true} />
-              </div>
-            )}
-          </div>
+          <button
+            className="settings-link-button"
+            onClick={() => navigate('/tools')}
+          >
+            Tools
+          </button>
 
-          {/* Documents Section */}
-          <div className="settings-section">
-            <div
-              className="section-header"
-              onClick={() => toggleSection('documents')}
-            >
-              <h3>
-                <span className="section-icon">📄</span>
-                Documents
-              </h3>
-              <span className="toggle-icon">
-                {expandedSections.has('documents') ? '−' : '+'}
-              </span>
-            </div>
-            {expandedSections.has('documents') && (
-              <div className="section-content">
-                <Documents embedded={true} />
-              </div>
-            )}
-          </div>
+          <button
+            className="settings-link-button"
+            onClick={() => navigate('/documents')}
+          >
+            Documents
+          </button>
 
-          {/* Analytics Section */}
-          <div className="settings-section">
-            <div
-              className="section-header"
-              onClick={() => toggleSection('analytics')}
-            >
-              <h3>
-                <span className="section-icon">📊</span>
-                Analytics
-              </h3>
-              <span className="toggle-icon">
-                {expandedSections.has('analytics') ? '−' : '+'}
-              </span>
-            </div>
-            {expandedSections.has('analytics') && (
-              <div className="section-content">
-                <Analytics embedded={true} />
-              </div>
-            )}
-          </div>
+          <button
+            className="settings-link-button"
+            onClick={() => navigate('/analytics')}
+          >
+            Analytics
+          </button>
 
-          {/* Logout Section */}
-          <div className="settings-section logout-section">
-            <button onClick={handleLogout} className="logout-button">
-              <span className="section-icon">🚪</span>
-              Logout
-            </button>
-          </div>
+          <button onClick={handleLogout} className="logout-button">
+            Logout
+          </button>
         </div>
+
+        <footer className="footer">
+          <p className="footer-contact">Contact: <a href="mailto:system@polsia.ai">system@polsia.ai</a></p>
+        </footer>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
 
