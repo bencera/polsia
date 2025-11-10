@@ -11,16 +11,24 @@ const { StdioServerTransport } = require('@modelcontextprotocol/sdk/server/stdio
 const { CallToolRequestSchema, ListToolsRequestSchema } = require('@modelcontextprotocol/sdk/types.js');
 const { createReport, getReportsByUserId, getReportsByDate } = require('../db.js');
 
-// Get user ID from command line argument
-const userIdArg = process.argv.find(arg => arg.startsWith('--user-id='));
-if (!userIdArg) {
-    console.error('Error: --user-id argument is required');
-    process.exit(1);
+// Get user ID from environment variable or command line argument
+let userId;
+
+// Try environment variable first (used by routine-executor)
+if (process.env.USER_ID) {
+    userId = parseInt(process.env.USER_ID);
+} else {
+    // Fallback to command line argument
+    const userIdArg = process.argv.find(arg => arg.startsWith('--user-id='));
+    if (!userIdArg) {
+        console.error('Error: USER_ID environment variable or --user-id argument is required');
+        process.exit(1);
+    }
+    userId = parseInt(userIdArg.split('=')[1]);
 }
 
-const userId = parseInt(userIdArg.split('=')[1]);
 if (isNaN(userId)) {
-    console.error('Error: --user-id must be a valid integer');
+    console.error('Error: USER_ID must be a valid integer');
     process.exit(1);
 }
 

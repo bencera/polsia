@@ -114,7 +114,9 @@ async function runRoutine(routineId, userId, options = {}) {
                 const primaryRepo = await getGitHubPrimaryRepo(userId);
                 console.log(`[Routine Executor] Primary repo result:`, primaryRepo ? primaryRepo.full_name : 'None configured');
 
-                if (primaryRepo && primaryRepo.clone_url) {
+                if (primaryRepo && primaryRepo.full_name) {
+                    // Construct clone URL from full_name (owner/repo)
+                    const cloneUrl = `https://github.com/${primaryRepo.full_name}.git`;
                     await saveExecutionLog(executionRecord.id, {
                         log_level: 'info',
                         stage: 'setup',
@@ -152,8 +154,8 @@ async function runRoutine(routineId, userId, options = {}) {
                         console.log(`[Routine Executor] 🔑 GitHub token obtained, starting clone...`);
 
                         // Clone the repo with authentication
-                        const cloneUrl = primaryRepo.clone_url.replace('https://', `https://${decryptedToken}@`);
-                        const cloneOutput = execSync(`git clone --depth 1 "${cloneUrl}" "${tempDir}"`, {
+                        const authenticatedCloneUrl = cloneUrl.replace('https://', `https://${decryptedToken}@`);
+                        const cloneOutput = execSync(`git clone --depth 1 "${authenticatedCloneUrl}" "${tempDir}"`, {
                             encoding: 'utf8',
                             timeout: 60000, // 60 second timeout
                         });
@@ -427,7 +429,26 @@ async function buildRoutinePrompt(agent, routine, userId) {
 
     prompt += `## Instructions\n\n`;
     prompt += `Execute this routine as defined. You have access to the tools mounted via MCP servers. `;
-    prompt += `This is a scheduled routine that runs automatically. Provide a summary of what you accomplished.\n`;
+    prompt += `This is a scheduled routine that runs automatically. Provide a summary of what you accomplished.\n\n`;
+
+    // Add session awareness instructions for recurring routines
+    if (routine.frequency && routine.frequency !== 'manual') {
+        prompt += `## ⚡ Session Efficiency\n\n`;
+        prompt += `**Important:** This routine runs ${routine.frequency}. You are operating in a persistent session.\n\n`;
+        prompt += `**On subsequent runs, be efficient:**\n`;
+        prompt += `- You've likely explored the repository schema before - reuse that knowledge\n`;
+        prompt += `- If the database structure hasn't changed, skip re-reading all the model files\n`;
+        prompt += `- Jump straight to querying the database for updated metrics\n`;
+        prompt += `- Only re-explore files if you encounter errors or need to understand new fields\n\n`;
+        prompt += `**First run checklist:**\n`;
+        prompt += `1. Explore repository to understand database schema\n`;
+        prompt += `2. Query database for metrics\n`;
+        prompt += `3. Generate report\n\n`;
+        prompt += `**Subsequent runs (if schema is known):**\n`;
+        prompt += `1. Query database directly for updated metrics\n`;
+        prompt += `2. Generate report\n`;
+        prompt += `3. Only re-explore files if queries fail or you need clarification\n\n`;
+    }
 
     return prompt;
 }
