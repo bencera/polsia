@@ -243,18 +243,10 @@ async function executeTask(prompt, options = {}) {
       queryOptions.model = model;
     }
 
-    // Resume from previous session if provided and it exists on disk
+    // Resume from previous session if provided (SDK handles validation internally)
     if (resumeSessionId) {
-      // Check if session exists in .claude/sessions directory
-      const sessionPath = path.join(cwd, '.claude', 'sessions', resumeSessionId);
-      try {
-        await fs.access(sessionPath);
-        queryOptions.resume = resumeSessionId;
-        console.log(`[Claude Agent] ♻️  Resuming session: ${resumeSessionId}`);
-      } catch (error) {
-        console.log(`[Claude Agent] ⚠️  Session ${resumeSessionId.substring(0, 8)}... not found on disk, starting new session`);
-        // Don't set resume option - will create a new session instead
-      }
+      queryOptions.resume = resumeSessionId;
+      console.log(`[Claude Agent] ♻️  Attempting to resume session: ${resumeSessionId.substring(0, 8)}...`);
     } else {
       console.log('[Claude Agent] 🆕 Starting new session');
     }
