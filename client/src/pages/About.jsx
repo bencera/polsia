@@ -7,8 +7,6 @@ function About() {
       <div className="about-content">
         <Link to="/" className="back-link">← Back to Home</Link>
 
-        <h1>About Polsia</h1>
-
         <div className="about-story">
           <p>
             When I was 38, 39, when I really started to build AI products<br />
