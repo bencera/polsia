@@ -212,6 +212,7 @@ async function runRoutine(routineId, userId, options = {}) {
             resumeSessionId: resumeSessionId, // ✅ Session persistence across routines and tasks!
             maxTurns: config.maxTurns || agent.config?.maxTurns || 100,
             mcpServers: mcpServers,
+            skipFileCollection: routine.type === 'render_analytics', // Skip file collection for analytics routines (reduces log noise)
             onProgress: async (progress) => {
                 let logMessage = '';
                 let logLevel = 'info';

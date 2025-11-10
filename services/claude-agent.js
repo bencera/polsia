@@ -399,8 +399,9 @@ async function executeTask(prompt, options = {}) {
     let generatedFiles = {};
     if (!skipFileCollection) {
       generatedFiles = await collectFiles(cwd);
+      console.log(`[Claude Agent] ✅ Collected ${Object.keys(generatedFiles).length} generated files`);
     } else {
-      console.log('[Claude Agent] Skipping file collection (not needed for this task)');
+      console.log('[Claude Agent] ⏭️  Skipping file collection (not needed for this task)');
     }
 
     const duration = Date.now() - startTime;
@@ -460,7 +461,7 @@ async function collectFiles(dir) {
         if (['.js', '.jsx', '.ts', '.tsx', '.json', '.md'].includes(ext)) {
           const content = await fs.readFile(fullPath, 'utf8');
           files[item] = content;
-          console.log(`[Claude Agent] Collected file: ${item} (${content.length} bytes)`);
+          // Removed verbose logging - just collect silently
         }
       } else if (stat.isDirectory()) {
         // Recursively collect from subdirectories
