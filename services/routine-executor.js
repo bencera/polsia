@@ -371,8 +371,13 @@ async function buildRoutinePrompt(agent, routine, userId) {
         if (primaryRepo) {
             prompt += `## Repository Information\n\n`;
             prompt += `The GitHub repository **${primaryRepo.full_name}** has been cloned to \`./github-repo\` in your working directory.\n`;
-            prompt += `You can read the code files directly to understand the database schema and important metrics.\n`;
-            prompt += `Do NOT attempt to clone the repository - it is already available locally.\n\n`;
+            prompt += `You can read the code files directly using standard file reading tools to understand the database schema and important metrics.\n`;
+            prompt += `**Important:** Use direct file reading (cat, less, grep, etc.) to explore the repository - NOT the GitHub MCP.\n`;
+            prompt += `Look for:\n`;
+            prompt += `- Database schema files (migrations/, db.js, models/)\n`;
+            prompt += `- Table definitions and column names\n`;
+            prompt += `- API endpoints that show what data exists\n`;
+            prompt += `- README or docs that explain the data model\n\n`;
         }
     }
 
@@ -398,7 +403,16 @@ async function configureMCPServersForRoutine(agent, routine, userId, config, mcp
     const routineMcpConfig = config.mcpConfig || {};
     const mergedMcpConfig = { ...agentMcpConfig, ...routineMcpConfig };
 
-    for (const mount of mcpMounts) {
+    // Filter out GitHub MCP for render_analytics routines (repo is already cloned locally)
+    let filteredMounts = mcpMounts;
+    if (routine.type === 'render_analytics') {
+        filteredMounts = mcpMounts.filter(mount => mount !== 'github');
+        if (mcpMounts.includes('github')) {
+            console.log('[Routine Executor] ℹ️  Filtered out GitHub MCP for render_analytics (repo already cloned)');
+        }
+    }
+
+    for (const mount of filteredMounts) {
         if (mount === 'github') {
             const githubConfig = mergedMcpConfig.github || {};
             const githubToken = await getGitHubToken(userId);

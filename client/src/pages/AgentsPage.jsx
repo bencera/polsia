@@ -377,8 +377,11 @@ function AgentsPage() {
                                   <p style={{ margin: '0 0 8px 0' }}>
                                     <strong>Before execution:</strong> The primary GitHub repository will be automatically cloned to <code>./github-repo</code> in the agent's workspace.
                                   </p>
-                                  <p style={{ margin: '0' }}>
-                                    The agent can directly read code files to understand the database schema without needing to clone via GitHub MCP.
+                                  <p style={{ margin: '0 0 8px 0' }}>
+                                    The agent will use standard file reading tools (cat, grep, etc.) to explore the repository and understand the database schema.
+                                  </p>
+                                  <p style={{ margin: '0', fontStyle: 'italic', color: '#666' }}>
+                                    Note: GitHub MCP is automatically excluded for this routine type since the repository is already available locally.
                                   </p>
                                 </div>
                               </div>
