@@ -169,83 +169,25 @@ function AgentsPage() {
 
   const activeCount = routines.filter(m => m.status === 'active').length;
 
-  // Group routines by MCP server
-  const groupRoutinesByMCP = (routines) => {
-    const groups = {
-      'multi-integration': [],
-      'appstore_connect': [],
-      'github': [],
-      'gmail': [],
-      'meta_ads': [],
-      'render': [],
-      'reports': [],
-      'sentry': [],
-      'slack': [],
-      'tasks': [],
-      'general': []
-    };
+  // Format last run timestamp
+  const formatLastRun = (lastRunAt) => {
+    if (!lastRunAt) return 'Never run';
 
-    const mcpDisplayNames = {
-      'multi-integration': 'Multi-Integration Routines',
-      'appstore_connect': 'App Store Connect',
-      'github': 'GitHub',
-      'gmail': 'Gmail',
-      'meta_ads': 'Meta Ads',
-      'render': 'Render',
-      'reports': 'Reports',
-      'sentry': 'Sentry',
-      'slack': 'Slack',
-      'tasks': 'Tasks',
-      'general': 'General Routines'
-    };
+    const date = new Date(lastRunAt);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
 
-    routines.forEach(routine => {
-      const mcpMounts = routine.config?.mcpMounts || [];
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays}d ago`;
 
-      // Routines with 3+ MCPs go to multi-integration
-      if (mcpMounts.length >= 3) {
-        groups['multi-integration'].push(routine);
-      }
-      // Routines with primary MCP (first in array)
-      else if (mcpMounts.length > 0) {
-        const primaryMCP = mcpMounts[0];
-        if (groups[primaryMCP]) {
-          groups[primaryMCP].push(routine);
-        } else {
-          groups['general'].push(routine);
-        }
-      }
-      // Routines with no MCPs
-      else {
-        groups['general'].push(routine);
-      }
-    });
-
-    // Return only non-empty groups in order
-    const orderedGroups = [
-      'multi-integration',
-      'appstore_connect',
-      'github',
-      'gmail',
-      'meta_ads',
-      'render',
-      'reports',
-      'sentry',
-      'slack',
-      'tasks',
-      'general'
-    ];
-
-    return orderedGroups
-      .filter(key => groups[key].length > 0)
-      .map(key => ({
-        key,
-        displayName: mcpDisplayNames[key],
-        routines: groups[key]
-      }));
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
-
-  const groupedRoutines = groupRoutinesByMCP(routines);
 
   if (loading) {
     return (
@@ -335,22 +277,13 @@ function AgentsPage() {
             </p>
           </div>
         ) : (
-          <>
-            {groupedRoutines.map((group) => (
-              <div key={group.key} className="routine-section">
-                <div className="section-header">
-                  <h3 className="section-title">{group.displayName}</h3>
-                  <span className="section-count">
-                    {group.routines.length} {group.routines.length === 1 ? 'routine' : 'routines'}
-                  </span>
-                </div>
-                <div className="routines-list">
-                  {group.routines.map((routine) => {
-                    const isExpanded = expandedRoutines.has(routine.id);
-                    const config = routine.config || {};
+          <div className="routines-list">
+            {routines.map((routine) => {
+              const isExpanded = expandedRoutines.has(routine.id);
+              const config = routine.config || {};
 
-                    return (
-                      <div key={routine.id} className="routine-card">
+              return (
+                <div key={routine.id} className="routine-card">
                         <div className="routine-main">
                           <button
                             className="expand-btn"
@@ -380,6 +313,9 @@ function AgentsPage() {
                                   Agent: {routine.agent_name}
                                 </span>
                               )}
+                              <span className="routine-last-run">
+                                Last run: {formatLastRun(routine.last_run_at)}
+                              </span>
                             </div>
                           </div>
 
@@ -538,9 +474,6 @@ function AgentsPage() {
                     );
                   })}
                 </div>
-              </div>
-            ))}
-          </>
         )}
       </div>
 
