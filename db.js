@@ -931,11 +931,14 @@ async function getRoutinesByUserId(userId) {
     const client = await pool.connect();
     try {
         const result = await client.query(
-            `SELECT r.*, a.name as agent_name, a.status as agent_status
+            `SELECT r.*, a.name as agent_name, a.status as agent_status,
+                    MAX(me.created_at) as last_run_at
              FROM routines r
              INNER JOIN agents a ON a.id = r.agent_id
+             LEFT JOIN module_executions me ON me.routine_id = r.id AND me.is_routine_execution = true
              WHERE r.user_id = $1
-             ORDER BY r.created_at DESC`,
+             GROUP BY r.id, a.name, a.status
+             ORDER BY MAX(me.created_at) DESC NULLS LAST, r.created_at DESC`,
             [userId]
         );
         return result.rows;
