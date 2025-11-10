@@ -92,6 +92,13 @@ function Settings() {
             Analytics
           </button>
 
+          <button
+            className="settings-link-button"
+            onClick={() => navigate('/cost-tracking')}
+          >
+            Cost Tracking
+          </button>
+
           <button onClick={handleLogout} className="logout-button">
             Logout
           </button>

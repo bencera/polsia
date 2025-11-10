@@ -1,0 +1,212 @@
+/* Polsia Module Costs - Matching Dashboard Aesthetic */
+
+.module-costs-container {
+  font-family: "Times New Roman", Times, serif;
+  background-color: #fff;
+  color: #000;
+  line-height: 1.6;
+  padding: 0;
+  min-height: 100vh;
+  width: 100%;
+}
+
+.module-costs-content {
+  margin-bottom: 30px;
+  padding: 0 20px 40px 20px;
+}
+
+.module-costs-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 30px;
+  gap: 20px;
+}
+
+.module-costs-header h2 {
+  font-size: 2.5em;
+  font-weight: 700;
+  margin: 0 0 10px 0;
+  line-height: 1.1;
+}
+
+.module-costs-subtitle {
+  font-size: 1.1em;
+  color: #666;
+  margin: 0;
+}
+
+.header-buttons {
+  display: flex;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.back-button,
+.refresh-button {
+  padding: 10px 20px;
+  font-family: "Times New Roman", Times, serif;
+  font-size: 1em;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #000 0%, #333 100%);
+  border: 2px solid #000;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.back-button:hover,
+.refresh-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #333 0%, #555 100%);
+  transform: translateY(-2px);
+}
+
+.refresh-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Module Costs Section */
+.module-costs-section {
+  margin-bottom: 40px;
+}
+
+/* Cost Tables */
+.cost-table-container {
+  overflow-x: auto;
+  border: 1px solid #000;
+}
+
+.cost-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #fff;
+  font-size: 0.95em;
+}
+
+.cost-table thead {
+  background-color: #000;
+  color: #fff;
+}
+
+.cost-table th {
+  padding: 12px 15px;
+  text-align: left;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.85em;
+  letter-spacing: 0.5px;
+}
+
+.cost-table td {
+  padding: 12px 15px;
+  border-bottom: 1px solid #ddd;
+}
+
+.cost-table tbody tr:hover {
+  background-color: #f9f9f9;
+}
+
+.cost-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.module-name {
+  font-weight: 600;
+}
+
+.cost-value {
+  font-weight: 700;
+  color: #000;
+}
+
+/* Loading and Error States */
+.loading {
+  text-align: center;
+  padding: 40px;
+  font-size: 1.2em;
+  color: #666;
+}
+
+.error-message {
+  padding: 15px;
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #721c24;
+  margin-bottom: 20px;
+  font-size: 1em;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #666;
+  font-size: 1.1em;
+  font-style: italic;
+}
+
+/* Footer */
+.footer {
+  text-align: center;
+  padding: 20px 0 0 0;
+  border-top: 1px solid #000;
+  margin-top: 40px;
+}
+
+.footer p {
+  font-size: 13px;
+  color: #666;
+  margin: 4px 0;
+}
+
+.footer-contact {
+  margin-top: 8px;
+}
+
+.footer-contact a {
+  color: #000;
+  text-decoration: none;
+  border-bottom: 1px solid #000;
+}
+
+.footer-contact a:hover {
+  color: #333;
+  border-bottom-color: #333;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .module-costs-content {
+    padding: 0 15px 40px 15px;
+  }
+
+  .module-costs-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+
+  .module-costs-header h2 {
+    font-size: 2em;
+  }
+
+  .header-buttons {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .back-button,
+  .refresh-button {
+    width: 100%;
+  }
+
+  .cost-table {
+    font-size: 0.85em;
+  }
+
+  .cost-table th,
+  .cost-table td {
+    padding: 8px 10px;
+  }
+}

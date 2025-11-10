@@ -1188,12 +1188,12 @@ async function getModuleExecutions(moduleId, userId, limit = 50) {
 async function createModuleExecution(moduleId, userId, executionData) {
     const client = await pool.connect();
     try {
-        const { trigger_type, status } = executionData;
+        const { trigger_type, status, routine_id, is_routine_execution } = executionData;
         const result = await client.query(
-            `INSERT INTO module_executions (module_id, user_id, status, trigger_type, started_at)
-             VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
+            `INSERT INTO module_executions (module_id, user_id, status, trigger_type, routine_id, is_routine_execution, started_at)
+             VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
              RETURNING *`,
-            [moduleId, userId, status || 'pending', trigger_type || 'manual']
+            [moduleId, userId, status || 'pending', trigger_type || 'manual', routine_id || null, is_routine_execution || false]
         );
         return result.rows[0];
     } catch (err) {
@@ -3449,6 +3449,101 @@ async function getReportById(reportId, userId) {
     }
 }
 
+// ==================== Cost Tracking Functions ====================
+
+// Get execution cost summary with time period breakdowns
+async function getExecutionCostsSummary(userId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            `SELECT
+                COALESCE(SUM(cost_usd), 0) as total_cost,
+                COALESCE(SUM(CASE WHEN DATE(completed_at) = CURRENT_DATE THEN cost_usd ELSE 0 END), 0) as today_cost,
+                COALESCE(SUM(CASE WHEN completed_at >= CURRENT_DATE - INTERVAL '7 days' THEN cost_usd ELSE 0 END), 0) as week_cost,
+                COALESCE(SUM(CASE WHEN DATE_TRUNC('month', completed_at) = DATE_TRUNC('month', CURRENT_DATE) THEN cost_usd ELSE 0 END), 0) as month_cost,
+                COUNT(*) as total_executions,
+                COUNT(CASE WHEN status = 'completed' THEN 1 END) as successful_executions,
+                COALESCE(AVG(cost_usd), 0) as avg_cost
+            FROM module_executions
+            WHERE user_id = $1 AND cost_usd IS NOT NULL`,
+            [userId]
+        );
+        return result.rows[0];
+    } catch (err) {
+        console.error('Error getting execution costs summary:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Get costs grouped by module
+async function getCostsByModule(userId, limit = 10) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            `SELECT
+                m.id,
+                m.name,
+                COALESCE(SUM(me.cost_usd), 0) as total_cost,
+                COUNT(me.id) as execution_count,
+                COALESCE(AVG(me.cost_usd), 0) as avg_cost_per_execution,
+                MAX(me.completed_at) as last_execution
+            FROM module_executions me
+            JOIN modules m ON me.module_id = m.id
+            WHERE me.user_id = $1 AND me.cost_usd IS NOT NULL
+            GROUP BY m.id, m.name
+            ORDER BY total_cost DESC
+            LIMIT $2`,
+            [userId, limit]
+        );
+        return result.rows;
+    } catch (err) {
+        console.error('Error getting costs by module:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Get detailed execution history with costs
+async function getDetailedExecutionHistory(userId, limit = 100) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            `SELECT
+                me.id,
+                COALESCE(
+                    m.name,
+                    r.name,
+                    a.name,
+                    'Unknown'
+                ) as module_name,
+                me.cost_usd,
+                me.completed_at,
+                me.started_at,
+                me.status,
+                me.duration_ms,
+                me.metadata,
+                me.trigger_type
+            FROM module_executions me
+            LEFT JOIN modules m ON me.module_id = m.id
+            LEFT JOIN routines r ON me.routine_id = r.id
+            LEFT JOIN agents a ON r.agent_id = a.id
+            WHERE me.user_id = $1 AND me.cost_usd IS NOT NULL
+            ORDER BY me.completed_at DESC NULLS LAST, me.created_at DESC
+            LIMIT $2`,
+            [userId, limit]
+        );
+        return result.rows;
+    } catch (err) {
+        console.error('Error getting detailed execution history:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
 module.exports = {
     pool,
     initDatabase,
@@ -3583,4 +3678,8 @@ module.exports = {
     getReportsByUserId,
     getReportsByDate,
     getReportById,
+    // Cost tracking functions
+    getExecutionCostsSummary,
+    getCostsByModule,
+    getDetailedExecutionHistory,
 };

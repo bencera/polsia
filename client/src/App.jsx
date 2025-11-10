@@ -14,6 +14,8 @@ import Connections from './pages/Connections';
 import Documents from './pages/Documents';
 import Analytics from './pages/Analytics';
 import Tools from './pages/Tools';
+import CostTracking from './pages/CostTracking';
+import ModuleCosts from './pages/ModuleCosts';
 import './App.css'
 
 // Component that redirects to dashboard if already logged in
@@ -130,6 +132,22 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Tools />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/cost-tracking"
+              element={
+                <ProtectedRoute>
+                  <CostTracking />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/module-costs"
+              element={
+                <ProtectedRoute>
+                  <ModuleCosts />
                 </ProtectedRoute>
               }
             />

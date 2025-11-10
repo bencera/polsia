@@ -441,6 +441,10 @@ app.use('/api/documents', authenticateToken, documentRoutes);
 const reportRoutes = require('./routes/reports-routes');
 app.use('/api/reports', authenticateToken, reportRoutes);
 
+// Cost Tracking Routes - Execution cost analytics
+const costTrackingRoutes = require('./routes/cost-tracking-routes');
+app.use('/api/cost-tracking', authenticateToken, costTrackingRoutes);
+
 // Tools Routes - MCP server catalog and system tools
 const toolsRoutes = require('./routes/tools-routes');
 app.use('/api/tools', authenticateToken, toolsRoutes);
