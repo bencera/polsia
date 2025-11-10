@@ -162,7 +162,67 @@ function AgentsPage() {
         newSet.delete(routineId);
         return newSet;
       });
+      return;
     }
+
+    // Poll for completion and refresh the list when done
+    pollForCompletion(routineId);
+  };
+
+  const pollForCompletion = async (routineId) => {
+    // Poll every 2 seconds to check if execution completed
+    const pollInterval = setInterval(async () => {
+      try {
+        const response = await fetch(`/api/routines/${routineId}/executions?limit=1`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!response.ok) {
+          clearInterval(pollInterval);
+          setRunningRoutines(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(routineId);
+            return newSet;
+          });
+          return;
+        }
+
+        const data = await response.json();
+        const latestExecution = data.executions?.[0];
+
+        // If execution completed or failed, refresh the list
+        if (latestExecution && (latestExecution.status === 'completed' || latestExecution.status === 'failed')) {
+          clearInterval(pollInterval);
+          setRunningRoutines(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(routineId);
+            return newSet;
+          });
+          // Refresh the routines list to update "Last run" timestamp
+          fetchRoutines();
+        }
+      } catch (err) {
+        console.error('Error polling for completion:', err);
+        clearInterval(pollInterval);
+        setRunningRoutines(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(routineId);
+          return newSet;
+        });
+      }
+    }, 2000);
+
+    // Stop polling after 10 minutes (safety timeout)
+    setTimeout(() => {
+      clearInterval(pollInterval);
+      setRunningRoutines(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(routineId);
+        return newSet;
+      });
+    }, 600000);
   };
 
   const fetchPromptPreview = async (routineId) => {
