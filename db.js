@@ -3851,9 +3851,11 @@ module.exports = {
     getExecutionCostsSummary,
     getCostsByModule,
     getDetailedExecutionHistory,
+    // NOTE: Public dashboard and funding functions exported at end of file
 };
 
-// ===== FUNDING PROJECTS =====
+// ===== PUBLIC DASHBOARD & FUNDING FUNCTIONS =====
+// These are defined after the main module.exports but added to exports at the end
 
 async function getFundingProjectsByUser(userId) {
     const result = await pool.query(
@@ -4098,24 +4100,24 @@ async function getModulesByFundingProject(projectId) {
     return result.rows;
 }
 
-// Export all functions including new funding/donations functions
-module.exports = {
-    ...module.exports,
-    // Funding and donations functions
-    getFundingProjectsByUser,
-    createFundingProject,
-    updateFundingProject,
-    deleteFundingProject,
-    createDonation,
-    completeDonation,
-    getTopDonorsByUser,
-    getDonationsByUser,
-    getDonationByPaymentIntent,
-    getUserBalance,
-    ensureUserBalance,
-    updateUserBalance,
-    deductFromBalance,
-    checkBalanceAndPauseModules,
-    pauseModulesByFundingProject,
-    getModulesByFundingProject,
-};
+// Add public dashboard and funding functions to existing exports
+module.exports.getUserByCompanySlug = getUserByCompanySlug;
+module.exports.updateUserCompanySettings = updateUserCompanySettings;
+module.exports.checkSlugAvailability = checkSlugAvailability;
+module.exports.getPublicDashboardData = getPublicDashboardData;
+module.exports.getFundingProjectsByUser = getFundingProjectsByUser;
+module.exports.createFundingProject = createFundingProject;
+module.exports.updateFundingProject = updateFundingProject;
+module.exports.deleteFundingProject = deleteFundingProject;
+module.exports.createDonation = createDonation;
+module.exports.completeDonation = completeDonation;
+module.exports.getTopDonorsByUser = getTopDonorsByUser;
+module.exports.getDonationsByUser = getDonationsByUser;
+module.exports.getDonationByPaymentIntent = getDonationByPaymentIntent;
+module.exports.getUserBalance = getUserBalance;
+module.exports.ensureUserBalance = ensureUserBalance;
+module.exports.updateUserBalance = updateUserBalance;
+module.exports.deductFromBalance = deductFromBalance;
+module.exports.checkBalanceAndPauseModules = checkBalanceAndPauseModules;
+module.exports.pauseModulesByFundingProject = pauseModulesByFundingProject;
+module.exports.getModulesByFundingProject = getModulesByFundingProject;
