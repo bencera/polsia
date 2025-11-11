@@ -338,7 +338,7 @@ function PublicDashboard() {
         onClose={handleDonationModalClose}
         userId={dashboardData?.user?.id}
         projectId={selectedProject?.id}
-        projectName={selectedProject?.name || 'General Fund'}
+        projectName={selectedProject?.name || dashboardData?.user?.company_name || 'General Fund'}
       />
     </>
   );
