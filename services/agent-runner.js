@@ -9,6 +9,7 @@ const crypto = require('crypto');
 const { executeTask } = require('./claude-agent');
 const {
     getModuleById,
+    getAgentById,
     createModuleExecution,
     updateModuleExecution,
     getServiceConnectionsByUserId,
@@ -17,6 +18,8 @@ const {
     getExecutionLogs,
     getServiceConnectionByName,
     taskExistsForExecution,
+    getDonationById,
+    markDonationThanked,
 } = require('../db');
 const { getGitHubToken, getGmailToken, getSlackToken, getSlackTokens, getSentryToken, getAppStoreConnectConnection, getMetaAdsConnection, getRenderApiKey, getRenderConnection } = require('../db');
 const { decryptToken } = require('../utils/encryption');
@@ -47,19 +50,38 @@ async function runModule(moduleId, userId, options = {}) {
     const startTime = Date.now();
     const { trigger_type = 'manual' } = options;
 
-    console.log(`[Agent Runner] Starting module execution: ${moduleId} for user ${userId}`);
+    console.log(`[Agent Runner] Starting agent execution: ${moduleId} for user ${userId}`);
 
     let executionRecord = null;
     let mcpMounts = [];
 
     try {
-        // 1. Fetch module configuration
-        const module = await getModuleById(moduleId, userId);
-        if (!module) {
-            throw new Error(`Module ${moduleId} not found for user ${userId}`);
+        // 1. Fetch agent configuration (unified system)
+        let agent = await getAgentById(moduleId, userId);
+
+        // Fallback: check legacy modules table
+        if (!agent) {
+            const module = await getModuleById(moduleId, userId);
+            if (module) {
+                // Convert module to agent format for backwards compatibility
+                agent = {
+                    id: module.id,
+                    user_id: module.user_id,
+                    name: module.name,
+                    description: module.description,
+                    role: module.role,
+                    agent_type: module.type,
+                    config: module.config,
+                    session_id: module.session_id,
+                };
+            }
         }
 
-        console.log(`[Agent Runner] Module found: ${module.name}`);
+        if (!agent) {
+            throw new Error(`Agent ${moduleId} not found for user ${userId}`);
+        }
+
+        console.log(`[Agent Runner] Agent found: ${agent.name} (type: ${agent.agent_type})`);
 
         // 2. Create execution record
         executionRecord = await createModuleExecution(moduleId, userId, {
@@ -74,42 +96,42 @@ async function runModule(moduleId, userId, options = {}) {
             status: 'running',
         });
 
-        // 3. Check if this is a special module type (email summarizer, data agent, vision gatherer, render analytics)
-        if (module.type === 'email_summarizer') {
-            return await runEmailSummarizerModule(module, userId, executionRecord, startTime);
+        // 3. Check if this is a special agent type (email summarizer, data agent, vision gatherer, render analytics)
+        if (agent.agent_type === 'email_summarizer') {
+            return await runEmailSummarizerModule(agent, userId, executionRecord, startTime);
         }
 
-        if (module.type === 'data_agent') {
-            return await runDataAgentModule(module, userId, executionRecord, startTime);
+        if (agent.agent_type === 'data_agent') {
+            return await runDataAgentModule(agent, userId, executionRecord, startTime);
         }
 
-        if (module.type === 'vision_gatherer') {
-            return await runVisionGathererModule(module, userId, executionRecord, startTime);
+        if (agent.agent_type === 'vision_gatherer') {
+            return await runVisionGathererModule(agent, userId, executionRecord, startTime);
         }
 
-        if (module.type === 'render_analytics') {
-            return await runRenderAnalyticsModule(module, userId, executionRecord, startTime);
+        if (agent.agent_type === 'render_analytics') {
+            return await runRenderAnalyticsModule(agent, userId, executionRecord, startTime);
         }
 
-        if (module.type === 'appstore_analytics') {
-            return await runAppStoreAnalyticsModule(module, userId, executionRecord, startTime);
+        if (agent.agent_type === 'appstore_analytics') {
+            return await runAppStoreAnalyticsModule(agent, userId, executionRecord, startTime);
         }
 
-        if (module.type === 'all_analytics') {
-            return await runAllAnalyticsModule(module, userId, executionRecord, startTime);
+        if (agent.agent_type === 'all_analytics') {
+            return await runAllAnalyticsModule(agent, userId, executionRecord, startTime);
         }
 
-        if (module.type === 'analytics_sub_agents') {
-            return await runAnalyticsSubAgentsModule(module, userId, executionRecord, startTime);
+        if (agent.agent_type === 'analytics_sub_agents') {
+            return await runAnalyticsSubAgentsModule(agent, userId, executionRecord, startTime);
         }
 
-        // 4. Prepare execution context for regular modules
-        const context = await prepareModuleContext(module, userId);
+        // 4. Prepare execution context for regular agents
+        const context = await prepareModuleContext(agent, userId);
 
         console.log(`[Agent Runner] Context prepared with ${Object.keys(context.mcpServers || {}).length} MCP servers`);
 
         // 5. If using Gmail MCP, seed credentials first
-        const config = module.config || {};
+        const config = agent.config || {};
         mcpMounts = config.mcpMounts || [];
         if (mcpMounts.includes('gmail')) {
             console.log('[Agent Runner] Setting up Gmail MCP credentials...');
@@ -119,23 +141,23 @@ async function runModule(moduleId, userId, options = {}) {
             }
         }
 
-        // 4. Create persistent workspace for this module (same path for session resumption)
+        // 4. Create persistent workspace for this agent (same path for session resumption)
         const workspace = path.join(
             process.cwd(),
             'temp',
-            'module-sessions',
-            `module-${module.id}`
+            'agent-sessions',
+            `agent-${agent.id}`
         );
         await fs.mkdir(workspace, { recursive: true });
 
         console.log(`[Agent Runner] Workspace: ${workspace}`);
 
         // 5. Check for existing session_id to enable continuous learning
-        const resumeSessionId = module.session_id || null;
+        const resumeSessionId = agent.session_id || null;
         if (resumeSessionId) {
-            console.log(`[Agent Runner] ♻️  Module has existing session - will resume for continuous learning`);
+            console.log(`[Agent Runner] ♻️  Agent has existing session - will resume for continuous learning`);
         } else {
-            console.log(`[Agent Runner] 🆕 First run for this module - creating new session`);
+            console.log(`[Agent Runner] 🆕 First run for this agent - creating new session`);
         }
 
         // Track new session ID if this is first run
@@ -268,18 +290,18 @@ async function runModule(moduleId, userId, options = {}) {
             }
         }
 
-        // 7.1. Save new session ID to module for future runs (continuous learning)
+        // 7.1. Save new session ID to agent for future runs (continuous learning)
         if (newSessionId && !resumeSessionId && result.success) {
-            console.log(`[Agent Runner] 💾 Saving session ID to module for future runs...`);
-            const { updateModuleSessionId } = require('../db');
-            await updateModuleSessionId(module.id, newSessionId);
+            console.log(`[Agent Runner] 💾 Saving session ID to agent for future runs...`);
+            const { updateAgentSession } = require('../db');
+            await updateAgentSession(agent.id, newSessionId, workspace);
             console.log(`[Agent Runner] ✅ Session ID saved - future runs will resume from this session`);
         }
 
-        console.log(`[Agent Runner] ✅ Module execution completed: ${moduleId}`);
+        console.log(`[Agent Runner] ✅ Agent execution completed: ${moduleId}`);
 
         // 7.5. Auto-store analytics request ID if this is the Enable module
-        if (result.success && module.name === 'Enable App Store Analytics Reports') {
+        if (result.success && agent.name === 'Enable App Store Analytics Reports') {
             try {
                 const { storeAppStoreAnalyticsRequest } = require('../db');
 
@@ -360,7 +382,7 @@ async function runModule(moduleId, userId, options = {}) {
             cost_usd: result.metadata?.cost_usd || 0,
         };
     } catch (error) {
-        console.error(`[Agent Runner] ❌ Error executing module ${moduleId}:`, error.message);
+        console.error(`[Agent Runner] ❌ Error executing agent ${moduleId}:`, error.message);
         console.error(`[Agent Runner] Stack trace:`, error.stack);
 
         // Cleanup Gmail MCP credentials if they were used
@@ -2545,7 +2567,270 @@ Remember: Use relative path "analytics.md" not absolute path.
     }
 }
 
+/**
+ * Trigger Donation Thanker Agent
+ * Sends personalized thank-you email to donor and creates dashboard activity
+ * @param {number} donationId - The donation ID to thank
+ * @returns {Promise<Object>} Execution result
+ */
+async function triggerDonationThanker(donationId) {
+    const startTime = Date.now();
+    let executionRecord = null;
+
+    console.log(`[Donation Thanker] 🎁 Starting thank-you automation for donation ${donationId}`);
+
+    try {
+        // 1. Fetch donation details
+        const donation = await getDonationById(donationId);
+        if (!donation) {
+            throw new Error(`Donation ${donationId} not found`);
+        }
+
+        // Check if already thanked
+        if (donation.thanked_at) {
+            console.log(`[Donation Thanker] ⚠️ Donation ${donationId} already thanked at ${donation.thanked_at}`);
+            return {
+                success: false,
+                error: 'Donation already thanked',
+                already_thanked: true,
+            };
+        }
+
+        const userId = donation.user_id;
+        console.log(`[Donation Thanker] Donation details:`, {
+            donor_name: donation.donor_name,
+            donor_email: donation.donor_email,
+            amount: donation.amount_usd,
+            company: donation.company_name,
+        });
+
+        // 2. Find Donation Thanker agent (for this user or system-level)
+        const db = require('../db');
+        const agentResult = await db.pool.query(
+            'SELECT * FROM agents WHERE agent_type = $1 AND (user_id = $2 OR user_id IS NULL) AND status = $3 ORDER BY user_id DESC LIMIT 1',
+            ['donation_thanker', userId, 'active']
+        );
+
+        if (agentResult.rows.length === 0) {
+            throw new Error('Donation Thanker agent not found. Run seed script.');
+        }
+
+        const agent = agentResult.rows[0];
+        console.log(`[Donation Thanker] Found agent: ${agent.name} (ID: ${agent.id})`);
+
+        // 3. Create execution record
+        executionRecord = await createModuleExecution(null, userId, {
+            trigger_type: 'donation_webhook',
+            status: 'running',
+            metadata: {
+                donation_id: donationId,
+                agent_id: agent.id,
+                agent_name: agent.name,
+            },
+        });
+
+        console.log(`[Donation Thanker] Created execution record: ${executionRecord.id}`);
+
+        await saveExecutionLog(executionRecord.id, {
+            log_level: 'info',
+            stage: 'started',
+            message: `Thanking donor ${donation.donor_name} for $${donation.amount_usd} donation`,
+            metadata: { donation_id: donationId },
+        });
+
+        // 4. Setup Gmail MCP credentials
+        const config = agent.config || {};
+        const mcpMounts = config.mcpMounts || [];
+
+        if (mcpMounts.includes('gmail')) {
+            await setupGmailMCPCredentials(userId);
+        }
+
+        // 5. Configure MCP servers
+        const mcpServers = {};
+
+        // Gmail MCP
+        if (mcpMounts.includes('gmail')) {
+            const gmailToken = await getGmailToken(userId);
+            if (!gmailToken) {
+                throw new Error('Gmail not connected. Please connect Gmail in settings.');
+            }
+
+            mcpServers.gmail = {
+                command: 'npx',
+                args: ['-y', '@gongrzhe/server-gmail-autoauth-mcp'],
+                env: {
+                    GMAIL_CREDENTIALS_PATH: path.join(process.cwd(), 'temp', `gmail-credentials-${userId}.json`),
+                },
+            };
+        }
+
+        console.log(`[Donation Thanker] Configured ${Object.keys(mcpServers).length} MCP servers: ${Object.keys(mcpServers).join(', ')}`);
+
+        // 6. Build personalized prompt
+        const prompt = `You are the Donation Thanker Agent. A supporter just donated to ${donation.company_name || 'our platform'}!
+
+**Donation Details:**
+- Donor Name: ${donation.donor_name}
+- Donor Email: ${donation.donor_email}
+- Amount: $${parseFloat(donation.amount_usd).toFixed(2)}
+- Message from donor: ${donation.message || '(none)'}
+- Company: ${donation.company_name}
+
+**Your Task:**
+
+Send a warm, personalized thank-you email to ${donation.donor_email} using the Gmail MCP:
+- Thank them by name for their $${parseFloat(donation.amount_usd).toFixed(2)} contribution
+- ${donation.message ? `Respond thoughtfully to their message: "${donation.message}"` : 'Express genuine appreciation for their support'}
+- Keep it brief (2-3 paragraphs)
+- Be warm and personal, not corporate
+- Sign it from ${donation.company_name}
+
+Execute this task now.`;
+
+        console.log(`[Donation Thanker] 🤖 Starting AI execution...`);
+
+        // 7. Execute agent
+        const result = await executeTask(prompt, {
+            maxTurns: config.maxTurns || 10,
+            mcpServers: mcpServers,
+            onProgress: async (progress) => {
+                let logMessage = '';
+                let logLevel = 'info';
+                let stage = progress.stage || null;
+
+                if (progress.stage === 'thinking') {
+                    logMessage = progress.message || 'AI thinking...';
+                    console.log(`[Donation Thanker] 💭 ${progress.message || 'Thinking...'}`);
+                } else if (progress.stage === 'tool_use') {
+                    logMessage = `Using tool: ${progress.tool}`;
+                    stage = 'tool_use';
+                    console.log(`[Donation Thanker] 🔧 Using tool: ${progress.tool}`);
+                } else if (progress.stage === 'initialized') {
+                    logMessage = `Session initialized with model: ${progress.model}`;
+                    stage = 'initialized';
+                    console.log(`[Donation Thanker] ✓ Session initialized`);
+                }
+
+                if (logMessage && executionRecord) {
+                    saveExecutionLog(executionRecord.id, {
+                        log_level: logLevel,
+                        stage: stage,
+                        message: logMessage,
+                        metadata: {
+                            tool: progress.tool,
+                            turnCount: progress.turnCount,
+                            donation_id: donationId,
+                        },
+                    }).catch(err => {
+                        console.error('[Donation Thanker] Failed to save log:', err.message);
+                    });
+                }
+            },
+        });
+
+        console.log(`[Donation Thanker] ✓ AI execution completed. Success: ${result.success}`);
+
+        // 8. Cleanup Gmail MCP credentials
+        if (mcpMounts.includes('gmail')) {
+            await cleanupGmailMCPCredentials();
+        }
+
+        // 9. Mark donation as thanked if successful
+        if (result.success) {
+            await markDonationThanked(donationId);
+            console.log(`[Donation Thanker] ✅ Donation ${donationId} marked as thanked`);
+        }
+
+        // 10. Create task summary for dashboard
+        const alreadyHasTask = await taskExistsForExecution(executionRecord.id);
+        if (!alreadyHasTask) {
+            const taskTitle = `${donation.donor_name} donated $${parseFloat(donation.amount_usd).toFixed(2)}`;
+            const taskDescription = donation.message
+                ? `Thanked ${donation.donor_name} for their donation. Their message: "${donation.message}"`
+                : `Sent thank-you email to ${donation.donor_name} for their $${parseFloat(donation.amount_usd).toFixed(2)} donation.`;
+
+            await createTaskSummary(userId, {
+                title: taskTitle,
+                description: taskDescription,
+                status: 'completed',
+                serviceIds: [], // no services used (Gmail is handled by MCP)
+                execution_id: executionRecord.id,
+            });
+            console.log(`[Donation Thanker] ✅ Task summary created: "${taskTitle}"`);
+        }
+
+        // 11. Update execution record
+        const duration = Date.now() - startTime;
+        const cost = result.metadata?.cost_usd || 0;
+
+        console.log(`[Donation Thanker] 📊 Execution stats:`);
+        console.log(`   - Duration: ${(duration / 1000).toFixed(2)}s`);
+        console.log(`   - Cost: $${cost.toFixed(4)}`);
+        console.log(`   - Status: ${result.success ? '✓ completed' : '✗ failed'}`);
+
+        await updateModuleExecution(executionRecord.id, {
+            status: result.success ? 'completed' : 'failed',
+            completed_at: new Date(),
+            duration_ms: duration,
+            cost_usd: cost,
+            metadata: {
+                turns: result.metadata?.num_turns,
+                donation_id: donationId,
+                donor_email: donation.donor_email,
+                amount_usd: donation.amount_usd,
+                agent_id: agent.id,
+            },
+        });
+
+        await saveExecutionLog(executionRecord.id, {
+            log_level: result.success ? 'info' : 'error',
+            stage: result.success ? 'completed' : 'failed',
+            message: result.success
+                ? `✅ Thank-you sent to ${donation.donor_name}`
+                : `❌ Failed to send thank-you: ${result.error || 'Unknown error'}`,
+        });
+
+        return {
+            success: result.success,
+            execution_id: executionRecord.id,
+            duration_ms: duration,
+            cost_usd: cost,
+            donation_id: donationId,
+            error: result.error,
+        };
+
+    } catch (error) {
+        console.error(`[Donation Thanker] ❌ Error:`, error.message);
+
+        const duration = Date.now() - startTime;
+
+        if (executionRecord) {
+            await saveExecutionLog(executionRecord.id, {
+                log_level: 'error',
+                stage: 'failed',
+                message: `Donation thanker failed: ${error.message}`,
+            });
+
+            await updateModuleExecution(executionRecord.id, {
+                status: 'failed',
+                completed_at: new Date(),
+                duration_ms: duration,
+                error_message: error.message,
+            });
+        }
+
+        return {
+            success: false,
+            error: error.message,
+            donation_id: donationId,
+            execution_id: executionRecord?.id,
+        };
+    }
+}
+
 module.exports = {
     runModule,
     prepareModuleContext,
+    triggerDonationThanker,
 };
