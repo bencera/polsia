@@ -3851,9 +3851,271 @@ module.exports = {
     getExecutionCostsSummary,
     getCostsByModule,
     getDetailedExecutionHistory,
-    // Public dashboard functions
-    getUserByCompanySlug,
-    updateUserCompanySettings,
-    checkSlugAvailability,
-    getPublicDashboardData,
+};
+
+// ===== FUNDING PROJECTS =====
+
+async function getFundingProjectsByUser(userId) {
+    const result = await pool.query(
+        `SELECT * FROM funding_projects
+         WHERE user_id = $1
+         ORDER BY display_order ASC, created_at ASC`,
+        [userId]
+    );
+    return result.rows;
+}
+
+async function createFundingProject(userId, name, description, goalAmount, displayOrder = 0) {
+    const result = await pool.query(
+        `INSERT INTO funding_projects
+         (user_id, name, description, goal_amount_usd, display_order)
+         VALUES ($1, $2, $3, $4, $5)
+         RETURNING *`,
+        [userId, name, description, goalAmount, displayOrder]
+    );
+    return result.rows[0];
+}
+
+async function updateFundingProject(projectId, updates) {
+    const fields = [];
+    const values = [];
+    let paramCount = 1;
+
+    if (updates.name !== undefined) {
+        fields.push(`name = $${paramCount++}`);
+        values.push(updates.name);
+    }
+    if (updates.description !== undefined) {
+        fields.push(`description = $${paramCount++}`);
+        values.push(updates.description);
+    }
+    if (updates.goal_amount_usd !== undefined) {
+        fields.push(`goal_amount_usd = $${paramCount++}`);
+        values.push(updates.goal_amount_usd);
+    }
+    if (updates.status !== undefined) {
+        fields.push(`status = $${paramCount++}`);
+        values.push(updates.status);
+    }
+    if (updates.display_order !== undefined) {
+        fields.push(`display_order = $${paramCount++}`);
+        values.push(updates.display_order);
+    }
+
+    fields.push(`updated_at = CURRENT_TIMESTAMP`);
+    values.push(projectId);
+
+    const result = await pool.query(
+        `UPDATE funding_projects
+         SET ${fields.join(', ')}
+         WHERE id = $${paramCount}
+         RETURNING *`,
+        values
+    );
+    return result.rows[0];
+}
+
+async function deleteFundingProject(projectId) {
+    await pool.query('DELETE FROM funding_projects WHERE id = $1', [projectId]);
+    return true;
+}
+
+// ===== DONATIONS =====
+
+async function createDonation(userId, projectId, donorName, donorEmail, amount, paymentIntentId, metadata = {}) {
+    const result = await pool.query(
+        `INSERT INTO donations
+         (user_id, funding_project_id, donor_name, donor_email, amount_usd, stripe_payment_intent_id, metadata)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         RETURNING *`,
+        [userId, projectId, donorName, donorEmail, amount, paymentIntentId, JSON.stringify(metadata)]
+    );
+    return result.rows[0];
+}
+
+async function completeDonation(paymentIntentId) {
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // Get the donation
+        const donationResult = await client.query(
+            'SELECT * FROM donations WHERE stripe_payment_intent_id = $1',
+            [paymentIntentId]
+        );
+
+        if (donationResult.rows.length === 0) {
+            throw new Error('Donation not found');
+        }
+
+        const donation = donationResult.rows[0];
+
+        // Update donation status
+        await client.query(
+            `UPDATE donations
+             SET status = 'completed', completed_at = CURRENT_TIMESTAMP
+             WHERE stripe_payment_intent_id = $1`,
+            [paymentIntentId]
+        );
+
+        // Update user balance
+        await ensureUserBalance(donation.user_id, client);
+        await client.query(
+            `UPDATE user_balances
+             SET total_donated_usd = total_donated_usd + $1,
+                 current_balance_usd = current_balance_usd + $1,
+                 last_updated_at = CURRENT_TIMESTAMP
+             WHERE user_id = $2`,
+            [donation.amount_usd, donation.user_id]
+        );
+
+        await client.query('COMMIT');
+        return donation;
+    } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+    } finally {
+        client.release();
+    }
+}
+
+async function getTopDonorsByUser(userId, limit = 10) {
+    const result = await pool.query(
+        `SELECT
+            CASE WHEN is_anonymous THEN 'Anonymous' ELSE donor_name END as donor_name,
+            SUM(amount_usd) as total_donated
+         FROM donations
+         WHERE user_id = $1 AND status = 'completed'
+         GROUP BY donor_name, is_anonymous
+         ORDER BY total_donated DESC
+         LIMIT $2`,
+        [userId, limit]
+    );
+    return result.rows;
+}
+
+async function getDonationsByUser(userId, limit = 50) {
+    const result = await pool.query(
+        `SELECT d.*, fp.name as project_name
+         FROM donations d
+         LEFT JOIN funding_projects fp ON d.funding_project_id = fp.id
+         WHERE d.user_id = $1
+         ORDER BY d.created_at DESC
+         LIMIT $2`,
+        [userId, limit]
+    );
+    return result.rows;
+}
+
+async function getDonationByPaymentIntent(paymentIntentId) {
+    const result = await pool.query(
+        'SELECT * FROM donations WHERE stripe_payment_intent_id = $1',
+        [paymentIntentId]
+    );
+    return result.rows[0];
+}
+
+// ===== USER BALANCES =====
+
+async function getUserBalance(userId) {
+    const result = await pool.query(
+        'SELECT * FROM user_balances WHERE user_id = $1',
+        [userId]
+    );
+    return result.rows[0] || null;
+}
+
+async function ensureUserBalance(userId, client = null) {
+    const db = client || pool;
+    const result = await db.query(
+        `INSERT INTO user_balances (user_id)
+         VALUES ($1)
+         ON CONFLICT (user_id) DO NOTHING
+         RETURNING *`,
+        [userId]
+    );
+    return result.rows[0];
+}
+
+async function updateUserBalance(userId, donationAmount) {
+    await ensureUserBalance(userId);
+    const result = await pool.query(
+        `UPDATE user_balances
+         SET total_donated_usd = total_donated_usd + $1,
+             current_balance_usd = current_balance_usd + $1,
+             last_updated_at = CURRENT_TIMESTAMP
+         WHERE user_id = $2
+         RETURNING *`,
+        [donationAmount, userId]
+    );
+    return result.rows[0];
+}
+
+async function deductFromBalance(userId, executionCost) {
+    await ensureUserBalance(userId);
+    const result = await pool.query(
+        `UPDATE user_balances
+         SET total_spent_usd = total_spent_usd + $1,
+             current_balance_usd = current_balance_usd - $1,
+             last_updated_at = CURRENT_TIMESTAMP
+         WHERE user_id = $2
+         RETURNING *`,
+        [executionCost, userId]
+    );
+    return result.rows[0];
+}
+
+async function checkBalanceAndPauseModules(userId) {
+    const balance = await getUserBalance(userId);
+    if (balance && parseFloat(balance.current_balance_usd) <= 0) {
+        // Pause all active modules for this user
+        await pool.query(
+            `UPDATE modules
+             SET status = 'paused'
+             WHERE user_id = $1 AND status = 'active'`,
+            [userId]
+        );
+        return true;
+    }
+    return false;
+}
+
+async function pauseModulesByFundingProject(projectId) {
+    await pool.query(
+        `UPDATE modules
+         SET status = 'paused'
+         WHERE funding_project_id = $1 AND status = 'active'`,
+        [projectId]
+    );
+    return true;
+}
+
+async function getModulesByFundingProject(projectId) {
+    const result = await pool.query(
+        'SELECT * FROM modules WHERE funding_project_id = $1',
+        [projectId]
+    );
+    return result.rows;
+}
+
+// Export all functions including new funding/donations functions
+module.exports = {
+    ...module.exports,
+    // Funding and donations functions
+    getFundingProjectsByUser,
+    createFundingProject,
+    updateFundingProject,
+    deleteFundingProject,
+    createDonation,
+    completeDonation,
+    getTopDonorsByUser,
+    getDonationsByUser,
+    getDonationByPaymentIntent,
+    getUserBalance,
+    ensureUserBalance,
+    updateUserBalance,
+    deductFromBalance,
+    checkBalanceAndPauseModules,
+    pauseModulesByFundingProject,
+    getModulesByFundingProject,
 };

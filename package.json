@@ -50,6 +50,7 @@
     "node-pg-migrate": "^8.0.3",
     "pg": "^8.16.3",
     "slack-mcp-server": "^1.1.26",
+    "stripe": "^19.3.0",
     "uuid": "^13.0.0"
   },
   "engines": {

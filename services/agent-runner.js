@@ -241,6 +241,33 @@ async function runModule(moduleId, userId, options = {}) {
             error_message: result.success ? null : result.error,
         });
 
+        // 7.05. Deduct cost from user balance and check if modules should be paused
+        if (cost > 0) {
+            try {
+                const { deductFromBalance, checkBalanceAndPauseModules } = require('../db');
+                await deductFromBalance(userId, cost);
+                const paused = await checkBalanceAndPauseModules(userId);
+                if (paused) {
+                    console.log(`[Agent Runner] ⚠️  Balance depleted - modules paused for user ${userId}`);
+                    await saveExecutionLog(executionRecord.id, {
+                        timestamp: new Date(),
+                        level: 'warning',
+                        message: 'Balance depleted - all active modules have been paused. Add funds to resume operations.',
+                        stage: 'post_execution'
+                    });
+                }
+            } catch (balanceError) {
+                console.error(`[Agent Runner] ❌ Error deducting from balance:`, balanceError);
+                // Don't fail the execution if balance update fails
+                await saveExecutionLog(executionRecord.id, {
+                    timestamp: new Date(),
+                    level: 'error',
+                    message: `Failed to deduct cost from balance: ${balanceError.message}`,
+                    stage: 'post_execution'
+                });
+            }
+        }
+
         // 7.1. Save new session ID to module for future runs (continuous learning)
         if (newSessionId && !resumeSessionId && result.success) {
             console.log(`[Agent Runner] 💾 Saving session ID to module for future runs...`);

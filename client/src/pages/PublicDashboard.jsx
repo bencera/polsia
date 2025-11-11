@@ -151,13 +151,19 @@ function PublicDashboard() {
                   <h2 className="paperclips-title">AI Operations</h2>
 
                   <div className="paperclips-stat">
-                    Agent Loops (24h): <span className="paperclips-value">1,247</span>
+                    Active Agents: <span className="paperclips-value">8</span>
                   </div>
                   <div className="paperclips-stat">
-                    Active Agents: <span className="paperclips-value">8 / 12</span>
+                    Services Connected: <span className="paperclips-value">12</span>
                   </div>
                   <div className="paperclips-stat">
-                    Lines of Code Written: <span className="paperclips-value">3,892</span>
+                    Tasks Completed: <span className="paperclips-value">1,247</span>
+                  </div>
+                  <div className="paperclips-stat">
+                    LOC Written: <span className="paperclips-value">3,892</span>
+                  </div>
+                  <div className="paperclips-stat">
+                    Content Created: <span className="paperclips-value">156</span>
                   </div>
 
                 </div>

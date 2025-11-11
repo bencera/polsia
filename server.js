@@ -468,6 +468,14 @@ app.use('/api/public', publicDashboardRoutes);
 const userSettingsRoutes = require('./routes/user-settings-routes');
 app.use('/api/user', authenticateToken, userSettingsRoutes);
 
+// Funding and donations routes
+const donationRoutes = require('./routes/donation-routes');
+const fundingProjectRoutes = require('./routes/funding-project-routes');
+const balanceRoutes = require('./routes/balance-routes');
+app.use('/api/donations', donationRoutes);
+app.use('/api/funding-projects', fundingProjectRoutes);
+app.use('/api/balance', balanceRoutes);
+
 // 404 for any other routes
 app.get('*', (req, res) => {
     res.status(404).json({ success: false, message: 'Not found' });
