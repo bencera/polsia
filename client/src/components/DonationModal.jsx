@@ -202,7 +202,7 @@ function DonationModal({ isOpen, onClose, userId, projectId, projectName, isOwnA
         </form>
 
         <p className="donation-secure-notice">
-          🔒 Secure payment powered by Stripe
+          Secure payment powered by Stripe
         </p>
       </div>
     </div>
