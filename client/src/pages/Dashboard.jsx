@@ -63,12 +63,9 @@ function Dashboard() {
   };
 
   const fetchTopFunders = async () => {
+    if (!user?.id) return;
     try {
-      const response = await fetch('/api/donations/top-donors?limit=5', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const response = await fetch(`/api/donations/user/${user.id}/top-donors?limit=5`);
       const data = await response.json();
       if (response.ok) {
         setTopFunders(data.topDonors || []);

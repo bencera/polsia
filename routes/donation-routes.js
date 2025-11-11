@@ -155,8 +155,12 @@ router.post('/webhook', async (req, res) => {
                 const paymentIntent = event.data.object;
                 console.log(`[Donation Routes] Payment succeeded: ${paymentIntent.id}`);
 
-                // Complete the donation in database
-                await db.completeDonation(paymentIntent.id);
+                // Try to complete the donation - may already be completed by checkout.session.completed
+                try {
+                    await db.completeDonation(paymentIntent.id);
+                } catch (err) {
+                    console.log(`[Donation Routes] Payment intent ${paymentIntent.id} not found or already completed`);
+                }
                 break;
 
             case 'checkout.session.completed':
