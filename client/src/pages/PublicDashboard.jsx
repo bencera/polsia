@@ -9,10 +9,21 @@ function PublicDashboard() {
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [balance, setBalance] = useState(null);
+  const [topFunders, setTopFunders] = useState([]);
+  const [fundingProjects, setFundingProjects] = useState([]);
 
   useEffect(() => {
     fetchPublicDashboard();
   }, [company_slug]);
+
+  useEffect(() => {
+    if (dashboardData?.user?.id) {
+      fetchBalance(dashboardData.user.id);
+      fetchTopFunders(dashboardData.user.id);
+      fetchFundingProjects(dashboardData.user.id);
+    }
+  }, [dashboardData]);
 
   const fetchPublicDashboard = async () => {
     try {
@@ -28,6 +39,42 @@ function PublicDashboard() {
       setError('Failed to load dashboard. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchBalance = async (userId) => {
+    try {
+      const response = await fetch(`/api/balance/user/${userId}`);
+      const data = await response.json();
+      if (response.ok) {
+        setBalance(data.balance);
+      }
+    } catch (err) {
+      console.error('Failed to fetch balance:', err);
+    }
+  };
+
+  const fetchTopFunders = async (userId) => {
+    try {
+      const response = await fetch(`/api/donations/user/${userId}/top-donors?limit=5`);
+      const data = await response.json();
+      if (response.ok) {
+        setTopFunders(data.topDonors || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch top funders:', err);
+    }
+  };
+
+  const fetchFundingProjects = async (userId) => {
+    try {
+      const response = await fetch(`/api/funding-projects/user/${userId}`);
+      const data = await response.json();
+      if (response.ok) {
+        setFundingProjects(data.projects || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch funding projects:', err);
     }
   };
 
@@ -173,73 +220,55 @@ function PublicDashboard() {
                   <h2 className="paperclips-title">Computational Resources</h2>
 
                   <div className="paperclips-section">
-                    <span className="paperclips-stat">Available Funds: <span className="paperclips-value">$ 357.43</span></span>
+                    <span className="paperclips-stat">Available Funds: <span className="paperclips-value">
+                      $ {balance ? parseFloat(balance.current_balance_usd).toFixed(2) : '0.00'}
+                    </span></span>
                     <button className="paperclips-btn">Donate Funds</button>
                   </div>
 
                   <div className="paperclips-stat" style={{marginTop: '15px'}}>
-                    Funders: <span className="paperclips-value">5</span>
+                    Funders: <span className="paperclips-value">{topFunders.length}</span>
                   </div>
 
                   <h2 className="paperclips-title">Top Funders</h2>
 
-                  <div className="paperclips-stat">
-                    1. <span className="paperclips-value">Sarah Chen - $ 125.00</span>
-                  </div>
-                  <div className="paperclips-stat">
-                    2. <span className="paperclips-value">Marcus Johnson - $ 89.50</span>
-                  </div>
-                  <div className="paperclips-stat">
-                    3. <span className="paperclips-value">Emma Rodriguez - $ 67.23</span>
-                  </div>
-                  <div className="paperclips-stat">
-                    4. <span className="paperclips-value">Alex Kumar - $ 45.70</span>
-                  </div>
-                  <div className="paperclips-stat">
-                    5. <span className="paperclips-value">Jordan Park - $ 30.00</span>
-                  </div>
-
-                  <div className="paperclips-section" style={{marginTop: '10px'}}>
-                    <button className="paperclips-btn">Show All</button>
-                  </div>
+                  {topFunders.length > 0 ? (
+                    <>
+                      {topFunders.map((funder, index) => (
+                        <div key={index} className="paperclips-stat">
+                          {index + 1}. <span className="paperclips-value">
+                            {funder.donor_name} - $ {parseFloat(funder.total_donated).toFixed(2)}
+                          </span>
+                        </div>
+                      ))}
+                      <div className="paperclips-section" style={{marginTop: '10px'}}>
+                        <button className="paperclips-btn">Show All</button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="paperclips-stat" style={{fontStyle: 'italic', color: '#666'}}>
+                      No funders yet
+                    </div>
+                  )}
 
                   <h2 className="paperclips-title" style={{marginTop: '30px'}}>Funding Projects</h2>
 
-                  <div className="paperclips-project">
-                    <div className="paperclips-project-title">
-                      <strong>Social Media Posts</strong> ($50)
+                  {fundingProjects.length > 0 ? (
+                    fundingProjects.map((project) => (
+                      <div key={project.id} className="paperclips-project">
+                        <div className="paperclips-project-title">
+                          <strong>{project.name}</strong> (${parseFloat(project.goal_amount_usd).toFixed(0)})
+                        </div>
+                        <div className="paperclips-project-desc">
+                          {project.description}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="paperclips-stat" style={{fontStyle: 'italic', color: '#666'}}>
+                      No funding projects yet
                     </div>
-                    <div className="paperclips-project-desc">
-                      Create and schedule 10 promotional posts across Twitter, LinkedIn, and Reddit
-                    </div>
-                  </div>
-
-                  <div className="paperclips-project">
-                    <div className="paperclips-project-title">
-                      <strong>Content Marketing Campaign</strong> ($200)
-                    </div>
-                    <div className="paperclips-project-desc">
-                      Produce blog articles and case studies showcasing Polsia success stories
-                    </div>
-                  </div>
-
-                  <div className="paperclips-project">
-                    <div className="paperclips-project-title">
-                      <strong>Influencer Partnership</strong> ($500)
-                    </div>
-                    <div className="paperclips-project-desc">
-                      Sponsor tech YouTubers and podcasters to review and demo Polsia
-                    </div>
-                  </div>
-
-                  <div className="paperclips-project">
-                    <div className="paperclips-project-title">
-                      <strong>Paid Ads Campaign</strong> ($2,000)
-                    </div>
-                    <div className="paperclips-project-desc">
-                      Launch targeted ads on Google, Twitter, and Reddit to reach 100K developers
-                    </div>
-                  </div>
+                  )}
                 </div>
               </div>
 
