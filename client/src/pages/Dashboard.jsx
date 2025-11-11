@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTerminal } from '../contexts/TerminalContext';
 import Navbar from '../components/Navbar';
+import DonationModal from '../components/DonationModal';
 import './Dashboard.css';
 
 function Dashboard() {
@@ -11,7 +12,9 @@ function Dashboard() {
   const [balance, setBalance] = useState(null);
   const [topFunders, setTopFunders] = useState([]);
   const [fundingProjects, setFundingProjects] = useState([]);
-  const { token } = useAuth();
+  const [isDonationModalOpen, setIsDonationModalOpen] = useState(false);
+  const [selectedProject, setSelectedProject] = useState(null);
+  const { token, user } = useAuth();
   const { terminalLogs } = useTerminal();
 
   useEffect(() => {
@@ -89,6 +92,19 @@ function Dashboard() {
     } catch (err) {
       console.error('Failed to fetch funding projects:', err);
     }
+  };
+
+  const handleDonateClick = (project = null) => {
+    setSelectedProject(project);
+    setIsDonationModalOpen(true);
+  };
+
+  const handleDonationModalClose = () => {
+    setIsDonationModalOpen(false);
+    setSelectedProject(null);
+    // Refresh data after donation
+    fetchBalance();
+    fetchTopFunders();
   };
 
   const formatTimeAgo = (dateString) => {
@@ -204,7 +220,7 @@ function Dashboard() {
               <span className="paperclips-stat">Available Funds: <span className="paperclips-value">
                 $ {balance ? parseFloat(balance.current_balance_usd).toFixed(2) : '0.00'}
               </span></span>
-              <button className="paperclips-btn">Donate Funds</button>
+              <button className="paperclips-btn" onClick={() => handleDonateClick()}>Donate Funds</button>
             </div>
 
             <div className="paperclips-stat" style={{marginTop: '15px'}}>
@@ -308,6 +324,14 @@ function Dashboard() {
           <p className="footer-contact">Contact: <a href="mailto:system@polsia.ai">system@polsia.ai</a></p>
         </footer>
       </div>
+
+      <DonationModal
+        isOpen={isDonationModalOpen}
+        onClose={handleDonationModalClose}
+        userId={user?.id}
+        projectId={selectedProject?.id}
+        projectName={selectedProject?.name || 'General Fund'}
+      />
     </>
   );
 }

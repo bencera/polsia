@@ -55,6 +55,66 @@ router.post('/create-payment-intent', async (req, res) => {
 });
 
 /**
+ * POST /api/donations/create-checkout-session
+ * Create a Stripe Checkout Session for donation
+ * Body: { userId, projectId, amount, donorName, donorEmail, message, isAnonymous, projectName }
+ */
+router.post('/create-checkout-session', async (req, res) => {
+    try {
+        const { userId, projectId, amount, donorName, donorEmail, message, isAnonymous, projectName } = req.body;
+
+        // Validate inputs
+        if (!userId || !amount || amount <= 0 || !donorEmail) {
+            return res.status(400).json({ error: 'Invalid donation parameters' });
+        }
+
+        // Determine success and cancel URLs
+        const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        const successUrl = `${baseUrl}/dashboard?donation=success`;
+        const cancelUrl = `${baseUrl}/dashboard?donation=cancelled`;
+
+        // Create Stripe Checkout Session
+        const session = await stripeService.createCheckoutSession(
+            amount,
+            userId,
+            projectId,
+            donorEmail,
+            {
+                donor_name: donorName || 'Anonymous',
+                message: message || '',
+                is_anonymous: isAnonymous || false,
+                project_name: projectName || 'General Fund'
+            },
+            successUrl,
+            cancelUrl
+        );
+
+        // Create pending donation record with session ID
+        const donation = await db.createDonation(
+            userId,
+            projectId,
+            donorName || (isAnonymous ? 'Anonymous' : null),
+            donorEmail,
+            amount,
+            session.id, // Store session ID as payment intent ID temporarily
+            {
+                message,
+                is_anonymous: isAnonymous,
+                checkout_session_id: session.id
+            }
+        );
+
+        res.json({
+            sessionId: session.id,
+            donationId: donation.id
+        });
+    } catch (error) {
+        console.error('[Donation Routes] Error creating checkout session:', error);
+        res.status(500).json({ error: 'Failed to create checkout session' });
+    }
+});
+
+/**
  * POST /api/donations/webhook
  * Stripe webhook handler (no authentication required)
  * Handles payment_intent.succeeded events
@@ -74,6 +134,14 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
 
                 // Complete the donation in database
                 await db.completeDonation(paymentIntent.id);
+                break;
+
+            case 'checkout.session.completed':
+                const session = event.data.object;
+                console.log(`[Donation Routes] Checkout session completed: ${session.id}`);
+
+                // Complete the donation using session ID
+                await db.completeDonation(session.id);
                 break;
 
             case 'payment_intent.payment_failed':

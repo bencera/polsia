@@ -137,10 +137,64 @@ async function getPaymentIntentStatus(paymentIntentId) {
     }
 }
 
+/**
+ * Create a Checkout Session for donation
+ * @param {number} amount - Amount in USD
+ * @param {number} userId - User ID receiving the donation
+ * @param {number} projectId - Funding project ID (optional)
+ * @param {string} donorEmail - Donor's email
+ * @param {object} metadata - Additional metadata
+ * @param {string} successUrl - URL to redirect to on success
+ * @param {string} cancelUrl - URL to redirect to on cancel
+ * @returns {Promise<object>} Checkout session object
+ */
+async function createCheckoutSession(amount, userId, projectId, donorEmail, metadata = {}, successUrl, cancelUrl) {
+    if (!stripe) {
+        throw new Error('Stripe is not configured. Please set STRIPE_SECRET_KEY environment variable.');
+    }
+
+    try {
+        // Convert dollars to cents for Stripe
+        const amountInCents = Math.round(amount * 100);
+
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ['card'],
+            line_items: [
+                {
+                    price_data: {
+                        currency: 'usd',
+                        product_data: {
+                            name: metadata.project_name || 'Polsia Donation',
+                            description: metadata.description || 'Support AI automation operations',
+                        },
+                        unit_amount: amountInCents,
+                    },
+                    quantity: 1,
+                },
+            ],
+            mode: 'payment',
+            success_url: successUrl,
+            cancel_url: cancelUrl,
+            customer_email: donorEmail,
+            metadata: {
+                user_id: userId.toString(),
+                funding_project_id: projectId ? projectId.toString() : null,
+                ...metadata
+            },
+        });
+
+        return session;
+    } catch (error) {
+        console.error('[Stripe Service] Error creating checkout session:', error);
+        throw error;
+    }
+}
+
 module.exports = {
     createPaymentIntent,
     retrievePaymentIntent,
     constructWebhookEvent,
     refundPayment,
     getPaymentIntentStatus,
+    createCheckoutSession,
 };

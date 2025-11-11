@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import DonationModal from '../components/DonationModal';
 import './Dashboard.css';
 import '../components/Navbar.css';
 
@@ -12,6 +13,8 @@ function PublicDashboard() {
   const [balance, setBalance] = useState(null);
   const [topFunders, setTopFunders] = useState([]);
   const [fundingProjects, setFundingProjects] = useState([]);
+  const [isDonationModalOpen, setIsDonationModalOpen] = useState(false);
+  const [selectedProject, setSelectedProject] = useState(null);
 
   useEffect(() => {
     fetchPublicDashboard();
@@ -75,6 +78,21 @@ function PublicDashboard() {
       }
     } catch (err) {
       console.error('Failed to fetch funding projects:', err);
+    }
+  };
+
+  const handleDonateClick = (project = null) => {
+    setSelectedProject(project);
+    setIsDonationModalOpen(true);
+  };
+
+  const handleDonationModalClose = () => {
+    setIsDonationModalOpen(false);
+    setSelectedProject(null);
+    // Refresh data after donation
+    if (dashboardData?.user?.id) {
+      fetchBalance(dashboardData.user.id);
+      fetchTopFunders(dashboardData.user.id);
     }
   };
 
@@ -223,7 +241,7 @@ function PublicDashboard() {
                     <span className="paperclips-stat">Available Funds: <span className="paperclips-value">
                       $ {balance ? parseFloat(balance.current_balance_usd).toFixed(2) : '0.00'}
                     </span></span>
-                    <button className="paperclips-btn">Donate Funds</button>
+                    <button className="paperclips-btn" onClick={() => handleDonateClick()}>Donate Funds</button>
                   </div>
 
                   <div className="paperclips-stat" style={{marginTop: '15px'}}>
@@ -313,6 +331,14 @@ function PublicDashboard() {
           </p>
         </footer>
       </div>
+
+      <DonationModal
+        isOpen={isDonationModalOpen}
+        onClose={handleDonationModalClose}
+        userId={dashboardData?.user?.id}
+        projectId={selectedProject?.id}
+        projectName={selectedProject?.name || 'General Fund'}
+      />
     </>
   );
 }
