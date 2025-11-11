@@ -61,9 +61,9 @@ router.post('/create-payment-intent', async (req, res) => {
  */
 router.post('/create-checkout-session', async (req, res) => {
     try {
-        const { userId, projectId, amount, donorName, donorEmail, message, isAnonymous, projectName } = req.body;
+        const { userId, projectId, amount, donorName, donorEmail, message, isAnonymous, projectName, isOwnAccount } = req.body;
 
-        console.log('[Donation Routes] Checkout session request:', { userId, projectId, amount, donorEmail, donorName });
+        console.log('[Donation Routes] Checkout session request:', { userId, projectId, amount, donorEmail, donorName, isOwnAccount });
 
         // Validate inputs
         if (!userId || !amount || amount <= 0 || !donorEmail) {
@@ -71,14 +71,19 @@ router.post('/create-checkout-session', async (req, res) => {
             return res.status(400).json({ error: 'Invalid donation parameters' });
         }
 
-        // Get user's company name
+        // Get user's company name and slug
         const user = await db.getUserById(userId);
         const companyName = user?.company_name || 'Polsia';
+        const companySlug = user?.company_slug;
 
-        // Determine success and cancel URLs
+        // Determine success and cancel URLs based on whether it's their own account
         const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-        const successUrl = `${baseUrl}/dashboard?donation=success`;
-        const cancelUrl = `${baseUrl}/dashboard?donation=cancelled`;
+        const successUrl = isOwnAccount
+            ? `${baseUrl}/dashboard?donation=success`
+            : `${baseUrl}/${companySlug}?donation=success`;
+        const cancelUrl = isOwnAccount
+            ? `${baseUrl}/dashboard?donation=cancelled`
+            : `${baseUrl}/${companySlug}?donation=cancelled`;
 
         // Create Stripe Checkout Session
         const session = await stripeService.createCheckoutSession(

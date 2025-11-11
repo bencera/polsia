@@ -217,7 +217,7 @@ function Dashboard() {
               <span className="paperclips-stat">Available Funds: <span className="paperclips-value">
                 $ {balance ? parseFloat(balance.current_balance_usd).toFixed(2) : '0.00'}
               </span></span>
-              <button className="paperclips-btn" onClick={() => handleDonateClick()}>Donate Funds</button>
+              <button className="paperclips-btn" onClick={() => handleDonateClick()}>Add Funds</button>
             </div>
 
             <div className="paperclips-stat" style={{marginTop: '15px'}}>
@@ -328,6 +328,7 @@ function Dashboard() {
         userId={user?.id}
         projectId={selectedProject?.id}
         projectName={selectedProject?.name || 'General Fund'}
+        isOwnAccount={true}
       />
     </>
   );

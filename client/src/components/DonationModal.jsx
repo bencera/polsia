@@ -12,7 +12,7 @@ const stripePromise = loadStripe(stripePublishableKey);
 
 console.log(`[Donation Modal] Using Stripe in ${isProduction ? 'LIVE' : 'TEST'} mode`);
 
-function DonationModal({ isOpen, onClose, userId, projectId, projectName }) {
+function DonationModal({ isOpen, onClose, userId, projectId, projectName, isOwnAccount = false }) {
   const [amount, setAmount] = useState('');
   const [donorName, setDonorName] = useState('');
   const [donorEmail, setDonorEmail] = useState('');
@@ -60,6 +60,7 @@ function DonationModal({ isOpen, onClose, userId, projectId, projectName }) {
           message,
           isAnonymous,
           projectName,
+          isOwnAccount,
         }),
       });
 
@@ -89,7 +90,7 @@ function DonationModal({ isOpen, onClose, userId, projectId, projectName }) {
       <div className="donation-modal" onClick={(e) => e.stopPropagation()}>
         <button className="donation-modal-close" onClick={onClose}>×</button>
 
-        <h2 className="donation-modal-title">Donate Funds</h2>
+        <h2 className="donation-modal-title">{isOwnAccount ? 'Add Funds' : 'Donate Funds'}</h2>
         {projectName && (
           <p className="donation-modal-subtitle">Supporting: {projectName}</p>
         )}
@@ -150,26 +151,30 @@ function DonationModal({ isOpen, onClose, userId, projectId, projectName }) {
             />
           </div>
 
-          <div className="donation-form-group">
-            <label htmlFor="message">Message (Optional)</label>
-            <textarea
-              id="message"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Leave a message of support..."
-              rows="3"
-            />
-          </div>
+          {!isOwnAccount && (
+            <div className="donation-form-group">
+              <label htmlFor="message">Message (Optional)</label>
+              <textarea
+                id="message"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Leave a message of support..."
+                rows="3"
+              />
+            </div>
+          )}
 
-          <div className="donation-checkbox">
-            <input
-              type="checkbox"
-              id="isAnonymous"
-              checked={isAnonymous}
-              onChange={(e) => setIsAnonymous(e.target.checked)}
-            />
-            <label htmlFor="isAnonymous">Donate anonymously</label>
-          </div>
+          {!isOwnAccount && (
+            <div className="donation-checkbox">
+              <input
+                type="checkbox"
+                id="isAnonymous"
+                checked={isAnonymous}
+                onChange={(e) => setIsAnonymous(e.target.checked)}
+              />
+              <label htmlFor="isAnonymous">Donate anonymously</label>
+            </div>
+          )}
 
           {error && (
             <div className="donation-error">
