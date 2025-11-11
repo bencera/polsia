@@ -173,7 +173,7 @@ async function getUserById(id) {
     const client = await pool.connect();
     try {
         const result = await client.query(
-            'SELECT id, email, name, created_at, updated_at FROM users WHERE id = $1',
+            'SELECT id, email, name, company_name, company_slug, public_dashboard_enabled, created_at, updated_at FROM users WHERE id = $1',
             [id]
         );
         return result.rows[0] || null;
@@ -3561,6 +3561,157 @@ async function getDetailedExecutionHistory(userId, limit = 100) {
     }
 }
 
+// ==================== PUBLIC DASHBOARD FUNCTIONS ====================
+
+// Get user by company slug
+async function getUserByCompanySlug(slug) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            'SELECT id, email, name, company_name, company_slug, public_dashboard_enabled, created_at FROM users WHERE company_slug = $1',
+            [slug]
+        );
+        return result.rows[0] || null;
+    } catch (err) {
+        console.error('Error getting user by company slug:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Update user company settings
+async function updateUserCompanySettings(userId, { companyName, companySlug, publicDashboardEnabled }) {
+    const client = await pool.connect();
+    try {
+        const updates = [];
+        const values = [];
+        let paramIndex = 1;
+
+        if (companyName !== undefined) {
+            updates.push(`company_name = $${paramIndex++}`);
+            values.push(companyName);
+        }
+        if (companySlug !== undefined) {
+            updates.push(`company_slug = $${paramIndex++}`);
+            values.push(companySlug);
+        }
+        if (publicDashboardEnabled !== undefined) {
+            updates.push(`public_dashboard_enabled = $${paramIndex++}`);
+            values.push(publicDashboardEnabled);
+        }
+
+        if (updates.length === 0) {
+            throw new Error('No fields to update');
+        }
+
+        updates.push(`updated_at = CURRENT_TIMESTAMP`);
+        values.push(userId);
+
+        const result = await client.query(
+            `UPDATE users SET ${updates.join(', ')} WHERE id = $${paramIndex} RETURNING id, email, name, company_name, company_slug, public_dashboard_enabled, created_at, updated_at`,
+            values
+        );
+        return result.rows[0] || null;
+    } catch (err) {
+        console.error('Error updating user company settings:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Check if slug is available (excluding current user)
+async function checkSlugAvailability(slug, excludeUserId = null) {
+    const client = await pool.connect();
+    try {
+        let query = 'SELECT id FROM users WHERE company_slug = $1';
+        const params = [slug];
+
+        if (excludeUserId) {
+            query += ' AND id != $2';
+            params.push(excludeUserId);
+        }
+
+        const result = await client.query(query, params);
+        return result.rows.length === 0; // true if available
+    } catch (err) {
+        console.error('Error checking slug availability:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Get public dashboard data (tasks for a user)
+async function getPublicDashboardData(userId) {
+    const client = await pool.connect();
+    try {
+        // Get user info
+        const userResult = await client.query(
+            'SELECT id, name, company_name, company_slug, public_dashboard_enabled FROM users WHERE id = $1',
+            [userId]
+        );
+        const user = userResult.rows[0];
+
+        if (!user || !user.public_dashboard_enabled) {
+            return null;
+        }
+
+        // Get tasks (same query as getTasksByUserId)
+        const tasksResult = await client.query(`
+            SELECT
+                t.id,
+                t.title,
+                t.description,
+                t.status,
+                t.created_at,
+                t.completed_at,
+                COALESCE(
+                    json_agg(
+                        json_build_object(
+                            'id', sc.id,
+                            'service_name', sc.service_name,
+                            'status', sc.status
+                        )
+                    ) FILTER (WHERE sc.id IS NOT NULL),
+                    '[]'
+                ) as services
+            FROM tasks t
+            LEFT JOIN task_services ts ON t.id = ts.task_id
+            LEFT JOIN service_connections sc ON ts.service_connection_id = sc.id
+            WHERE t.user_id = $1
+            GROUP BY t.id
+            ORDER BY t.created_at DESC
+        `, [userId]);
+
+        // Get last 4 execution logs across all module executions for this user
+        const logsResult = await client.query(`
+            SELECT el.id, el.timestamp, el.log_level, el.stage, el.message, el.metadata
+            FROM execution_logs el
+            INNER JOIN module_executions me ON el.execution_id = me.id
+            WHERE me.user_id = $1
+            ORDER BY el.timestamp DESC
+            LIMIT 4
+        `, [userId]);
+
+        return {
+            user: {
+                name: user.name,
+                company_name: user.company_name,
+                company_slug: user.company_slug
+            },
+            tasks: tasksResult.rows,
+            logs: logsResult.rows.reverse() // Reverse to show oldest first (bottom-to-top)
+        };
+    } catch (err) {
+        console.error('Error getting public dashboard data:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
 module.exports = {
     pool,
     initDatabase,
@@ -3700,4 +3851,9 @@ module.exports = {
     getExecutionCostsSummary,
     getCostsByModule,
     getDetailedExecutionHistory,
+    // Public dashboard functions
+    getUserByCompanySlug,
+    updateUserCompanySettings,
+    checkSlugAvailability,
+    getPublicDashboardData,
 };

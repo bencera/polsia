@@ -113,7 +113,7 @@ function authenticateTokenFromQuery(req, res, next) {
 }
 
 // Serve React app for all routes (including landing page)
-app.get(['/', '/about', '/login', '/dashboard', '/modules', '/connections', '/brain', '/documents', '/analytics', '/tasks', '/agents'], (req, res) => {
+app.get(['/', '/about', '/login', '/dashboard', '/modules', '/connections', '/brain', '/documents', '/analytics', '/tasks', '/agents', '/settings/advanced', '/:company_slug'], (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'app', 'index.html'));
 });
 
@@ -175,6 +175,9 @@ app.get('/api/auth/me', authenticateToken, (req, res) => {
             id: req.user.id,
             email: req.user.email,
             name: req.user.name,
+            company_name: req.user.company_name,
+            company_slug: req.user.company_slug,
+            public_dashboard_enabled: req.user.public_dashboard_enabled,
             created_at: req.user.created_at
         }
     });
@@ -456,6 +459,14 @@ app.use('/api/brain', authenticateToken, brainRoutes);
 // Connection Routes - Service connection management
 const connectionRoutes = require('./routes/connection-routes');
 app.use('/api/connections', authenticateToken, connectionRoutes);
+
+// Public Dashboard Routes - NO authentication required
+const publicDashboardRoutes = require('./routes/public-dashboard-routes');
+app.use('/api/public', publicDashboardRoutes);
+
+// User Settings Routes - Manage company settings and public dashboard
+const userSettingsRoutes = require('./routes/user-settings-routes');
+app.use('/api/user', authenticateToken, userSettingsRoutes);
 
 // 404 for any other routes
 app.get('*', (req, res) => {

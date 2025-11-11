@@ -97,6 +97,120 @@ function Dashboard() {
       <div className="dashboard-container">
 
       <div className="dashboard-content">
+        {/* Metrics Summary Section - Paperclips Style */}
+        <div className="paperclips-container">
+          {/* Left Column */}
+          <div className="paperclips-left">
+            <h2 className="paperclips-title">Business</h2>
+
+            <div className="paperclips-stat">
+              All-time Users: <span className="paperclips-value">8,342</span>
+            </div>
+            <div className="paperclips-stat">
+              Monthly Active Users: <span className="paperclips-value">1,579</span>
+            </div>
+            <div className="paperclips-stat">
+              All-time Revenue: <span className="paperclips-value">$ 487,230</span>
+            </div>
+            <div className="paperclips-stat">
+              Monthly Revenue: <span className="paperclips-value">$ 12,450</span>
+            </div>
+            <div className="paperclips-stat">
+              Monthly Churn: <span className="paperclips-value">2.3%</span>
+            </div>
+            <div className="paperclips-stat">
+              Cost per User: <span className="paperclips-value">$ 0.52</span>
+            </div>
+
+            <h2 className="paperclips-title">AI Operations</h2>
+
+            <div className="paperclips-stat">
+              Agent Loops (24h): <span className="paperclips-value">1,247</span>
+            </div>
+            <div className="paperclips-stat">
+              Active Agents: <span className="paperclips-value">8 / 12</span>
+            </div>
+            <div className="paperclips-stat">
+              Lines of Code Written: <span className="paperclips-value">3,892</span>
+            </div>
+
+          </div>
+
+          {/* Right Column */}
+          <div className="paperclips-right">
+            <h2 className="paperclips-title">Computational Resources</h2>
+
+            <div className="paperclips-section">
+              <span className="paperclips-stat">Available Funds: <span className="paperclips-value">$ 357.43</span></span>
+              <button className="paperclips-btn">Donate Funds</button>
+            </div>
+
+            <div className="paperclips-stat" style={{marginTop: '15px'}}>
+              Funders: <span className="paperclips-value">5</span>
+            </div>
+
+            <h2 className="paperclips-title">Top Funders</h2>
+
+            <div className="paperclips-stat">
+              1. <span className="paperclips-value">Sarah Chen - $ 125.00</span>
+            </div>
+            <div className="paperclips-stat">
+              2. <span className="paperclips-value">Marcus Johnson - $ 89.50</span>
+            </div>
+            <div className="paperclips-stat">
+              3. <span className="paperclips-value">Emma Rodriguez - $ 67.23</span>
+            </div>
+            <div className="paperclips-stat">
+              4. <span className="paperclips-value">Alex Kumar - $ 45.70</span>
+            </div>
+            <div className="paperclips-stat">
+              5. <span className="paperclips-value">Jordan Park - $ 30.00</span>
+            </div>
+
+            <div className="paperclips-section" style={{marginTop: '10px'}}>
+              <button className="paperclips-btn">Show All</button>
+            </div>
+
+            <h2 className="paperclips-title" style={{marginTop: '30px'}}>Funding Projects</h2>
+
+            <div className="paperclips-project">
+              <div className="paperclips-project-title">
+                <strong>Social Media Posts</strong> ($50)
+              </div>
+              <div className="paperclips-project-desc">
+                Create and schedule 10 promotional posts across Twitter, LinkedIn, and Reddit
+              </div>
+            </div>
+
+            <div className="paperclips-project">
+              <div className="paperclips-project-title">
+                <strong>Content Marketing Campaign</strong> ($200)
+              </div>
+              <div className="paperclips-project-desc">
+                Produce blog articles and case studies showcasing Polsia success stories
+              </div>
+            </div>
+
+            <div className="paperclips-project">
+              <div className="paperclips-project-title">
+                <strong>Influencer Partnership</strong> ($500)
+              </div>
+              <div className="paperclips-project-desc">
+                Sponsor tech YouTubers and podcasters to review and demo Polsia
+              </div>
+            </div>
+
+            <div className="paperclips-project">
+              <div className="paperclips-project-title">
+                <strong>Paid Ads Campaign</strong> ($2,000)
+              </div>
+              <div className="paperclips-project-desc">
+                Launch targeted ads on Google, Twitter, and Reddit to reach 100K developers
+              </div>
+            </div>
+          </div>
+        </div>
+
         {loading && (
           <div className="status-message">
             <p>Loading tasks...</p>
@@ -116,8 +230,10 @@ function Dashboard() {
         )}
 
         {!loading && !error && tasks.length > 0 && (
-          <div className="tasks-feed">
-            {tasks.map((task) => (
+          <>
+            <h2 className="paperclips-title" style={{ marginTop: '30px', marginBottom: '15px' }}>Recent Activity</h2>
+            <div className="tasks-feed">
+              {tasks.map((task) => (
               <div key={task.id} className="task-item">
                 <h3 className="task-title">{task.title}</h3>
 
@@ -141,7 +257,8 @@ function Dashboard() {
                 </div>
               </div>
             ))}
-          </div>
+            </div>
+          </>
         )}
       </div>
 

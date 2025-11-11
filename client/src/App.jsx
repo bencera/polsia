@@ -16,6 +16,8 @@ import Analytics from './pages/Analytics';
 import Tools from './pages/Tools';
 import CostTracking from './pages/CostTracking';
 import ModuleCosts from './pages/ModuleCosts';
+import AdvancedSettings from './pages/AdvancedSettings';
+import PublicDashboard from './pages/PublicDashboard';
 import './App.css'
 
 // Component that redirects to dashboard if already logged in
@@ -151,6 +153,16 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/settings/advanced"
+              element={
+                <ProtectedRoute>
+                  <AdvancedSettings />
+                </ProtectedRoute>
+              }
+            />
+            {/* Public dashboard route - MUST be last to avoid conflicts */}
+            <Route path="/:company_slug" element={<PublicDashboard />} />
           </Routes>
         </Router>
       </TerminalProvider>

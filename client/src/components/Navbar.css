@@ -9,16 +9,31 @@
   align-items: center;
 }
 
+.navbar-brand-container {
+  display: flex;
+  align-items: baseline;
+}
+
 .navbar-brand {
   font-size: 2em;
   font-weight: 700;
   color: #000;
   text-decoration: none;
   font-family: "Times New Roman", Times, serif;
+  line-height: 1;
 }
 
 .navbar-brand:hover {
   color: #333;
+}
+
+.navbar-subtitle {
+  font-size: 0.5em;
+  color: #666;
+  font-family: "Times New Roman", Times, serif;
+  font-style: italic;
+  font-weight: 400;
+  margin-left: 8px;
 }
 
 .navbar-actions {

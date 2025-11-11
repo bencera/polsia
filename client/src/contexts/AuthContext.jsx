@@ -76,12 +76,19 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  const refreshUser = async () => {
+    if (token) {
+      await fetchCurrentUser();
+    }
+  };
+
   const value = {
     user,
     token,
     loading,
     login,
     logout,
+    refreshUser,
     isAuthenticated: !!user
   };
 

@@ -29,9 +29,11 @@ function Navbar() {
 
   return (
     <nav className="navbar">
-      <Link to="/dashboard" className="navbar-brand">
-        Polsia
-      </Link>
+      <div className="navbar-brand-container">
+        <Link to="/dashboard" className="navbar-brand">
+          {user?.company_name || 'My Company'} <span className="navbar-subtitle">Run by Polsia</span>
+        </Link>
+      </div>
       <div className="navbar-actions">
         <span className="user-info">{user?.email}</span>
         <button onClick={handleHome} className="nav-button">

@@ -99,6 +99,13 @@ function Settings() {
             Cost Tracking
           </button>
 
+          <button
+            className="settings-link-button"
+            onClick={() => navigate('/settings/advanced')}
+          >
+            Advanced Settings
+          </button>
+
           <button onClick={handleLogout} className="logout-button">
             Logout
           </button>
