@@ -327,7 +327,7 @@ function Dashboard() {
         onClose={handleDonationModalClose}
         userId={user?.id}
         projectId={selectedProject?.id}
-        projectName={selectedProject?.name || 'General Fund'}
+        projectName={selectedProject?.name || user?.companyName || 'Your Account'}
         isOwnAccount={true}
       />
     </>
