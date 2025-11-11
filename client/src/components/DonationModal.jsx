@@ -2,8 +2,15 @@ import { useState } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 import './DonationModal.css';
 
-// Load Stripe publishable key from environment variable
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+// Load Stripe publishable key based on environment
+const isProduction = import.meta.env.MODE === 'production';
+const stripePublishableKey = isProduction
+  ? import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY_LIVE
+  : (import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY_TEST || import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY_LIVE);
+
+const stripePromise = loadStripe(stripePublishableKey);
+
+console.log(`[Donation Modal] Using Stripe in ${isProduction ? 'LIVE' : 'TEST'} mode`);
 
 function DonationModal({ isOpen, onClose, userId, projectId, projectName }) {
   const [amount, setAmount] = useState('');
@@ -62,14 +69,11 @@ function DonationModal({ isOpen, onClose, userId, projectId, projectName }) {
         throw new Error(data.error || 'Failed to create checkout session');
       }
 
-      // Redirect to Stripe Checkout
-      const stripe = await stripePromise;
-      const { error: stripeError } = await stripe.redirectToCheckout({
-        sessionId: data.sessionId,
-      });
-
-      if (stripeError) {
-        throw new Error(stripeError.message);
+      // Redirect to Stripe Checkout using the session URL
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
+      } else {
+        throw new Error('No checkout URL received from server');
       }
     } catch (err) {
       console.error('Donation error:', err);

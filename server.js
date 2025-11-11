@@ -36,6 +36,11 @@ app.use(cors({
     origin: FRONTEND_URL,
     credentials: true
 }));
+
+// Stripe webhook route MUST come before express.json() to preserve raw body
+const donationRoutes = require('./routes/donation-routes');
+app.use('/api/donations/webhook', express.raw({ type: 'application/json' }), donationRoutes);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -468,11 +473,10 @@ app.use('/api/public', publicDashboardRoutes);
 const userSettingsRoutes = require('./routes/user-settings-routes');
 app.use('/api/user', authenticateToken, userSettingsRoutes);
 
-// Funding and donations routes
-const donationRoutes = require('./routes/donation-routes');
+// Funding and donations routes (webhook route already registered above before express.json())
 const fundingProjectRoutes = require('./routes/funding-project-routes')(authenticateToken);
 const balanceRoutes = require('./routes/balance-routes')(authenticateToken);
-app.use('/api/donations', donationRoutes);
+app.use('/api/donations', donationRoutes); // Other donation routes (non-webhook)
 app.use('/api/funding-projects', fundingProjectRoutes);
 app.use('/api/balance', balanceRoutes);
 

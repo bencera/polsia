@@ -82,6 +82,7 @@ function PublicDashboard() {
   };
 
   const handleDonateClick = (project = null) => {
+    console.log('Opening donation modal with userId:', dashboardData?.user?.id);
     setSelectedProject(project);
     setIsDonationModalOpen(true);
   };
@@ -155,14 +156,14 @@ function PublicDashboard() {
       <nav className="navbar">
         <div className="navbar-brand">
           {dashboardData?.user?.company_name || company_slug}
-        </div>
-        <div className="navbar-actions">
           <button
             onClick={() => navigate('/')}
             className="nav-button"
           >
             Run by Polsia
           </button>
+        </div>
+        <div className="navbar-actions">
         </div>
       </nav>
 

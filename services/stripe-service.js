@@ -1,13 +1,18 @@
 require('dotenv').config();
 const Stripe = require('stripe');
 
-// Initialize Stripe with secret key (only if provided)
-const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
+// Select Stripe key based on environment
+const isProduction = process.env.NODE_ENV === 'production';
+const STRIPE_SECRET_KEY = isProduction
+    ? process.env.STRIPE_SECRET_KEY_LIVE
+    : (process.env.STRIPE_SECRET_KEY_TEST || process.env.STRIPE_SECRET_KEY_LIVE);
+
 let stripe = null;
 
 if (STRIPE_SECRET_KEY) {
     stripe = Stripe(STRIPE_SECRET_KEY);
-    console.log('[Stripe Service] ✓ Stripe initialized successfully');
+    const mode = isProduction ? 'LIVE' : 'TEST';
+    console.log(`[Stripe Service] ✓ Stripe initialized successfully in ${mode} mode`);
 } else {
     console.warn('[Stripe Service] ⚠️  STRIPE_SECRET_KEY not configured - donation features will be disabled');
 }
@@ -79,7 +84,15 @@ async function retrievePaymentIntent(paymentIntentId) {
  */
 async function constructWebhookEvent(rawBody, signature) {
     try {
-        const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+        const isProduction = process.env.NODE_ENV === 'production';
+        const webhookSecret = isProduction
+            ? process.env.STRIPE_WEBHOOK_SECRET_LIVE
+            : (process.env.STRIPE_WEBHOOK_SECRET_TEST || process.env.STRIPE_WEBHOOK_SECRET_LIVE);
+
+        console.log('[Stripe Service] Webhook verification:', {
+            mode: isProduction ? 'PRODUCTION' : 'DEVELOPMENT',
+            secretUsed: webhookSecret ? `${webhookSecret.substring(0, 15)}...` : 'NONE'
+        });
 
         if (!webhookSecret) {
             console.warn('[Stripe Service] No webhook secret configured');
@@ -164,8 +177,8 @@ async function createCheckoutSession(amount, userId, projectId, donorEmail, meta
                     price_data: {
                         currency: 'usd',
                         product_data: {
-                            name: metadata.project_name || 'Polsia Donation',
-                            description: metadata.description || 'Support AI automation operations',
+                            name: metadata.company_name || 'Polsia',
+                            description: 'Support AI autonomous operations',
                         },
                         unit_amount: amountInCents,
                     },

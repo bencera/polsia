@@ -161,11 +161,6 @@
 
 .task-item {
   padding: 20px 0;
-  border-bottom: 1px solid #000;
-}
-
-.task-item:last-child {
-  border-bottom: none;
 }
 
 .task-timestamp {
@@ -234,8 +229,8 @@
 .paperclips-container {
   display: flex;
   gap: 30px;
-  margin-bottom: 40px;
-  padding-bottom: 30px;
+  margin-bottom: 20px;
+  padding-bottom: 20px;
   font-family: "Times New Roman", Times, serif;
   font-size: 14px;
   line-height: 1.5;

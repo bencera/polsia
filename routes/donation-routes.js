@@ -63,10 +63,17 @@ router.post('/create-checkout-session', async (req, res) => {
     try {
         const { userId, projectId, amount, donorName, donorEmail, message, isAnonymous, projectName } = req.body;
 
+        console.log('[Donation Routes] Checkout session request:', { userId, projectId, amount, donorEmail, donorName });
+
         // Validate inputs
         if (!userId || !amount || amount <= 0 || !donorEmail) {
+            console.log('[Donation Routes] Validation failed:', { userId: !!userId, amount, hasEmail: !!donorEmail });
             return res.status(400).json({ error: 'Invalid donation parameters' });
         }
+
+        // Get user's company name
+        const user = await db.getUserById(userId);
+        const companyName = user?.company_name || 'Polsia';
 
         // Determine success and cancel URLs
         const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
@@ -83,7 +90,8 @@ router.post('/create-checkout-session', async (req, res) => {
                 donor_name: donorName || 'Anonymous',
                 message: message || '',
                 is_anonymous: isAnonymous || false,
-                project_name: projectName || 'General Fund'
+                project_name: projectName || 'General Fund',
+                company_name: companyName
             },
             successUrl,
             cancelUrl
@@ -104,8 +112,16 @@ router.post('/create-checkout-session', async (req, res) => {
             }
         );
 
+        console.log('[Donation Routes] Created checkout session:', {
+            sessionId: session.id,
+            amount,
+            donorEmail,
+            checkoutUrl: session.url
+        });
+
         res.json({
             sessionId: session.id,
+            checkoutUrl: session.url,
             donationId: donation.id
         });
     } catch (error) {
@@ -114,12 +130,19 @@ router.post('/create-checkout-session', async (req, res) => {
     }
 });
 
+// Test endpoint to verify webhook route is accessible
+router.get('/webhook', (req, res) => {
+    res.json({ message: 'Webhook endpoint is accessible', method: 'GET' });
+});
+
 /**
  * POST /api/donations/webhook
  * Stripe webhook handler (no authentication required)
  * Handles payment_intent.succeeded events
+ * Note: express.raw() middleware is applied in server.js before this route
  */
-router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+router.post('/webhook', async (req, res) => {
+    console.log('[Donation Routes] 🔔 Webhook POST received!');
     try {
         const signature = req.headers['stripe-signature'];
         const event = await stripeService.constructWebhookEvent(req.body, signature);

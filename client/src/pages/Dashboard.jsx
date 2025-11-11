@@ -289,7 +289,7 @@ function Dashboard() {
 
         {!loading && !error && tasks.length > 0 && (
           <>
-            <h2 className="paperclips-title" style={{ marginTop: '30px', marginBottom: '15px' }}>Recent Activity</h2>
+            <h2 className="paperclips-title" style={{ marginTop: '10px', marginBottom: '15px' }}>Recent Activity</h2>
             <div className="tasks-feed">
               {tasks.map((task) => (
               <div key={task.id} className="task-item">

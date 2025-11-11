@@ -3697,6 +3697,7 @@ async function getPublicDashboardData(userId) {
 
         return {
             user: {
+                id: user.id,
                 name: user.name,
                 company_name: user.company_name,
                 company_slug: user.company_slug
