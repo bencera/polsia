@@ -1,13 +1,14 @@
 const express = require('express');
-const router = express.Router();
 const db = require('../db');
-const { authenticateToken } = require('../middleware/auth');
 
-/**
- * GET /api/funding-projects/user/:userId
- * Get all funding projects for a user (public endpoint)
- */
-router.get('/user/:userId', async (req, res) => {
+module.exports = (authenticateToken) => {
+  const router = express.Router();
+
+  /**
+   * GET /api/funding-projects/user/:userId
+   * Get all funding projects for a user (public endpoint)
+   */
+  router.get('/user/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
         const projects = await db.getFundingProjectsByUser(userId);
@@ -120,4 +121,5 @@ router.get('/:id/modules', authenticateToken, async (req, res) => {
     }
 });
 
-module.exports = router;
+  return router;
+};

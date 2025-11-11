@@ -1,8 +1,16 @@
 require('dotenv').config();
 const Stripe = require('stripe');
 
-// Initialize Stripe with secret key
-const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+// Initialize Stripe with secret key (only if provided)
+const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
+let stripe = null;
+
+if (STRIPE_SECRET_KEY) {
+    stripe = Stripe(STRIPE_SECRET_KEY);
+    console.log('[Stripe Service] ✓ Stripe initialized successfully');
+} else {
+    console.warn('[Stripe Service] ⚠️  STRIPE_SECRET_KEY not configured - donation features will be disabled');
+}
 
 /**
  * Create a payment intent for a donation
@@ -14,6 +22,10 @@ const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
  * @returns {Promise<object>} Payment intent object
  */
 async function createPaymentIntent(amount, userId, projectId, donorEmail, metadata = {}) {
+    if (!stripe) {
+        throw new Error('Stripe is not configured. Please set STRIPE_SECRET_KEY environment variable.');
+    }
+
     try {
         // Convert dollars to cents for Stripe
         const amountInCents = Math.round(amount * 100);
@@ -46,6 +58,10 @@ async function createPaymentIntent(amount, userId, projectId, donorEmail, metada
  * @returns {Promise<object>} Payment intent object
  */
 async function retrievePaymentIntent(paymentIntentId) {
+    if (!stripe) {
+        throw new Error('Stripe is not configured. Please set STRIPE_SECRET_KEY environment variable.');
+    }
+
     try {
         const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
         return paymentIntent;

@@ -1,7 +1,8 @@
 const express = require('express');
-const router = express.Router();
 const db = require('../db');
-const { authenticateToken } = require('../middleware/auth');
+
+module.exports = (authenticateToken) => {
+  const router = express.Router();
 
 /**
  * GET /api/balance
@@ -61,4 +62,5 @@ router.get('/stats', authenticateToken, async (req, res) => {
     }
 });
 
-module.exports = router;
+  return router;
+};

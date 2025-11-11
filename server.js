@@ -470,8 +470,8 @@ app.use('/api/user', authenticateToken, userSettingsRoutes);
 
 // Funding and donations routes
 const donationRoutes = require('./routes/donation-routes');
-const fundingProjectRoutes = require('./routes/funding-project-routes');
-const balanceRoutes = require('./routes/balance-routes');
+const fundingProjectRoutes = require('./routes/funding-project-routes')(authenticateToken);
+const balanceRoutes = require('./routes/balance-routes')(authenticateToken);
 app.use('/api/donations', donationRoutes);
 app.use('/api/funding-projects', fundingProjectRoutes);
 app.use('/api/balance', balanceRoutes);
