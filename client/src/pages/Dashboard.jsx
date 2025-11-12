@@ -315,6 +315,9 @@ function Dashboard({ isPublic = false, publicUser = null }) {
             <div className="dashboard-stat">
               Cost per User: <span className="dashboard-value">$ 0.52</span>
             </div>
+            <div style={{marginTop: '10px'}}>
+              <button className="dashboard-btn">Refresh</button>
+            </div>
 
             {/* 2. Autonomous Resources */}
             <h2 className="dashboard-title">Autonomous Resources</h2>
@@ -323,6 +326,10 @@ function Dashboard({ isPublic = false, publicUser = null }) {
                 $ {balance ? parseFloat(balance.current_balance_usd).toFixed(2) : '0.00'}
               </span></span>
               <button className="dashboard-btn" onClick={() => handleDonateClick()}>Add Funds</button>
+            </div>
+            <div className="dashboard-section" style={{marginTop: '10px'}}>
+              <span className="dashboard-stat">Auto-fund: <span className="dashboard-value">OFF</span></span>
+              <button className="dashboard-btn">Enable</button>
             </div>
             <div className="dashboard-stat" style={{marginTop: '15px'}}>
               Funders: <span className="dashboard-value">{topFunders.length}</span>
@@ -382,12 +389,36 @@ function Dashboard({ isPublic = false, publicUser = null }) {
             <div className="dashboard-stat">
               Decisions Made: <span className="dashboard-value">42</span>
             </div>
-            <div className="dashboard-stat">
-              Tasks Delegated: <span className="dashboard-value">156</span>
-            </div>
             <div className="dashboard-section" style={{marginTop: '10px'}}>
               <span className="dashboard-stat">Next Decision: <span className="dashboard-value">{countdown}</span></span>
               <button className="dashboard-btn">Make Decision Now</button>
+            </div>
+
+            {/* Recent Decisions */}
+            <div style={{marginTop: '15px'}}>
+              <div className="dashboard-stat" style={{marginBottom: '10px'}}>
+                Recent Decisions
+              </div>
+              <div className="recent-activity-scroll" style={{marginTop: '10px'}}>
+                <div className="activity-item">
+                  <div className="activity-description" style={{color: '#000'}}>
+                    Reallocated $20 from ads to analytics due to rising CPI (+12%).
+                  </div>
+                  <div className="activity-timestamp">2 hours ago</div>
+                </div>
+                <div className="activity-item">
+                  <div className="activity-description" style={{color: '#000'}}>
+                    Paused feature rollout after 2 error spikes.
+                  </div>
+                  <div className="activity-timestamp">5 hours ago</div>
+                </div>
+                <div className="activity-item">
+                  <div className="activity-description" style={{color: '#000'}}>
+                    Approved blog post on agent marketplace for launch tomorrow.
+                  </div>
+                  <div className="activity-timestamp">1 day ago</div>
+                </div>
+              </div>
             </div>
 
             {/* Engineering Projects */}
@@ -449,8 +480,19 @@ function Dashboard({ isPublic = false, publicUser = null }) {
           <div className="dashboard-right">
             {/* Links Section */}
             <h2 className="dashboard-title">Links</h2>
-            <div className="dashboard-stat" style={{fontStyle: 'italic', color: '#666'}}>
-              No links yet. Add important links to your resources.
+            <div style={{marginTop: '10px'}}>
+              <div className="activity-item" style={{padding: '8px 0'}}>
+                <a href="https://www.blanks.so" target="_blank" rel="noopener noreferrer" style={{color: '#000', textDecoration: 'none'}}>
+                  <div className="activity-title" style={{fontSize: '13px'}}>Blanks Website</div>
+                  <div className="activity-description" style={{fontSize: '12px', color: '#666'}}>https://www.blanks.so</div>
+                </a>
+              </div>
+              <div className="activity-item" style={{padding: '8px 0'}}>
+                <a href="https://apps.apple.com/us/app/blanks-ai-app-builder/id6744576554" target="_blank" rel="noopener noreferrer" style={{color: '#000', textDecoration: 'none'}}>
+                  <div className="activity-title" style={{fontSize: '13px'}}>Blanks iOS App</div>
+                  <div className="activity-description" style={{fontSize: '12px', color: '#666'}}>App Store</div>
+                </a>
+              </div>
             </div>
 
             {/* Documents Section */}
