@@ -10,6 +10,28 @@ const githubApi = require('../services/github-api');
 const { decryptToken } = require('../utils/encryption');
 
 /**
+ * GET /api/connections
+ * Get all service connections for the authenticated user
+ */
+router.get('/', async (req, res) => {
+  try {
+    const connections = await db.getServiceConnectionsByUserId(req.user.id);
+    res.json({
+      success: true,
+      connections: connections.map(conn => ({
+        id: conn.id,
+        service_name: conn.service_name,
+        status: conn.status || 'connected',
+        created_at: conn.created_at
+      }))
+    });
+  } catch (err) {
+    console.error('Error fetching connections:', err);
+    res.status(500).json({ success: false, message: 'Failed to fetch connections' });
+  }
+});
+
+/**
  * GET /api/connections/github/repos
  * Fetch list of user's GitHub repositories
  */

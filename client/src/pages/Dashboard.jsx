@@ -44,6 +44,9 @@ function Dashboard({ isPublic = false, publicUser = null }) {
   const [fundingProjects, setFundingProjects] = useState([]);
   const [isDonationModalOpen, setIsDonationModalOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState(null);
+  const [connections, setConnections] = useState([]);
+  const [documents, setDocuments] = useState(null);
+  const [reports, setReports] = useState([]);
 
   // Use publicUser if in public mode, otherwise use authenticated user
   const { token, user: authUser } = useAuth();
@@ -63,6 +66,11 @@ function Dashboard({ isPublic = false, publicUser = null }) {
       fetchBalance();
       fetchTopFunders();
       fetchFundingProjects();
+      if (!isPublic) {
+        fetchConnections();
+        fetchDocuments();
+        fetchReports();
+      }
     }
   }, [user]);
 
@@ -130,6 +138,54 @@ function Dashboard({ isPublic = false, publicUser = null }) {
       }
     } catch (err) {
       console.error('Failed to fetch funding projects:', err);
+    }
+  };
+
+  const fetchConnections = async () => {
+    try {
+      const response = await fetch('/api/connections', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setConnections(data.connections || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch connections:', err);
+    }
+  };
+
+  const fetchDocuments = async () => {
+    try {
+      const response = await fetch('/api/documents', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setDocuments(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch documents:', err);
+    }
+  };
+
+  const fetchReports = async () => {
+    try {
+      const response = await fetch('/api/reports?limit=5', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setReports(data.reports || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch reports:', err);
     }
   };
 
@@ -311,8 +367,8 @@ function Dashboard({ isPublic = false, publicUser = null }) {
             )}
           </div>
 
-          {/* Right Column */}
-          <div className="paperclips-right">
+          {/* Middle Column */}
+          <div className="paperclips-middle">
             {/* 4. CEO */}
             <h2 className="paperclips-title">CEO</h2>
             <div className="paperclips-stat">
@@ -326,8 +382,8 @@ function Dashboard({ isPublic = false, publicUser = null }) {
               <button className="paperclips-btn">Make Decision Now</button>
             </div>
 
-            {/* Engineering */}
-            <h2 className="paperclips-title">Engineering</h2>
+            {/* Engineering Projects */}
+            <h2 className="paperclips-title">Engineering Projects</h2>
             <div className="paperclips-project">
               <div className="paperclips-project-title">
                 <strong>Fix authentication bug</strong> ($12)
@@ -353,8 +409,8 @@ function Dashboard({ isPublic = false, publicUser = null }) {
               </div>
             </div>
 
-            {/* Marketing */}
-            <h2 className="paperclips-title">Marketing</h2>
+            {/* Marketing Projects */}
+            <h2 className="paperclips-title">Marketing Projects</h2>
             <div className="paperclips-project">
               <div className="paperclips-project-title">
                 <strong>Launch product announcement</strong> ($18)
@@ -379,34 +435,94 @@ function Dashboard({ isPublic = false, publicUser = null }) {
                 Create 10 engaging posts with AI-generated images for next week's schedule.
               </div>
             </div>
-
-            {/* 5. Operations */}
-            <h2 className="paperclips-title" style={{marginTop: '30px'}}>Operations</h2>
-            <div className="paperclips-project">
-              <div className="paperclips-project-title">
-                <strong>Automate customer onboarding</strong> ($30)
-              </div>
-              <div className="paperclips-project-desc">
-                Build workflow to send welcome emails, create accounts, and schedule check-ins.
-              </div>
-            </div>
-            <div className="paperclips-project">
-              <div className="paperclips-project-title">
-                <strong>Invoice processing automation</strong> ($28)
-              </div>
-              <div className="paperclips-project-desc">
-                Extract data from PDFs, validate against POs, and update accounting system.
-              </div>
-            </div>
-            <div className="paperclips-project">
-              <div className="paperclips-project-title">
-                <strong>Daily metrics report</strong> ($8)
-              </div>
-              <div className="paperclips-project-desc">
-                Generate and email summary of key business metrics every morning at 8am.
-              </div>
-            </div>
           </div>
+
+          {/* Right Column - Connections & Documents (only show in private mode) */}
+          {!isPublic && (
+            <div className="paperclips-right">
+              <h2 className="paperclips-title">Connections</h2>
+              {connections.length === 0 ? (
+                <div className="paperclips-stat" style={{fontStyle: 'italic', color: '#666'}}>
+                  No connections yet. Connect your accounts in Settings.
+                </div>
+              ) : (
+                <>
+                  {connections.map((connection) => (
+                    <div key={connection.id} className="paperclips-stat" style={{margin: '2px 0'}}>
+                      {connection.service_name.charAt(0).toUpperCase() + connection.service_name.slice(1)}:
+                      {connection.status === 'connected' ? (
+                        <span className="paperclips-value"> Connected</span>
+                      ) : (
+                        <button
+                          className="paperclips-btn"
+                          style={{marginLeft: '5px'}}
+                          onClick={() => window.location.href = '/settings'}
+                        >
+                          Connect
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <div style={{marginTop: '10px'}}>
+                    <button
+                      className="paperclips-btn"
+                      onClick={() => window.location.href = '/connections'}
+                    >
+                      Show All
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {/* Documents Section */}
+              <h2 className="paperclips-title">Documents</h2>
+              {documents ? (
+                <>
+                  {/* Strategic Documents */}
+                  <div className="paperclips-project" onClick={() => window.location.href = '/documents'}>
+                    <div className="paperclips-project-title">
+                      <strong>Vision</strong>
+                    </div>
+                    <div className="paperclips-project-desc">
+                      {documents.vision_md ? 'Defined' : 'Not Set'}
+                    </div>
+                  </div>
+                  <div className="paperclips-project" onClick={() => window.location.href = '/documents'}>
+                    <div className="paperclips-project-title">
+                      <strong>Goals</strong>
+                    </div>
+                    <div className="paperclips-project-desc">
+                      {documents.goals_md ? 'Defined' : 'Not Set'}
+                    </div>
+                  </div>
+
+                  {/* Recent Reports */}
+                  {reports.length > 0 && (
+                    <>
+                      <div className="paperclips-stat" style={{marginTop: '15px'}}>
+                        Recent Reports: <span className="paperclips-value">{reports.length}</span>
+                      </div>
+                      <div className="recent-activity-scroll" style={{marginTop: '10px'}}>
+                        {reports.map((report) => (
+                          <div key={report.id} className="activity-item">
+                            <div className="activity-title">{report.name}</div>
+                            <div className="activity-description">
+                              {report.report_type} • {new Date(report.report_date).toLocaleDateString()}
+                            </div>
+                            <div className="activity-timestamp">{formatTimeAgo(report.created_at)}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </>
+              ) : (
+                <div className="paperclips-stat" style={{fontStyle: 'italic', color: '#666'}}>
+                  Loading documents...
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
