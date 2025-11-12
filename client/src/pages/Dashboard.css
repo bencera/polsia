@@ -228,8 +228,8 @@
   border-bottom-color: #333;
 }
 
-/* Paperclips Style Layout */
-.paperclips-container {
+/* Dashboard Layout */
+.dashboard-container {
   display: flex;
   gap: 30px;
   margin-bottom: 20px;
@@ -239,24 +239,24 @@
   line-height: 1.5;
 }
 
-.paperclips-left {
+.dashboard-left {
   flex: 0 0 350px;
   min-width: 350px;
 }
 
-.paperclips-middle {
-  flex: 0 0 350px;
-  min-width: 350px;
-  padding-left: 30px;
-}
-
-.paperclips-right {
+.dashboard-middle {
   flex: 0 0 350px;
   min-width: 350px;
   padding-left: 30px;
 }
 
-.paperclips-title {
+.dashboard-right {
+  flex: 0 0 350px;
+  min-width: 350px;
+  padding-left: 30px;
+}
+
+.dashboard-title {
   font-size: 16px;
   font-weight: bold;
   margin: 20px 0 10px 0;
@@ -265,23 +265,23 @@
   padding-bottom: 5px;
 }
 
-.paperclips-title:first-child {
+.dashboard-title:first-child {
   margin-top: 0;
 }
 
-.paperclips-stat {
+.dashboard-stat {
   margin: 5px 0;
   line-height: 1.6;
   font-family: "Times New Roman", Times, serif;
   font-size: 14px;
 }
 
-.paperclips-value {
+.dashboard-value {
   font-weight: bold;
   font-family: Arial, Helvetica, sans-serif;
 }
 
-.paperclips-section {
+.dashboard-section {
   margin: 10px 0;
   display: flex;
   align-items: center;
@@ -327,15 +327,15 @@
   font-style: italic;
 }
 
-.paperclips-buttons {
+.dashboard-buttons {
   margin: 8px 0;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-/* Paperclips Buttons */
-.paperclips-btn {
+/* Dashboard Buttons */
+.dashboard-btn {
   background: linear-gradient(top, #ffffff, #888888);
   background: -webkit-linear-gradient(top, #ffffff, #888888);
   border: 1px solid #1a1a1a;
@@ -348,12 +348,12 @@
   box-shadow: rgba(255, 255, 255, 0.4) 0 1px 0 0 inset, rgba(255, 255, 255, 0.4) 0 1px 0;
 }
 
-.paperclips-btn:hover {
+.dashboard-btn:hover {
   background: linear-gradient(top, #ffffff, #aaaaaa);
   background: -webkit-linear-gradient(top, #ffffff, #aaaaaa);
 }
 
-.paperclips-btn:active {
+.dashboard-btn:active {
   background: linear-gradient(top, #888888, #ffffff);
   background: -webkit-linear-gradient(top, #888888, #ffffff);
   box-shadow: rgba(0, 0, 0, 0.4) 0 1px 2px 0 inset;
@@ -361,7 +361,7 @@
   padding-bottom: 3px;
 }
 
-.paperclips-btn-large {
+.dashboard-btn-large {
   background: linear-gradient(top, #ffffff, #888888);
   background: -webkit-linear-gradient(top, #ffffff, #888888);
   border: 1px solid #1a1a1a;
@@ -375,12 +375,12 @@
   min-width: 120px;
 }
 
-.paperclips-btn-large:hover {
+.dashboard-btn-large:hover {
   background: linear-gradient(top, #ffffff, #aaaaaa);
   background: -webkit-linear-gradient(top, #ffffff, #aaaaaa);
 }
 
-.paperclips-btn-large:active {
+.dashboard-btn-large:active {
   background: linear-gradient(top, #888888, #ffffff);
   background: -webkit-linear-gradient(top, #888888, #ffffff);
   box-shadow: rgba(0, 0, 0, 0.4) 0 1px 2px 0 inset;
@@ -389,7 +389,7 @@
 }
 
 /* Projects */
-.paperclips-project {
+.dashboard-project {
   background: linear-gradient(top, #ffffff, #d0d0d0);
   background: -webkit-linear-gradient(top, #ffffff, #d0d0d0);
   border: 1px solid #1a1a1a;
@@ -402,25 +402,25 @@
   cursor: pointer;
 }
 
-.paperclips-project:hover {
+.dashboard-project:hover {
   background: linear-gradient(top, #ffffff, #c0c0c0);
   background: -webkit-linear-gradient(top, #ffffff, #c0c0c0);
 }
 
-.paperclips-project:active {
+.dashboard-project:active {
   background: linear-gradient(top, #d0d0d0, #ffffff);
   background: -webkit-linear-gradient(top, #d0d0d0, #ffffff);
   box-shadow: rgba(0, 0, 0, 0.4) 0 1px 2px 0 inset;
 }
 
-.paperclips-project-locked {
+.dashboard-project-locked {
   background: linear-gradient(top, #dddddd, #999999);
   background: -webkit-linear-gradient(top, #dddddd, #999999);
   color: #666;
   cursor: not-allowed;
 }
 
-.paperclips-project-title {
+.dashboard-project-title {
   font-size: 14px;
   margin-bottom: 6px;
   font-family: Arial, Helvetica, sans-serif;
@@ -428,7 +428,7 @@
   font-weight: normal;
 }
 
-.paperclips-project-desc {
+.dashboard-project-desc {
   font-size: 12px;
   line-height: 1.4;
   font-family: Arial, Helvetica, sans-serif;
@@ -457,17 +457,17 @@
     font-size: 1.1em;
   }
 
-  .paperclips-container {
+  .dashboard-container {
     flex-direction: column;
     gap: 20px;
   }
 
-  .paperclips-left {
+  .dashboard-left {
     flex: 1;
     min-width: 100%;
   }
 
-  .paperclips-right {
+  .dashboard-right {
     border-left: none;
     border-top: 1px solid #000;
     padding-left: 0;
@@ -476,12 +476,12 @@
 }
 
 @media (max-width: 480px) {
-  .paperclips-container {
+  .dashboard-container {
     font-size: 13px;
   }
 
-  .paperclips-btn,
-  .paperclips-btn-large {
+  .dashboard-btn,
+  .dashboard-btn-large {
     font-size: 12px;
     padding: 4px 10px;
   }

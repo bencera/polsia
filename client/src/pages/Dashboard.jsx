@@ -47,6 +47,8 @@ function Dashboard({ isPublic = false, publicUser = null }) {
   const [connections, setConnections] = useState([]);
   const [documents, setDocuments] = useState(null);
   const [reports, setReports] = useState([]);
+  const [isDocumentModalOpen, setIsDocumentModalOpen] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState(null);
 
   // Use publicUser if in public mode, otherwise use authenticated user
   const { token, user: authUser } = useAuth();
@@ -166,7 +168,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
       });
       const data = await response.json();
       if (response.ok) {
-        setDocuments(data);
+        setDocuments(data.documents);
       }
     } catch (err) {
       console.error('Failed to fetch documents:', err);
@@ -200,6 +202,16 @@ function Dashboard({ isPublic = false, publicUser = null }) {
     // Refresh data after donation
     fetchBalance();
     fetchTopFunders();
+  };
+
+  const handleDocumentClick = (docType, content) => {
+    setSelectedDocument({ type: docType, content });
+    setIsDocumentModalOpen(true);
+  };
+
+  const handleDocumentModalClose = () => {
+    setIsDocumentModalOpen(false);
+    setSelectedDocument(null);
   };
 
   const formatTimeAgo = (dateString) => {
@@ -280,48 +292,46 @@ function Dashboard({ isPublic = false, publicUser = null }) {
         <Navbar />
       )}
 
-      <div className="dashboard-container">
-
       <div className="dashboard-content">
-        {/* Metrics Summary Section - Paperclips Style */}
-        <div className="paperclips-container">
+        {/* Metrics Summary Section */}
+        <div className="dashboard-container">
           {/* Left Column */}
-          <div className="paperclips-left">
+          <div className="dashboard-left">
             {/* 1. Business */}
-            <h2 className="paperclips-title">Business</h2>
-            <div className="paperclips-stat">
-              All-time Users: <span className="paperclips-value">8,342</span>
+            <h2 className="dashboard-title">Business</h2>
+            <div className="dashboard-stat">
+              All-time Users: <span className="dashboard-value">8,342</span>
             </div>
-            <div className="paperclips-stat">
-              Monthly Active Users: <span className="paperclips-value">1,579</span>
+            <div className="dashboard-stat">
+              Monthly Active Users: <span className="dashboard-value">1,579</span>
             </div>
-            <div className="paperclips-stat">
-              All-time Revenue: <span className="paperclips-value">$ 487,230</span>
+            <div className="dashboard-stat">
+              All-time Revenue: <span className="dashboard-value">$ 487,230</span>
             </div>
-            <div className="paperclips-stat">
-              Monthly Revenue: <span className="paperclips-value">$ 12,450</span>
+            <div className="dashboard-stat">
+              Monthly Revenue: <span className="dashboard-value">$ 12,450</span>
             </div>
-            <div className="paperclips-stat">
-              Monthly Churn: <span className="paperclips-value">2.3%</span>
+            <div className="dashboard-stat">
+              Monthly Churn: <span className="dashboard-value">2.3%</span>
             </div>
-            <div className="paperclips-stat">
-              Cost per User: <span className="paperclips-value">$ 0.52</span>
+            <div className="dashboard-stat">
+              Cost per User: <span className="dashboard-value">$ 0.52</span>
             </div>
 
             {/* 2. Autonomous Resources */}
-            <h2 className="paperclips-title">Autonomous Resources</h2>
-            <div className="paperclips-section">
-              <span className="paperclips-stat">Available Funds: <span className="paperclips-value">
+            <h2 className="dashboard-title">Autonomous Resources</h2>
+            <div className="dashboard-section">
+              <span className="dashboard-stat">Available Funds: <span className="dashboard-value">
                 $ {balance ? parseFloat(balance.current_balance_usd).toFixed(2) : '0.00'}
               </span></span>
-              <button className="paperclips-btn" onClick={() => handleDonateClick()}>Add Funds</button>
+              <button className="dashboard-btn" onClick={() => handleDonateClick()}>Add Funds</button>
             </div>
-            <div className="paperclips-stat" style={{marginTop: '15px'}}>
-              Funders: <span className="paperclips-value">{topFunders.length}</span>
+            <div className="dashboard-stat" style={{marginTop: '15px'}}>
+              Funders: <span className="dashboard-value">{topFunders.length}</span>
             </div>
             {topFunders.length > 0 && (
               <>
-                <div className="paperclips-stat" style={{marginTop: '5px'}}>
+                <div className="dashboard-stat" style={{marginTop: '5px'}}>
                   Top Funders: {topFunders.slice(0, 5).map((funder, index) => (
                     <span key={index}>
                       {index > 0 && ', '}
@@ -330,25 +340,25 @@ function Dashboard({ isPublic = false, publicUser = null }) {
                   ))}
                 </div>
                 <div style={{marginTop: '8px'}}>
-                  <button className="paperclips-btn">Show All</button>
+                  <button className="dashboard-btn">Show All</button>
                 </div>
               </>
             )}
 
             {/* 3. Recent Activity */}
-            <h2 className="paperclips-title">Recent Activity</h2>
+            <h2 className="dashboard-title">Recent Activity</h2>
             {loading && (
-              <div className="paperclips-stat" style={{fontStyle: 'italic', color: '#666'}}>
+              <div className="dashboard-stat" style={{fontStyle: 'italic', color: '#666'}}>
                 Loading tasks...
               </div>
             )}
             {error && (
-              <div className="paperclips-stat" style={{fontStyle: 'italic', color: '#666'}}>
+              <div className="dashboard-stat" style={{fontStyle: 'italic', color: '#666'}}>
                 {error}
               </div>
             )}
             {!loading && !error && tasks.length === 0 && (
-              <div className="paperclips-stat" style={{fontStyle: 'italic', color: '#666'}}>
+              <div className="dashboard-stat" style={{fontStyle: 'italic', color: '#666'}}>
                 No tasks yet. Your task history will appear here once Polsia starts working for you.
               </div>
             )}
@@ -368,70 +378,70 @@ function Dashboard({ isPublic = false, publicUser = null }) {
           </div>
 
           {/* Middle Column */}
-          <div className="paperclips-middle">
+          <div className="dashboard-middle">
             {/* 4. CEO */}
-            <h2 className="paperclips-title">CEO</h2>
-            <div className="paperclips-stat">
-              Decisions Made: <span className="paperclips-value">42</span>
+            <h2 className="dashboard-title">CEO</h2>
+            <div className="dashboard-stat">
+              Decisions Made: <span className="dashboard-value">42</span>
             </div>
-            <div className="paperclips-stat">
-              Tasks Delegated: <span className="paperclips-value">156</span>
+            <div className="dashboard-stat">
+              Tasks Delegated: <span className="dashboard-value">156</span>
             </div>
-            <div className="paperclips-section" style={{marginTop: '10px'}}>
-              <span className="paperclips-stat">Next Decision: <span className="paperclips-value">{countdown}</span></span>
-              <button className="paperclips-btn">Make Decision Now</button>
+            <div className="dashboard-section" style={{marginTop: '10px'}}>
+              <span className="dashboard-stat">Next Decision: <span className="dashboard-value">{countdown}</span></span>
+              <button className="dashboard-btn">Make Decision Now</button>
             </div>
 
             {/* Engineering Projects */}
-            <h2 className="paperclips-title">Engineering Projects</h2>
-            <div className="paperclips-project">
-              <div className="paperclips-project-title">
+            <h2 className="dashboard-title">Engineering Projects</h2>
+            <div className="dashboard-project">
+              <div className="dashboard-project-title">
                 <strong>Fix authentication bug</strong> ($12)
               </div>
-              <div className="paperclips-project-desc">
+              <div className="dashboard-project-desc">
                 Users unable to login with GitHub OAuth. Investigate token refresh issue.
               </div>
             </div>
-            <div className="paperclips-project">
-              <div className="paperclips-project-title">
+            <div className="dashboard-project">
+              <div className="dashboard-project-title">
                 <strong>Optimize database queries</strong> ($25)
               </div>
-              <div className="paperclips-project-desc">
+              <div className="dashboard-project-desc">
                 Slow loading times on dashboard. Add indexes to agents and executions tables.
               </div>
             </div>
-            <div className="paperclips-project">
-              <div className="paperclips-project-title">
+            <div className="dashboard-project">
+              <div className="dashboard-project-title">
                 <strong>Implement caching layer</strong> ($45)
               </div>
-              <div className="paperclips-project-desc">
+              <div className="dashboard-project-desc">
                 Add Redis caching for API responses to reduce database load by 60%.
               </div>
             </div>
 
             {/* Marketing Projects */}
-            <h2 className="paperclips-title">Marketing Projects</h2>
-            <div className="paperclips-project">
-              <div className="paperclips-project-title">
+            <h2 className="dashboard-title">Marketing Projects</h2>
+            <div className="dashboard-project">
+              <div className="dashboard-project-title">
                 <strong>Launch product announcement</strong> ($18)
               </div>
-              <div className="paperclips-project-desc">
+              <div className="dashboard-project-desc">
                 Create and schedule social media posts for new agent marketplace launch.
               </div>
             </div>
-            <div className="paperclips-project">
-              <div className="paperclips-project-title">
+            <div className="dashboard-project">
+              <div className="dashboard-project-title">
                 <strong>Write blog post</strong> ($22)
               </div>
-              <div className="paperclips-project-desc">
+              <div className="dashboard-project-desc">
                 Technical deep-dive on autonomous agents. Target: 2,000 words with code examples.
               </div>
             </div>
-            <div className="paperclips-project">
-              <div className="paperclips-project-title">
+            <div className="dashboard-project">
+              <div className="dashboard-project-title">
                 <strong>Generate Instagram content</strong> ($15)
               </div>
-              <div className="paperclips-project-desc">
+              <div className="dashboard-project-desc">
                 Create 10 engaging posts with AI-generated images for next week's schedule.
               </div>
             </div>
@@ -439,22 +449,22 @@ function Dashboard({ isPublic = false, publicUser = null }) {
 
           {/* Right Column - Connections & Documents (only show in private mode) */}
           {!isPublic && (
-            <div className="paperclips-right">
-              <h2 className="paperclips-title">Connections</h2>
+            <div className="dashboard-right">
+              <h2 className="dashboard-title">Connections</h2>
               {connections.length === 0 ? (
-                <div className="paperclips-stat" style={{fontStyle: 'italic', color: '#666'}}>
+                <div className="dashboard-stat" style={{fontStyle: 'italic', color: '#666'}}>
                   No connections yet. Connect your accounts in Settings.
                 </div>
               ) : (
                 <>
                   {connections.map((connection) => (
-                    <div key={connection.id} className="paperclips-stat" style={{margin: '2px 0'}}>
+                    <div key={connection.id} className="dashboard-stat" style={{margin: '2px 0'}}>
                       {connection.service_name.charAt(0).toUpperCase() + connection.service_name.slice(1)}:
                       {connection.status === 'connected' ? (
-                        <span className="paperclips-value"> Connected</span>
+                        <span className="dashboard-value"> Connected</span>
                       ) : (
                         <button
-                          className="paperclips-btn"
+                          className="dashboard-btn"
                           style={{marginLeft: '5px'}}
                           onClick={() => window.location.href = '/settings'}
                         >
@@ -465,7 +475,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
                   ))}
                   <div style={{marginTop: '10px'}}>
                     <button
-                      className="paperclips-btn"
+                      className="dashboard-btn"
                       onClick={() => window.location.href = '/connections'}
                     >
                       Show All
@@ -475,36 +485,59 @@ function Dashboard({ isPublic = false, publicUser = null }) {
               )}
 
               {/* Documents Section */}
-              <h2 className="paperclips-title">Documents</h2>
+              <h2 className="dashboard-title">Documents</h2>
               {documents ? (
                 <>
-                  {/* Strategic Documents */}
-                  <div className="paperclips-project" onClick={() => window.location.href = '/documents'}>
-                    <div className="paperclips-project-title">
-                      <strong>Vision</strong>
-                    </div>
-                    <div className="paperclips-project-desc">
-                      {documents.vision_md ? 'Defined' : 'Not Set'}
-                    </div>
-                  </div>
-                  <div className="paperclips-project" onClick={() => window.location.href = '/documents'}>
-                    <div className="paperclips-project-title">
-                      <strong>Goals</strong>
-                    </div>
-                    <div className="paperclips-project-desc">
-                      {documents.goals_md ? 'Defined' : 'Not Set'}
-                    </div>
+                  <div className="recent-activity-scroll" style={{marginTop: '10px'}}>
+                    {/* Vision Document */}
+                    {documents.vision_md && documents.vision_md.trim().length > 0 ? (
+                      <div
+                        className="activity-item"
+                        style={{cursor: 'pointer'}}
+                        onClick={() => handleDocumentClick('Vision', documents.vision_md)}
+                      >
+                        <div className="activity-title">Vision</div>
+                        <div className="activity-description">Strategic vision document</div>
+                      </div>
+                    ) : (
+                      <div className="activity-item" style={{cursor: 'pointer'}} onClick={() => window.location.href = '/documents'}>
+                        <div className="activity-title">Vision</div>
+                        <div className="activity-description" style={{color: '#999'}}>Not set - click to define</div>
+                      </div>
+                    )}
+
+                    {/* Goals Document */}
+                    {documents.goals_md && documents.goals_md.trim().length > 0 ? (
+                      <div
+                        className="activity-item"
+                        style={{cursor: 'pointer'}}
+                        onClick={() => handleDocumentClick('Goals', documents.goals_md)}
+                      >
+                        <div className="activity-title">Goals</div>
+                        <div className="activity-description">Company goals and objectives</div>
+                      </div>
+                    ) : (
+                      <div className="activity-item" style={{cursor: 'pointer'}} onClick={() => window.location.href = '/documents'}>
+                        <div className="activity-title">Goals</div>
+                        <div className="activity-description" style={{color: '#999'}}>Not set - click to define</div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Recent Reports */}
                   {reports.length > 0 && (
                     <>
-                      <div className="paperclips-stat" style={{marginTop: '15px'}}>
-                        Recent Reports: <span className="paperclips-value">{reports.length}</span>
+                      <div className="dashboard-stat" style={{marginTop: '15px'}}>
+                        Recent Reports: <span className="dashboard-value">{reports.length}</span>
                       </div>
                       <div className="recent-activity-scroll" style={{marginTop: '10px'}}>
                         {reports.map((report) => (
-                          <div key={report.id} className="activity-item">
+                          <div
+                            key={report.id}
+                            className="activity-item"
+                            style={{cursor: 'pointer'}}
+                            onClick={() => handleDocumentClick(report.name, report.content)}
+                          >
                             <div className="activity-title">{report.name}</div>
                             <div className="activity-description">
                               {report.report_type} • {new Date(report.report_date).toLocaleDateString()}
@@ -517,7 +550,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
                   )}
                 </>
               ) : (
-                <div className="paperclips-stat" style={{fontStyle: 'italic', color: '#666'}}>
+                <div className="dashboard-stat" style={{fontStyle: 'italic', color: '#666'}}>
                   Loading documents...
                 </div>
               )}
@@ -526,10 +559,9 @@ function Dashboard({ isPublic = false, publicUser = null }) {
         </div>
       </div>
 
-        <footer className="footer">
-          <p className="footer-contact">Contact: <a href="mailto:system@polsia.ai">system@polsia.ai</a></p>
-        </footer>
-      </div>
+      <footer className="footer">
+        <p className="footer-contact">Contact: <a href="mailto:system@polsia.com">system@polsia.com</a></p>
+      </footer>
 
       <DonationModal
         isOpen={isDonationModalOpen}
@@ -539,6 +571,70 @@ function Dashboard({ isPublic = false, publicUser = null }) {
         projectName={selectedProject?.name || user?.company_name || 'Your Account'}
         isOwnAccount={true}
       />
+
+      {/* Document Viewer Modal */}
+      {isDocumentModalOpen && selectedDocument && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }}
+          onClick={handleDocumentModalClose}
+        >
+          <div
+            style={{
+              backgroundColor: '#fff',
+              padding: '30px',
+              borderRadius: '4px',
+              maxWidth: '800px',
+              width: '100%',
+              maxHeight: '80vh',
+              overflow: 'auto',
+              border: '1px solid #000',
+              position: 'relative'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif' }}>{selectedDocument.type}</h2>
+              <button
+                onClick={handleDocumentModalClose}
+                style={{
+                  background: 'linear-gradient(top, #ffffff, #888888)',
+                  border: '1px solid #1a1a1a',
+                  padding: '6px 12px',
+                  cursor: 'pointer',
+                  borderRadius: '2px',
+                  fontFamily: 'Arial, Helvetica, sans-serif',
+                  fontSize: '13px'
+                }}
+              >
+                Close
+              </button>
+            </div>
+            <div
+              style={{
+                fontFamily: 'Times New Roman, Times, serif',
+                fontSize: '14px',
+                lineHeight: '1.6',
+                whiteSpace: 'pre-wrap',
+                wordWrap: 'break-word'
+              }}
+            >
+              {selectedDocument.content}
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
