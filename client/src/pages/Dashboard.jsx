@@ -68,10 +68,10 @@ function Dashboard({ isPublic = false, publicUser = null }) {
       fetchBalance();
       fetchTopFunders();
       fetchFundingProjects();
+      fetchDocuments();
+      fetchReports();
       if (!isPublic) {
         fetchConnections();
-        fetchDocuments();
-        fetchReports();
       }
     }
   }, [user]);
@@ -161,11 +161,10 @@ function Dashboard({ isPublic = false, publicUser = null }) {
 
   const fetchDocuments = async () => {
     try {
-      const response = await fetch('/api/documents', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const url = isPublic ? `/api/documents/user/${user.id}` : '/api/documents';
+      const headers = isPublic ? {} : { 'Authorization': `Bearer ${token}` };
+
+      const response = await fetch(url, { headers });
       const data = await response.json();
       if (response.ok) {
         setDocuments(data.documents);
@@ -177,11 +176,10 @@ function Dashboard({ isPublic = false, publicUser = null }) {
 
   const fetchReports = async () => {
     try {
-      const response = await fetch('/api/reports?limit=5', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const url = isPublic ? `/api/reports/user/${user.id}?limit=5` : '/api/reports?limit=5';
+      const headers = isPublic ? {} : { 'Authorization': `Bearer ${token}` };
+
+      const response = await fetch(url, { headers });
       const data = await response.json();
       if (response.ok) {
         setReports(data.reports || []);
@@ -447,115 +445,125 @@ function Dashboard({ isPublic = false, publicUser = null }) {
             </div>
           </div>
 
-          {/* Right Column - Connections & Documents (only show in private mode) */}
-          {!isPublic && (
-            <div className="dashboard-right">
-              <h2 className="dashboard-title">Connections</h2>
-              {connections.length === 0 ? (
-                <div className="dashboard-stat" style={{fontStyle: 'italic', color: '#666'}}>
-                  No connections yet. Connect your accounts in Settings.
-                </div>
-              ) : (
-                <>
-                  {connections.map((connection) => (
-                    <div key={connection.id} className="dashboard-stat" style={{margin: '2px 0'}}>
-                      {connection.service_name.charAt(0).toUpperCase() + connection.service_name.slice(1)}:
-                      {connection.status === 'connected' ? (
-                        <span className="dashboard-value"> Connected</span>
-                      ) : (
-                        <button
-                          className="dashboard-btn"
-                          style={{marginLeft: '5px'}}
-                          onClick={() => window.location.href = '/settings'}
-                        >
-                          Connect
-                        </button>
-                      )}
+          {/* Right Column - Links, Documents & Connections */}
+          <div className="dashboard-right">
+            {/* Links Section */}
+            <h2 className="dashboard-title">Links</h2>
+            <div className="dashboard-stat" style={{fontStyle: 'italic', color: '#666'}}>
+              No links yet. Add important links to your resources.
+            </div>
+
+            {/* Documents Section */}
+            <h2 className="dashboard-title">Documents</h2>
+            {documents ? (
+              <>
+                <div style={{marginTop: '10px'}}>
+                  {/* Vision Document */}
+                  {documents.vision_md && documents.vision_md.trim().length > 0 ? (
+                    <div
+                      className="activity-item"
+                      style={{cursor: 'pointer', padding: '8px 0'}}
+                      onClick={() => handleDocumentClick('Vision', documents.vision_md)}
+                    >
+                      <div className="activity-title" style={{fontSize: '13px'}}>Vision</div>
+                      <div className="activity-description" style={{fontSize: '12px'}}>Strategic vision document</div>
+                    </div>
+                  ) : (
+                    <div className="activity-item" style={{cursor: 'pointer', padding: '8px 0'}} onClick={() => window.location.href = '/documents'}>
+                      <div className="activity-title" style={{fontSize: '13px'}}>Vision</div>
+                      <div className="activity-description" style={{color: '#999', fontSize: '12px'}}>Not set - click to define</div>
+                    </div>
+                  )}
+
+                  {/* Goals Document */}
+                  {documents.goals_md && documents.goals_md.trim().length > 0 ? (
+                    <div
+                      className="activity-item"
+                      style={{cursor: 'pointer', padding: '8px 0'}}
+                      onClick={() => handleDocumentClick('Goals', documents.goals_md)}
+                    >
+                      <div className="activity-title" style={{fontSize: '13px'}}>Goals</div>
+                      <div className="activity-description" style={{fontSize: '12px'}}>Company goals and objectives</div>
+                    </div>
+                  ) : (
+                    <div className="activity-item" style={{cursor: 'pointer', padding: '8px 0'}} onClick={() => window.location.href = '/documents'}>
+                      <div className="activity-title" style={{fontSize: '13px'}}>Goals</div>
+                      <div className="activity-description" style={{color: '#999', fontSize: '12px'}}>Not set - click to define</div>
+                    </div>
+                  )}
+
+                  {/* Recent Reports (3 most recent) */}
+                  {reports.slice(0, 3).map((report) => (
+                    <div
+                      key={report.id}
+                      className="activity-item"
+                      style={{cursor: 'pointer', padding: '8px 0'}}
+                      onClick={() => handleDocumentClick(report.name, report.content)}
+                    >
+                      <div className="activity-title" style={{fontSize: '13px'}}>{report.name}</div>
+                      <div className="activity-description" style={{fontSize: '12px'}}>
+                        {report.report_type} • {new Date(report.report_date).toLocaleDateString()}
+                      </div>
+                      <div className="activity-timestamp" style={{fontSize: '11px'}}>{formatTimeAgo(report.created_at)}</div>
                     </div>
                   ))}
-                  <div style={{marginTop: '10px'}}>
-                    <button
-                      className="dashboard-btn"
-                      onClick={() => window.location.href = '/connections'}
-                    >
-                      Show All
-                    </button>
-                  </div>
-                </>
-              )}
-
-              {/* Documents Section */}
-              <h2 className="dashboard-title">Documents</h2>
-              {documents ? (
-                <>
-                  <div className="recent-activity-scroll" style={{marginTop: '10px'}}>
-                    {/* Vision Document */}
-                    {documents.vision_md && documents.vision_md.trim().length > 0 ? (
-                      <div
-                        className="activity-item"
-                        style={{cursor: 'pointer'}}
-                        onClick={() => handleDocumentClick('Vision', documents.vision_md)}
-                      >
-                        <div className="activity-title">Vision</div>
-                        <div className="activity-description">Strategic vision document</div>
-                      </div>
-                    ) : (
-                      <div className="activity-item" style={{cursor: 'pointer'}} onClick={() => window.location.href = '/documents'}>
-                        <div className="activity-title">Vision</div>
-                        <div className="activity-description" style={{color: '#999'}}>Not set - click to define</div>
-                      </div>
-                    )}
-
-                    {/* Goals Document */}
-                    {documents.goals_md && documents.goals_md.trim().length > 0 ? (
-                      <div
-                        className="activity-item"
-                        style={{cursor: 'pointer'}}
-                        onClick={() => handleDocumentClick('Goals', documents.goals_md)}
-                      >
-                        <div className="activity-title">Goals</div>
-                        <div className="activity-description">Company goals and objectives</div>
-                      </div>
-                    ) : (
-                      <div className="activity-item" style={{cursor: 'pointer'}} onClick={() => window.location.href = '/documents'}>
-                        <div className="activity-title">Goals</div>
-                        <div className="activity-description" style={{color: '#999'}}>Not set - click to define</div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Recent Reports */}
-                  {reports.length > 0 && (
-                    <>
-                      <div className="dashboard-stat" style={{marginTop: '15px'}}>
-                        Recent Reports: <span className="dashboard-value">{reports.length}</span>
-                      </div>
-                      <div className="recent-activity-scroll" style={{marginTop: '10px'}}>
-                        {reports.map((report) => (
-                          <div
-                            key={report.id}
-                            className="activity-item"
-                            style={{cursor: 'pointer'}}
-                            onClick={() => handleDocumentClick(report.name, report.content)}
-                          >
-                            <div className="activity-title">{report.name}</div>
-                            <div className="activity-description">
-                              {report.report_type} • {new Date(report.report_date).toLocaleDateString()}
-                            </div>
-                            <div className="activity-timestamp">{formatTimeAgo(report.created_at)}</div>
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </>
-              ) : (
-                <div className="dashboard-stat" style={{fontStyle: 'italic', color: '#666'}}>
-                  Loading documents...
                 </div>
-              )}
-            </div>
-          )}
+
+                {/* See More Button */}
+                <div style={{marginTop: '10px'}}>
+                  <button
+                    className="dashboard-btn"
+                    onClick={() => window.location.href = '/documents'}
+                  >
+                    See More
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="dashboard-stat" style={{fontStyle: 'italic', color: '#666'}}>
+                Loading documents...
+              </div>
+            )}
+
+            {/* Connections Section - Only show in private mode */}
+            {!isPublic && (
+              <>
+                <h2 className="dashboard-title">Connections</h2>
+                {connections.length === 0 ? (
+                  <div className="dashboard-stat" style={{fontStyle: 'italic', color: '#666'}}>
+                    No connections yet. Connect your accounts in Settings.
+                  </div>
+                ) : (
+                  <>
+                    {connections.map((connection) => (
+                      <div key={connection.id} className="dashboard-stat" style={{margin: '2px 0'}}>
+                        {connection.service_name.charAt(0).toUpperCase() + connection.service_name.slice(1)}:
+                        {connection.status === 'connected' ? (
+                          <span className="dashboard-value"> Connected</span>
+                        ) : (
+                          <button
+                            className="dashboard-btn"
+                            style={{marginLeft: '5px'}}
+                            onClick={() => window.location.href = '/settings'}
+                          >
+                            Connect
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    <div style={{marginTop: '10px'}}>
+                      <button
+                        className="dashboard-btn"
+                        onClick={() => window.location.href = '/connections'}
+                      >
+                        Show All
+                      </button>
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </div>
 

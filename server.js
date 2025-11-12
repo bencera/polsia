@@ -443,6 +443,10 @@ app.use('/api/ai', authenticateToken, aiGenerationRoutes);
 
 // Document Store Routes - Manage company documents (vision, goals, analytics, memory)
 const documentRoutes = require('./routes/document-routes');
+// Public routes first (no auth required)
+app.use('/api/documents/user', documentRoutes);
+app.use('/api/reports/user', require('./routes/reports-routes'));
+// Then authenticated routes
 app.use('/api/documents', authenticateToken, documentRoutes);
 
 // Reports Routes - Access and manage reports by category

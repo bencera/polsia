@@ -14,6 +14,46 @@ const {
 // req.user is available in all routes
 
 /**
+ * GET /api/reports/user/:userId
+ * PUBLIC: List reports for a specific user (for public dashboard)
+ * Query params same as authenticated endpoint
+ */
+router.get('/user/:userId', async (req, res) => {
+    try {
+        const userId = parseInt(req.params.userId);
+
+        if (!userId || isNaN(userId)) {
+            return res.status(400).json({ success: false, message: 'Invalid user ID' });
+        }
+
+        const { report_type, start_date, end_date, limit = 50, offset = 0 } = req.query;
+
+        const filters = {};
+        if (report_type) filters.report_type = report_type;
+        if (start_date) filters.start_date = start_date;
+        if (end_date) filters.end_date = end_date;
+
+        const reports = await getReportsByUserId(
+            userId,
+            filters,
+            parseInt(limit),
+            parseInt(offset)
+        );
+
+        res.json({
+            success: true,
+            reports,
+            count: reports.length,
+            offset: parseInt(offset),
+            limit: parseInt(limit)
+        });
+    } catch (error) {
+        console.error('Error getting public reports:', error);
+        res.status(500).json({ success: false, message: 'Failed to get reports' });
+    }
+});
+
+/**
  * GET /api/reports
  * List all reports for the authenticated user with optional filters
  * Query params:

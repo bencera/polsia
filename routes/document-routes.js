@@ -17,6 +17,32 @@ const {
 // req.user is available in all routes
 
 /**
+ * GET /api/documents/user/:userId
+ * PUBLIC: Get all documents for a specific user (for public dashboard)
+ */
+router.get('/user/:userId', async (req, res) => {
+  try {
+    const userId = parseInt(req.params.userId);
+
+    if (!userId || isNaN(userId)) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID' });
+    }
+
+    let documentStore = await getDocumentStore(userId);
+
+    // If no document store exists, initialize one
+    if (!documentStore) {
+      documentStore = await initializeDocumentStore(userId);
+    }
+
+    res.json({ success: true, documents: documentStore });
+  } catch (error) {
+    console.error('Error getting public documents:', error);
+    res.status(500).json({ success: false, message: 'Failed to get documents' });
+  }
+});
+
+/**
  * GET /api/documents
  * Get all documents for the authenticated user
  */
