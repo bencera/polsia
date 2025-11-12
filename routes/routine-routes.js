@@ -5,6 +5,7 @@
 
 const express = require('express');
 const router = express.Router();
+const db = require('../db');
 const {
     getRoutinesByUserId,
     getRoutinesByAgentId,
@@ -18,6 +19,7 @@ const {
     getAgentById,
 } = require('../db');
 const { runRoutine, buildRoutinePrompt } = require('../services/routine-executor');
+const { runModule } = require('../services/agent-runner');
 
 // Note: All routes require authenticateToken middleware (applied in server.js)
 // req.user is available in all routes
@@ -217,45 +219,76 @@ router.get('/:id/prompt-preview', async (req, res) => {
  */
 router.post('/:id/run', async (req, res) => {
     try {
-        const routine = await getRoutineById(req.params.id, req.user.id);
+        // ID can be either an agent or routine (for backwards compatibility)
+        // First, try to find an agent with this ID
+        const agent = await db.getAgentById(req.params.id, req.user.id);
 
-        if (!routine) {
-            return res.status(404).json({
-                success: false,
-                message: 'Routine not found',
+        if (agent) {
+            // Run as agent using runModule (unified agent execution)
+            const executionPromise = runModule(req.params.id, req.user.id, {
+                trigger_type: 'manual',
+            });
+
+            executionPromise.catch((error) => {
+                console.error(`Error running agent ${req.params.id}:`, error);
+            });
+
+            // Poll for the execution record
+            let execution = null;
+            for (let i = 0; i < 5; i++) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                const executions = await db.getAgentExecutions(req.params.id, req.user.id, 1);
+                if (executions && executions.length > 0 && executions[0].status === 'running') {
+                    execution = executions[0];
+                    break;
+                }
+            }
+
+            res.json({
+                success: true,
+                message: 'Agent execution triggered',
+                execution: execution ? { id: execution.id } : null,
+            });
+        } else {
+            // Fallback: try routine (for backwards compatibility)
+            const routine = await getRoutineById(req.params.id, req.user.id);
+
+            if (!routine) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Agent or routine not found',
+                });
+            }
+
+            // Trigger routine execution and get execution ID for streaming
+            const executionPromise = runRoutine(req.params.id, req.user.id, {
+                trigger_type: 'manual',
+            });
+
+            executionPromise.catch((error) => {
+                console.error(`Error running routine ${req.params.id}:`, error);
+            });
+
+            // Poll for the execution record
+            let execution = null;
+            for (let i = 0; i < 5; i++) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                const executions = await getRoutineExecutions(req.params.id, req.user.id, 1);
+                if (executions && executions.length > 0 && executions[0].status === 'running') {
+                    execution = executions[0];
+                    break;
+                }
+            }
+
+            res.json({
+                success: true,
+                message: 'Routine execution triggered',
+                execution: execution ? { id: execution.id } : null,
             });
         }
-
-        // Trigger routine execution and get execution ID for streaming
-        const executionPromise = runRoutine(req.params.id, req.user.id, {
-            trigger_type: 'manual',
-        });
-
-        // Wait briefly for execution record to be created (happens very early in runRoutine)
-        // This allows us to return execution_id to frontend for log streaming
-        executionPromise.catch((error) => {
-            console.error(`Error running routine ${req.params.id}:`, error);
-        });
-
-        // Poll for the execution record (created within first 100ms of runRoutine)
-        let execution = null;
-        for (let i = 0; i < 5; i++) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-            const executions = await getRoutineExecutions(req.params.id, req.user.id, 1);
-            if (executions && executions.length > 0 && executions[0].status === 'running') {
-                execution = executions[0];
-                break;
-            }
-        }
-
-        res.json({
-            success: true,
-            message: 'Routine execution triggered',
-            execution: execution ? { id: execution.id } : null,
-        });
     } catch (error) {
-        console.error('Error triggering routine:', error);
-        res.status(500).json({ success: false, message: 'Failed to trigger routine' });
+        console.error('Error triggering execution:', error);
+        res.status(500).json({ success: false, message: 'Failed to trigger execution' });
     }
 });
 

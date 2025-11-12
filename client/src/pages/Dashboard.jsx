@@ -5,6 +5,36 @@ import Navbar from '../components/Navbar';
 import DonationModal from '../components/DonationModal';
 import './Dashboard.css';
 
+// Countdown timer hook
+function useCountdown(targetDate) {
+  const [timeLeft, setTimeLeft] = useState('');
+
+  useEffect(() => {
+    const updateCountdown = () => {
+      const now = new Date().getTime();
+      const distance = targetDate - now;
+
+      if (distance < 0) {
+        setTimeLeft('00h 00m 00s');
+        return;
+      }
+
+      const hours = Math.floor(distance / (1000 * 60 * 60));
+      const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+      setTimeLeft(`${String(hours).padStart(2, '0')}h ${String(minutes).padStart(2, '0')}m ${String(seconds).padStart(2, '0')}s`);
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+
+    return () => clearInterval(interval);
+  }, [targetDate]);
+
+  return timeLeft;
+}
+
 function Dashboard() {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -16,6 +46,13 @@ function Dashboard() {
   const [selectedProject, setSelectedProject] = useState(null);
   const { token, user } = useAuth();
   const { terminalLogs } = useTerminal();
+
+  // CEO next decision countdown - set to a fixed target time for demo (6 hours from now)
+  const [nextDecisionTime] = useState(() => {
+    const now = new Date();
+    return now.getTime() + (6 * 60 * 60 * 1000); // 6 hours from now
+  });
+  const countdown = useCountdown(nextDecisionTime);
 
   useEffect(() => {
     fetchTasks();
@@ -168,8 +205,8 @@ function Dashboard() {
         <div className="paperclips-container">
           {/* Left Column */}
           <div className="paperclips-left">
+            {/* 1. Business */}
             <h2 className="paperclips-title">Business</h2>
-
             <div className="paperclips-stat">
               All-time Users: <span className="paperclips-value">8,342</span>
             </div>
@@ -189,13 +226,87 @@ function Dashboard() {
               Cost per User: <span className="paperclips-value">$ 0.52</span>
             </div>
 
-            <h2 className="paperclips-title">AI Operations</h2>
+            {/* 2. Autonomous Resources */}
+            <h2 className="paperclips-title">Autonomous Resources</h2>
+            <div className="paperclips-section">
+              <span className="paperclips-stat">Available Funds: <span className="paperclips-value">
+                $ {balance ? parseFloat(balance.current_balance_usd).toFixed(2) : '0.00'}
+              </span></span>
+              <button className="paperclips-btn" onClick={() => handleDonateClick()}>Add Funds</button>
+            </div>
+            <div className="paperclips-stat" style={{marginTop: '15px'}}>
+              Funders: <span className="paperclips-value">{topFunders.length}</span>
+            </div>
+            {topFunders.length > 0 && (
+              <>
+                <div className="paperclips-stat" style={{marginTop: '5px'}}>
+                  Top Funders: {topFunders.slice(0, 5).map((funder, index) => (
+                    <span key={index}>
+                      {index > 0 && ', '}
+                      {funder.donor_name} (${parseFloat(funder.total_donated).toFixed(0)})
+                    </span>
+                  ))}
+                </div>
+                <div style={{marginTop: '8px'}}>
+                  <button className="paperclips-btn">Show All</button>
+                </div>
+              </>
+            )}
 
+            {/* 3. Recent Activity */}
+            <h2 className="paperclips-title">Recent Activity</h2>
+            {loading && (
+              <div className="paperclips-stat" style={{fontStyle: 'italic', color: '#666'}}>
+                Loading tasks...
+              </div>
+            )}
+            {error && (
+              <div className="paperclips-stat" style={{fontStyle: 'italic', color: '#666'}}>
+                {error}
+              </div>
+            )}
+            {!loading && !error && tasks.length === 0 && (
+              <div className="paperclips-stat" style={{fontStyle: 'italic', color: '#666'}}>
+                No tasks yet. Your task history will appear here once Polsia starts working for you.
+              </div>
+            )}
+            {!loading && !error && tasks.length > 0 && (
+              <div className="recent-activity-scroll">
+                {tasks.slice(0, 3).map((task) => (
+                  <div key={task.id} className="activity-item">
+                    <div className="activity-title">{task.title}</div>
+                    {task.description && (
+                      <div className="activity-description">{task.description}</div>
+                    )}
+                    <div className="activity-timestamp">{formatTimeAgo(task.created_at)}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Right Column */}
+          <div className="paperclips-right">
+            {/* 4. CEO */}
+            <h2 className="paperclips-title">CEO</h2>
             <div className="paperclips-stat">
-              Active Agents: <span className="paperclips-value">8</span>
+              Decisions Made: <span className="paperclips-value">42</span>
             </div>
             <div className="paperclips-stat">
-              Services Connected: <span className="paperclips-value">12</span>
+              Tasks Delegated: <span className="paperclips-value">156</span>
+            </div>
+            <div className="paperclips-section" style={{marginTop: '10px'}}>
+              <span className="paperclips-stat">Next Decision: <span className="paperclips-value">{countdown}</span></span>
+              <button className="paperclips-btn">Make Decision Now</button>
+            </div>
+
+            {/* Engineering */}
+            <h2 className="paperclips-title">Engineering</h2>
+            <div className="paperclips-stat">
+              Active Agents: <span className="paperclips-value">5</span>
+            </div>
+            <div className="paperclips-stat">
+              Services Connected: <span className="paperclips-value">8</span>
             </div>
             <div className="paperclips-stat">
               Tasks Completed: <span className="paperclips-value">1,247</span>
@@ -203,52 +314,29 @@ function Dashboard() {
             <div className="paperclips-stat">
               LOC Written: <span className="paperclips-value">3,892</span>
             </div>
+            <div className="paperclips-section" style={{marginTop: '15px'}}>
+              <button className="paperclips-btn">Take Action</button>
+            </div>
+
+            {/* Marketing */}
+            <h2 className="paperclips-title">Marketing</h2>
+            <div className="paperclips-stat">
+              Active Agents: <span className="paperclips-value">3</span>
+            </div>
             <div className="paperclips-stat">
               Content Created: <span className="paperclips-value">156</span>
             </div>
-
-          </div>
-
-          {/* Right Column */}
-          <div className="paperclips-right">
-            <h2 className="paperclips-title">Computational Resources</h2>
-
-            <div className="paperclips-section">
-              <span className="paperclips-stat">Available Funds: <span className="paperclips-value">
-                $ {balance ? parseFloat(balance.current_balance_usd).toFixed(2) : '0.00'}
-              </span></span>
-              <button className="paperclips-btn" onClick={() => handleDonateClick()}>Add Funds</button>
+            <div className="paperclips-stat">
+              Social Posts: <span className="paperclips-value">89</span>
+            </div>
+            <div className="paperclips-section" style={{marginTop: '15px'}}>
+              <button className="paperclips-btn">Take Action</button>
             </div>
 
-            <div className="paperclips-stat" style={{marginTop: '15px'}}>
-              Funders: <span className="paperclips-value">{topFunders.length}</span>
-            </div>
-
-            <h2 className="paperclips-title">Top Funders</h2>
-
-            {topFunders.length > 0 ? (
-              <>
-                {topFunders.map((funder, index) => (
-                  <div key={index} className="paperclips-stat">
-                    {index + 1}. <span className="paperclips-value">
-                      {funder.donor_name} - $ {parseFloat(funder.total_donated).toFixed(2)}
-                    </span>
-                  </div>
-                ))}
-                <div className="paperclips-section" style={{marginTop: '10px'}}>
-                  <button className="paperclips-btn">Show All</button>
-                </div>
-              </>
-            ) : (
-              <div className="paperclips-stat" style={{fontStyle: 'italic', color: '#666'}}>
-                No funders yet
-              </div>
-            )}
-
+            {/* 5. Funding Projects */}
             <h2 className="paperclips-title" style={{marginTop: '30px'}}>Funding Projects</h2>
-
             {fundingProjects.length > 0 ? (
-              fundingProjects.map((project) => (
+              fundingProjects.slice(0, 3).map((project) => (
                 <div key={project.id} className="paperclips-project">
                   <div className="paperclips-project-title">
                     <strong>{project.name}</strong> (${parseFloat(project.goal_amount_usd).toFixed(0)})
@@ -265,56 +353,6 @@ function Dashboard() {
             )}
           </div>
         </div>
-
-        {loading && (
-          <div className="status-message">
-            <p>Loading tasks...</p>
-          </div>
-        )}
-
-        {error && (
-          <div className="status-message error">
-            <p>{error}</p>
-          </div>
-        )}
-
-        {!loading && !error && tasks.length === 0 && (
-          <div className="status-message">
-            <p>No tasks yet. Your task history will appear here once Polsia starts working for you.</p>
-          </div>
-        )}
-
-        {!loading && !error && tasks.length > 0 && (
-          <>
-            <h2 className="paperclips-title" style={{ marginTop: '10px', marginBottom: '15px' }}>Recent Activity</h2>
-            <div className="tasks-feed">
-              {tasks.map((task) => (
-              <div key={task.id} className="task-item">
-                <h3 className="task-title">{task.title}</h3>
-
-                {task.description && (
-                  <p className="task-description">{task.description}</p>
-                )}
-
-                {task.services && task.services.length > 0 && (
-                  <div className="task-services">
-                    Services: {task.services.map((service, index) => (
-                      <span key={service.id}>
-                        {index > 0 && ', '}
-                        {service.service_name}
-                      </span>
-                    ))}
-                  </div>
-                )}
-
-                <div className="task-timestamp">
-                  {formatTimeAgo(task.created_at)}
-                </div>
-              </div>
-            ))}
-            </div>
-          </>
-        )}
       </div>
 
         <footer className="footer">

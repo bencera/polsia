@@ -1,6 +1,6 @@
-/* Polsia Routines - Matching Landing Page Aesthetic */
+/* Polsia Agents - Matching Landing Page Aesthetic */
 
-.routines-container {
+.agents-container {
   font-family: "Times New Roman", Times, serif;
   background-color: #fff;
   color: #000;
@@ -30,41 +30,41 @@
   text-overflow: ellipsis;
 }
 
-/* Routines Content */
-.routines-content {
+/* Agents Content */
+.agents-content {
   margin-bottom: 30px;
   padding: 0 20px 40px 20px;
 }
 
-.routines-header {
+.agents-header {
   margin-bottom: 30px;
 }
 
-.routines-header h2 {
+.agents-header h2 {
   font-size: 2em;
   font-weight: 700;
   margin: 0 0 0.3em 0;
   line-height: 1.1;
 }
 
-.routines-subtitle {
+.agents-subtitle {
   font-size: 1.1em;
   margin: 0 0 0.5em 0;
   color: #666;
 }
 
-.routines-status {
+.agents-status {
   font-size: 0.95em;
   margin: 0;
   color: #000;
 }
 
 /* Module Sections */
-.routine-section {
+.agent-section {
   margin-bottom: 50px;
 }
 
-.routine-section:last-child {
+.agent-section:last-child {
   margin-bottom: 0;
 }
 
@@ -91,24 +91,24 @@
   font-weight: normal;
 }
 
-/* Routines List */
-.routines-list {
+/* Agents List */
+.agents-list {
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
-.routine-card {
+.agent-card {
   background: #fff;
   border: 1px solid #000;
   padding: 20px;
 }
 
-.routine-card:hover {
+.agent-card:hover {
   background-color: #fafafa;
 }
 
-.routine-main {
+.agent-main {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -144,35 +144,35 @@
   transform: rotate(-180deg);
 }
 
-.routine-info {
+.agent-info {
   flex: 1;
 }
 
-.routine-name {
+.agent-name {
   font-size: 1.3em;
   font-weight: 700;
   margin: 0 0 0.3em 0;
   line-height: 1.2;
 }
 
-.routine-name.disabled {
+.agent-name.disabled {
   text-decoration: line-through;
   color: #999;
 }
 
-.routine-description {
+.agent-description {
   font-size: 1em;
   margin: 0 0 0.8em 0;
   color: #333;
   line-height: 1.5;
 }
 
-.routine-description.disabled {
+.agent-description.disabled {
   text-decoration: line-through;
   color: #999;
 }
 
-.routine-meta {
+.agent-meta {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
@@ -180,7 +180,7 @@
   font-size: 0.9em;
 }
 
-.routine-status {
+.agent-status {
   padding: 2px 8px;
   border: 1px solid #000;
   font-size: 11px;
@@ -191,24 +191,24 @@
   font-family: "Times New Roman", Times, serif;
 }
 
-.routine-status.active {
+.agent-status.active {
   background-color: #fff;
   color: #000;
 }
 
-.routine-status.disabled {
+.agent-status.disabled {
   background-color: #000;
   color: #fff;
 }
 
-.routine-status.coming-soon,
-.routine-status.locked {
+.agent-status.coming-soon,
+.agent-status.locked {
   background-color: #f5f5f5;
   color: #666;
   border-color: #666;
 }
 
-.routine-frequency-select {
+.agent-frequency-select {
   font-family: "Times New Roman", Times, serif;
   font-size: 11px;
   font-weight: normal;
@@ -227,22 +227,22 @@
   background-size: 10px;
 }
 
-.routine-frequency-select:hover {
+.agent-frequency-select:hover {
   background-color: #f5f5f5;
 }
 
-.routine-frequency-select:focus {
+.agent-frequency-select:focus {
   outline: 2px solid #000;
   outline-offset: 1px;
 }
 
-.routine-services {
+.agent-services {
   color: #666;
   font-size: 0.95em;
 }
 
 /* Module Controls */
-.routine-controls {
+.agent-controls {
   display: flex;
   gap: 12px;
   align-items: center;
@@ -330,12 +330,12 @@ input:checked + .toggle-slider:before {
   cursor: not-allowed;
 }
 
-.routine-type {
+.agent-type {
   color: #666;
   font-size: 0.95em;
 }
 
-.routine-agent {
+.agent-agent {
   padding: 2px 8px;
   border: 1px solid #666;
   font-size: 11px;
@@ -345,8 +345,8 @@ input:checked + .toggle-slider:before {
   font-family: "Times New Roman", Times, serif;
 }
 
-/* Routine Details (Expanded) */
-.routine-details {
+/* Agent Details (Expanded) */
+.agent-details {
   margin-top: 20px;
   padding-top: 20px;
   border-top: 1px solid #e0e0e0;
@@ -484,19 +484,19 @@ input:checked + .toggle-slider:before {
 
 /* Responsive Design */
 @media (max-width: 768px) {
-  .routines-container {
+  .agents-container {
     padding: 0;
   }
 
-  .routines-content {
+  .agents-content {
     padding: 0 15px 40px 15px;
   }
 
-  .routines-header h2 {
+  .agents-header h2 {
     font-size: 1.8em;
   }
 
-  .routines-subtitle {
+  .agents-subtitle {
     font-size: 1em;
   }
 
@@ -510,16 +510,16 @@ input:checked + .toggle-slider:before {
     gap: 6px;
   }
 
-  .routine-main {
+  .agent-main {
     flex-direction: column;
     gap: 15px;
   }
 
-  .routine-controls {
+  .agent-controls {
     align-self: flex-start;
   }
 
-  .routine-name {
+  .agent-name {
     font-size: 1.2em;
   }
 

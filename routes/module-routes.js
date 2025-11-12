@@ -5,6 +5,7 @@
 
 const express = require('express');
 const router = express.Router();
+const db = require('../db');
 const {
     getModulesByUserId,
     getModuleById,
@@ -199,46 +200,144 @@ router.delete('/:id', async (req, res) => {
 
 /**
  * POST /api/modules/:id/execute
- * Manually trigger a module execution
+ * POST /api/modules/:id/run
+ * Manually trigger an agent execution
  */
 router.post('/:id/execute', async (req, res) => {
     try {
-        const moduleId = parseInt(req.params.id);
+        const agentId = parseInt(req.params.id);
 
-        if (isNaN(moduleId)) {
-            return res.status(400).json({ success: false, message: 'Invalid module ID' });
+        if (isNaN(agentId)) {
+            return res.status(400).json({ success: false, message: 'Invalid agent ID' });
         }
 
-        // Verify module exists and belongs to user
-        const module = await getModuleById(moduleId, req.user.id);
+        // Try to find agent first (unified system)
+        const agent = await db.getAgentById(agentId, req.user.id);
 
+        if (agent) {
+            console.log(`[Agent Routes] Manual execution triggered for agent: ${agent.name}`);
+
+            // Trigger execution asynchronously
+            const executionPromise = runModule(agentId, req.user.id, {
+                trigger_type: 'manual',
+            });
+
+            executionPromise.catch((error) => {
+                console.error(`[Agent Routes] Error executing agent ${agentId}:`, error);
+            });
+
+            // Poll for the execution record
+            let execution = null;
+            for (let i = 0; i < 5; i++) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                const executions = await db.getAgentExecutions(agentId, req.user.id, 1);
+                if (executions && executions.length > 0 && executions[0].status === 'running') {
+                    execution = executions[0];
+                    break;
+                }
+            }
+
+            return res.json({
+                success: true,
+                message: 'Agent execution started',
+                execution: execution ? { id: execution.id } : null,
+            });
+        }
+
+        // Fallback: check legacy modules table
+        const module = await getModuleById(agentId, req.user.id);
         if (!module) {
-            return res.status(404).json({ success: false, message: 'Module not found' });
+            return res.status(404).json({ success: false, message: 'Agent not found' });
         }
 
-        console.log(`[Module Routes] Manual execution triggered for module: ${module.name}`);
+        console.log(`[Module Routes] Manual execution triggered for legacy module: ${module.name}`);
 
         // Trigger execution asynchronously
-        runModule(moduleId, req.user.id, {
+        runModule(agentId, req.user.id, {
             trigger_type: 'manual',
         }).catch((error) => {
-            console.error(`[Module Routes] Error executing module ${moduleId}:`, error);
+            console.error(`[Module Routes] Error executing module ${agentId}:`, error);
         });
 
         // Return immediately
         res.json({
             success: true,
-            message: 'Module execution started',
+            message: 'Agent execution started',
         });
     } catch (error) {
-        console.error('Error triggering module execution:', error);
+        console.error('Error triggering agent execution:', error);
+        res.status(500).json({ success: false, message: 'Failed to trigger execution' });
+    }
+});
+
+// Alias for /execute - /run endpoint
+router.post('/:id/run', async (req, res) => {
+    try {
+        const agentId = parseInt(req.params.id);
+
+        if (isNaN(agentId)) {
+            return res.status(400).json({ success: false, message: 'Invalid agent ID' });
+        }
+
+        // Try to find agent first (unified system)
+        const agent = await db.getAgentById(agentId, req.user.id);
+
+        if (agent) {
+            console.log(`[Agent Routes] Manual execution triggered for agent: ${agent.name}`);
+
+            // Trigger execution asynchronously
+            const executionPromise = runModule(agentId, req.user.id, {
+                trigger_type: 'manual',
+            });
+
+            executionPromise.catch((error) => {
+                console.error(`[Agent Routes] Error executing agent ${agentId}:`, error);
+            });
+
+            // Poll for the execution record
+            let execution = null;
+            for (let i = 0; i < 5; i++) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                const executions = await db.getAgentExecutions(agentId, req.user.id, 1);
+                if (executions && executions.length > 0 && executions[0].status === 'running') {
+                    execution = executions[0];
+                    break;
+                }
+            }
+
+            return res.json({
+                success: true,
+                message: 'Agent execution started',
+                execution: execution ? { id: execution.id } : null,
+            });
+        }
+
+        // Fallback: check legacy modules table
+        const module = await getModuleById(agentId, req.user.id);
+        if (!module) {
+            return res.status(404).json({ success: false, message: 'Agent not found' });
+        }
+
+        console.log(`[Module Routes] Manual execution triggered for legacy module: ${module.name}`);
+        runModule(agentId, req.user.id, {
+            trigger_type: 'manual',
+        }).catch((error) => {
+            console.error(`[Module Routes] Error executing module ${agentId}:`, error);
+        });
+
+        res.json({
+            success: true,
+            message: 'Agent execution started',
+        });
+    } catch (error) {
+        console.error('Error triggering agent execution:', error);
         res.status(500).json({ success: false, message: 'Failed to trigger execution' });
     }
 });
 
 /**
  * GET /api/modules/:id/executions
- * Get execution history for a module
+ * Get execution history for an agent
  */
 router.get('/:id/executions', async (req, res) => {
     try {

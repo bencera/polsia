@@ -673,8 +673,9 @@ async function updateModuleSessionId(moduleId, sessionId) {
 async function getAgentsByUserId(userId) {
     const client = await pool.connect();
     try {
+        // Return both user-specific agents AND system-level agents (user_id IS NULL)
         const result = await client.query(
-            'SELECT * FROM agents WHERE user_id = $1 ORDER BY created_at DESC',
+            'SELECT * FROM agents WHERE user_id = $1 OR user_id IS NULL ORDER BY created_at DESC',
             [userId]
         );
         return result.rows;
@@ -832,13 +833,13 @@ async function getTasksByAgentId(userId, agentId, status = null) {
     }
 }
 
-// Get execution history for an agent (via tasks linked to module_executions)
+// Get execution history for an agent (via tasks linked to agent_executions)
 async function getAgentExecutions(agentId, userId, limit = 50) {
     const client = await pool.connect();
     try {
         // Get executions linked to tasks assigned to this agent
         const result = await client.query(
-            `SELECT me.* FROM module_executions me
+            `SELECT me.* FROM agent_executions me
              INNER JOIN tasks t ON t.execution_id = me.id
              WHERE t.assigned_to_agent_id = $1 AND me.user_id = $2
              ORDER BY me.created_at DESC
@@ -908,6 +909,88 @@ async function incrementAgentTaskCompletions(agentId) {
         return result.rows[0] || null;
     } catch (err) {
         console.error('Error incrementing agent task completions:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Get scheduled agents for a user
+async function getScheduledAgents(userId) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            `SELECT * FROM agents
+             WHERE (user_id = $1 OR user_id IS NULL)
+               AND execution_mode = 'scheduled'
+               AND status = 'active'
+             ORDER BY next_run_at NULLS FIRST, created_at DESC`,
+            [userId]
+        );
+        return result.rows;
+    } catch (err) {
+        console.error('Error getting scheduled agents:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Update agent schedule (last_run_at, next_run_at)
+async function updateAgentSchedule(agentId, frequency, nextRunAt = null) {
+    const client = await pool.connect();
+    try {
+        const now = new Date();
+        let calculatedNextRun = nextRunAt;
+
+        // Calculate next_run_at if not provided
+        if (!calculatedNextRun && frequency) {
+            calculatedNextRun = new Date();
+            switch (frequency) {
+                case 'auto':
+                    calculatedNextRun.setHours(calculatedNextRun.getHours() + 6);
+                    break;
+                case 'daily':
+                    calculatedNextRun.setDate(calculatedNextRun.getDate() + 1);
+                    break;
+                case 'weekly':
+                    calculatedNextRun.setDate(calculatedNextRun.getDate() + 7);
+                    break;
+                default:
+                    calculatedNextRun.setDate(calculatedNextRun.getDate() + 1);
+            }
+        }
+
+        const result = await client.query(
+            `UPDATE agents
+             SET last_run_at = $1, next_run_at = $2, updated_at = $1
+             WHERE id = $3
+             RETURNING *`,
+            [now, calculatedNextRun, agentId]
+        );
+        return result.rows[0] || null;
+    } catch (err) {
+        console.error('Error updating agent schedule:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Get agents by execution mode
+async function getAgentsByExecutionMode(userId, executionMode) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            `SELECT * FROM agents
+             WHERE (user_id = $1 OR user_id IS NULL)
+               AND execution_mode = $2
+             ORDER BY created_at DESC`,
+            [userId, executionMode]
+        );
+        return result.rows;
+    } catch (err) {
+        console.error('Error getting agents by execution mode:', err);
         throw err;
     } finally {
         client.release();
@@ -1142,7 +1225,7 @@ async function getRoutineExecutions(routineId, userId, limit = 50) {
     const client = await pool.connect();
     try {
         const result = await client.query(
-            `SELECT * FROM module_executions
+            `SELECT * FROM agent_executions
              WHERE routine_id = $1 AND user_id = $2 AND is_routine_execution = true
              ORDER BY created_at DESC
              LIMIT $3`,
@@ -1166,7 +1249,7 @@ async function getModuleExecutions(moduleId, userId, limit = 50) {
     const client = await pool.connect();
     try {
         const result = await client.query(
-            `SELECT * FROM module_executions
+            `SELECT * FROM agent_executions
              WHERE module_id = $1 AND user_id = $2
              ORDER BY created_at DESC
              LIMIT $3`,
@@ -1187,7 +1270,7 @@ async function createModuleExecution(moduleId, userId, executionData) {
     try {
         const { trigger_type, status, routine_id, is_routine_execution } = executionData;
         const result = await client.query(
-            `INSERT INTO module_executions (module_id, user_id, status, trigger_type, routine_id, is_routine_execution, started_at)
+            `INSERT INTO agent_executions (module_id, user_id, status, trigger_type, routine_id, is_routine_execution, started_at)
              VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
              RETURNING *`,
             [moduleId, userId, status || 'pending', trigger_type || 'manual', routine_id || null, is_routine_execution || false]
@@ -1237,7 +1320,7 @@ async function updateModuleExecution(executionId, updates) {
 
         values.push(executionId);
 
-        const query = `UPDATE module_executions SET ${setClauses.join(', ')}
+        const query = `UPDATE agent_executions SET ${setClauses.join(', ')}
                        WHERE id = $${paramCount++}
                        RETURNING *`;
 
@@ -3481,7 +3564,7 @@ async function getExecutionCostsSummary(userId) {
                 COUNT(*) as total_executions,
                 COUNT(CASE WHEN status = 'completed' THEN 1 END) as successful_executions,
                 COALESCE(AVG(cost_usd), 0) as avg_cost
-            FROM module_executions
+            FROM agent_executions
             WHERE user_id = $1 AND cost_usd IS NOT NULL`,
             [userId]
         );
@@ -3506,7 +3589,7 @@ async function getCostsByModule(userId, limit = 10) {
                 COUNT(me.id) as execution_count,
                 COALESCE(AVG(me.cost_usd), 0) as avg_cost_per_execution,
                 MAX(me.completed_at) as last_execution
-            FROM module_executions me
+            FROM agent_executions me
             JOIN modules m ON me.module_id = m.id
             WHERE me.user_id = $1 AND me.cost_usd IS NOT NULL
             GROUP BY m.id, m.name
@@ -3543,7 +3626,7 @@ async function getDetailedExecutionHistory(userId, limit = 100) {
                 me.duration_ms,
                 me.metadata,
                 me.trigger_type
-            FROM module_executions me
+            FROM agent_executions me
             LEFT JOIN modules m ON me.module_id = m.id
             LEFT JOIN routines r ON me.routine_id = r.id
             LEFT JOIN agents a ON r.agent_id = a.id
@@ -3689,7 +3772,7 @@ async function getPublicDashboardData(userId) {
         const logsResult = await client.query(`
             SELECT el.id, el.timestamp, el.log_level, el.stage, el.message, el.metadata
             FROM execution_logs el
-            INNER JOIN module_executions me ON el.execution_id = me.id
+            INNER JOIN agent_executions me ON el.execution_id = me.id
             WHERE me.user_id = $1
             ORDER BY el.timestamp DESC
             LIMIT 4
@@ -3790,6 +3873,9 @@ module.exports = {
     updateAgentSession,
     incrementAgentRoutineRuns,
     incrementAgentTaskCompletions,
+    getScheduledAgents,
+    updateAgentSchedule,
+    getAgentsByExecutionMode,
     getAgentWithRoutines,
     // Routine functions (scheduled agent tasks)
     getRoutinesByUserId,
@@ -3985,11 +4071,19 @@ async function completeDonation(paymentIntentId) {
 async function getTopDonorsByUser(userId, limit = 10) {
     const result = await pool.query(
         `SELECT
-            CASE WHEN is_anonymous THEN 'Anonymous' ELSE donor_name END as donor_name,
-            SUM(amount_usd) as total_donated
-         FROM donations
+            CASE WHEN bool_or(is_anonymous) THEN 'Anonymous' ELSE MAX(donor_name) END as donor_name,
+            donor_email,
+            SUM(amount_usd) as total_donated,
+            (SELECT message FROM donations d2
+             WHERE d2.donor_email = d1.donor_email
+             AND d2.user_id = $1
+             AND d2.status = 'completed'
+             ORDER BY d2.created_at DESC
+             LIMIT 1) as latest_message,
+            COUNT(*) as donation_count
+         FROM donations d1
          WHERE user_id = $1 AND status = 'completed'
-         GROUP BY donor_name, is_anonymous
+         GROUP BY donor_email
          ORDER BY total_donated DESC
          LIMIT $2`,
         [userId, limit]
@@ -4014,6 +4108,32 @@ async function getDonationByPaymentIntent(paymentIntentId) {
     const result = await pool.query(
         'SELECT * FROM donations WHERE stripe_payment_intent_id = $1',
         [paymentIntentId]
+    );
+    return result.rows[0];
+}
+
+async function getUnthankedDonations(userId = null) {
+    const query = userId
+        ? 'SELECT d.*, u.company_name, u.company_slug FROM donations d JOIN users u ON d.user_id = u.id WHERE d.status = $1 AND d.thanked_at IS NULL AND d.user_id = $2 ORDER BY d.completed_at DESC'
+        : 'SELECT d.*, u.company_name, u.company_slug FROM donations d JOIN users u ON d.user_id = u.id WHERE d.status = $1 AND d.thanked_at IS NULL ORDER BY d.completed_at DESC';
+    const params = userId ? ['completed', userId] : ['completed'];
+
+    const result = await pool.query(query, params);
+    return result.rows;
+}
+
+async function markDonationThanked(donationId) {
+    const result = await pool.query(
+        'UPDATE donations SET thanked_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *',
+        [donationId]
+    );
+    return result.rows[0];
+}
+
+async function getDonationById(donationId) {
+    const result = await pool.query(
+        'SELECT d.*, u.company_name, u.company_slug, u.email as recipient_email FROM donations d JOIN users u ON d.user_id = u.id WHERE d.id = $1',
+        [donationId]
     );
     return result.rows[0];
 }
@@ -4115,6 +4235,9 @@ module.exports.completeDonation = completeDonation;
 module.exports.getTopDonorsByUser = getTopDonorsByUser;
 module.exports.getDonationsByUser = getDonationsByUser;
 module.exports.getDonationByPaymentIntent = getDonationByPaymentIntent;
+module.exports.getUnthankedDonations = getUnthankedDonations;
+module.exports.markDonationThanked = markDonationThanked;
+module.exports.getDonationById = getDonationById;
 module.exports.getUserBalance = getUserBalance;
 module.exports.ensureUserBalance = ensureUserBalance;
 module.exports.updateUserBalance = updateUserBalance;

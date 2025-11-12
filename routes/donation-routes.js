@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const stripeService = require('../services/stripe-service');
+const { triggerDonationThanker } = require('../services/agent-runner');
 
 /**
  * POST /api/donations/create-payment-intent
@@ -162,7 +163,15 @@ router.post('/webhook', async (req, res) => {
 
                 // Try to complete the donation - may already be completed by checkout.session.completed
                 try {
-                    await db.completeDonation(paymentIntent.id);
+                    const completedPayment = await db.completeDonation(paymentIntent.id);
+
+                    // Trigger thank-you automation asynchronously (don't block webhook response)
+                    if (completedPayment?.id) {
+                        console.log(`[Donation Routes] 🎁 Triggering thank-you automation for donation ${completedPayment.id}`);
+                        triggerDonationThanker(completedPayment.id).catch(err => {
+                            console.error(`[Donation Routes] Failed to trigger donation thanker:`, err);
+                        });
+                    }
                 } catch (err) {
                     console.log(`[Donation Routes] Payment intent ${paymentIntent.id} not found or already completed`);
                 }
@@ -173,7 +182,15 @@ router.post('/webhook', async (req, res) => {
                 console.log(`[Donation Routes] Checkout session completed: ${session.id}`);
 
                 // Complete the donation using session ID
-                await db.completeDonation(session.id);
+                const completedDonation = await db.completeDonation(session.id);
+
+                // Trigger thank-you automation asynchronously (don't block webhook response)
+                if (completedDonation?.id) {
+                    console.log(`[Donation Routes] 🎁 Triggering thank-you automation for donation ${completedDonation.id}`);
+                    triggerDonationThanker(completedDonation.id).catch(err => {
+                        console.error(`[Donation Routes] Failed to trigger donation thanker:`, err);
+                    });
+                }
                 break;
 
             case 'payment_intent.payment_failed':

@@ -215,7 +215,7 @@ export function TerminalProvider({ children }) {
   };
 
   // Manually trigger a routine execution (called from Routines page)
-  const runRoutine = async (routineId, routineName) => {
+  const runRoutine = async (agentId, agentName) => {
     try {
       // Add a starting log message
       const startLog = {
@@ -223,11 +223,11 @@ export function TerminalProvider({ children }) {
         timestamp: new Date().toISOString(),
         log_level: 'info',
         stage: 'init',
-        message: `Starting routine: ${routineName}`
+        message: `Starting agent: ${agentName}`
       };
       setTerminalLogs(prev => [...prev, startLog]);
 
-      const response = await fetch(`/api/routines/${routineId}/run`, {
+      const response = await fetch(`/api/modules/${agentId}/run`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -235,36 +235,35 @@ export function TerminalProvider({ children }) {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to trigger routine execution');
+        throw new Error('Failed to trigger agent execution');
       }
 
       const data = await response.json();
 
       // Get the execution ID from the response and start streaming logs
       if (data.execution && data.execution.id) {
-        // Start streaming logs for this routine execution
-        // Pass isRoutine=true to use /api/routines endpoint instead of /api/modules
-        startLogStream(routineId, data.execution.id, true);
+        // Start streaming logs for this agent execution
+        startLogStream(agentId, data.execution.id, false);
 
         const successLog = {
           id: Date.now() + 1,
           timestamp: new Date().toISOString(),
           log_level: 'info',
           stage: 'triggered',
-          message: `Routine "${routineName}" triggered successfully (Execution ID: ${data.execution.id})`
+          message: `Agent "${agentName}" triggered successfully (Execution ID: ${data.execution.id})`
         };
         setTerminalLogs(prev => [...prev, successLog]);
       }
 
       return true;
     } catch (err) {
-      console.error('[TerminalContext] Error running routine:', err);
+      console.error('[TerminalContext] Error running agent:', err);
       const errorLog = {
         id: Date.now() + 2,
         timestamp: new Date().toISOString(),
         log_level: 'error',
         stage: 'error',
-        message: `Failed to run routine: ${err.message}`
+        message: `Failed to run agent: ${err.message}`
       };
       setTerminalLogs(prev => [...prev, errorLog]);
       return false;

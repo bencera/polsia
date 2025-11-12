@@ -258,6 +258,11 @@ function PublicDashboard() {
                           {index + 1}. <span className="paperclips-value">
                             {funder.donor_name} - $ {parseFloat(funder.total_donated).toFixed(2)}
                           </span>
+                          {funder.latest_message && (
+                            <div style={{fontSize: '11px', color: '#666', marginTop: '4px', marginLeft: '18px', fontStyle: 'italic'}}>
+                              "{funder.latest_message}"
+                            </div>
+                          )}
                         </div>
                       ))}
                       <div className="paperclips-section" style={{marginTop: '10px'}}>

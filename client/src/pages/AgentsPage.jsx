@@ -7,48 +7,49 @@ import './AgentsPage.css';
 function AgentsPage() {
   const { token } = useAuth();
   const { terminalLogs, runRoutine, isStreaming } = useTerminal();
-  const [routines, setRoutines] = useState([]);
+  const [agents, setAgents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [runningRoutines, setRunningRoutines] = useState(new Set());
-  const [expandedRoutines, setExpandedRoutines] = useState(new Set());
+  const [runningAgents, setRunningAgents] = useState(new Set());
+  const [expandedAgents, setExpandedAgents] = useState(new Set());
   const [promptPreviews, setPromptPreviews] = useState({});
   const [loadingPrompts, setLoadingPrompts] = useState({});
+  const [filterMode, setFilterMode] = useState('all'); // 'all', 'scheduled', 'on_demand', 'task_driven'
 
-  // Fetch routines from API
+  // Fetch agents from API
   useEffect(() => {
-    fetchRoutines();
+    fetchAgents();
   }, [token]);
 
-  const fetchRoutines = async () => {
+  const fetchAgents = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/routines', {
+      const response = await fetch('/api/agents', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch routines');
+        throw new Error('Failed to fetch agents');
       }
 
       const data = await response.json();
-      setRoutines(data.routines || []);
+      setAgents(data.agents || []);
       setError(null);
     } catch (err) {
-      console.error('Error fetching routines:', err);
+      console.error('Error fetching agents:', err);
       setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const toggleRoutineStatus = async (routineId, currentStatus) => {
+  const toggleAgentStatus = async (agentId, currentStatus) => {
     try {
       const newStatus = currentStatus === 'active' ? 'disabled' : 'active';
 
-      const response = await fetch(`/api/routines/${routineId}`, {
+      const response = await fetch(`/api/agents/${agentId}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -58,30 +59,37 @@ function AgentsPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to update routine status');
+        throw new Error('Failed to update agent status');
       }
 
       const data = await response.json();
 
       // Update local state
-      setRoutines(routines.map(routine =>
-        routine.id === routineId ? data.routine : routine
+      setAgents(agents.map(agent =>
+        agent.id === agentId ? data.agent : agent
       ));
     } catch (err) {
-      console.error('Error toggling routine status:', err);
-      alert('Failed to update routine status');
+      console.error('Error toggling agent status:', err);
+      alert('Failed to update agent status');
     }
   };
 
-  const updateFrequency = async (routineId, frequency) => {
+  const updateFrequency = async (agentId, frequency) => {
     try {
-      const response = await fetch(`/api/routines/${routineId}`, {
+      // Determine execution_mode based on frequency
+      const execution_mode = frequency === 'manual' ? 'on_demand' : 'scheduled';
+      const schedule_frequency = frequency === 'manual' ? null : frequency;
+
+      const response = await fetch(`/api/agents/${agentId}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ frequency })
+        body: JSON.stringify({
+          execution_mode,
+          schedule_frequency
+        })
       });
 
       if (!response.ok) {
@@ -91,8 +99,8 @@ function AgentsPage() {
       const data = await response.json();
 
       // Update local state
-      setRoutines(routines.map(routine =>
-        routine.id === routineId ? data.routine : routine
+      setAgents(agents.map(agent =>
+        agent.id === agentId ? data.agent : agent
       ));
     } catch (err) {
       console.error('Error updating frequency:', err);
@@ -100,18 +108,18 @@ function AgentsPage() {
     }
   };
 
-  const updateGuardrails = async (routineId, guardrail, value) => {
+  const updateGuardrails = async (agentId, guardrail, value) => {
     try {
-      const routine = routines.find(m => m.id === routineId);
+      const agent = agents.find(m => m.id === agentId);
       const newConfig = {
-        ...routine.config,
+        ...agent.config,
         guardrails: {
-          ...routine.config?.guardrails,
+          ...agent.config?.guardrails,
           [guardrail]: value
         }
       };
 
-      const response = await fetch(`/api/routines/${routineId}`, {
+      const response = await fetch(`/api/agents/${agentId}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -127,8 +135,8 @@ function AgentsPage() {
       const data = await response.json();
 
       // Update local state
-      setRoutines(routines.map(m =>
-        m.id === routineId ? data.routine : m
+      setAgents(agents.map(m =>
+        m.id === agentId ? data.agent : m
       ));
     } catch (err) {
       console.error('Error updating guardrails:', err);
@@ -136,44 +144,44 @@ function AgentsPage() {
     }
   };
 
-  const toggleRoutineExpand = (routineId) => {
-    setExpandedRoutines(prev => {
+  const toggleAgentExpand = (agentId) => {
+    setExpandedAgents(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(routineId)) {
-        newSet.delete(routineId);
+      if (newSet.has(agentId)) {
+        newSet.delete(agentId);
       } else {
-        newSet.add(routineId);
+        newSet.add(agentId);
       }
       return newSet;
     });
   };
 
-  const runRoutineNow = async (routineId, routineName) => {
-    // Mark routine as running
-    setRunningRoutines(prev => new Set([...prev, routineId]));
+  const runAgentNow = async (agentId, agentName) => {
+    // Mark agent as running
+    setRunningAgents(prev => new Set([...prev, agentId]));
 
-    // Use context's runRoutine function
-    const success = await runRoutine(routineId, routineName);
+    // Use context's runRoutine function (works for unified agents)
+    const success = await runRoutine(agentId, agentName);
 
     if (!success) {
-      alert('Failed to run routine');
-      setRunningRoutines(prev => {
+      alert('Failed to run agent');
+      setRunningAgents(prev => {
         const newSet = new Set(prev);
-        newSet.delete(routineId);
+        newSet.delete(agentId);
         return newSet;
       });
       return;
     }
 
     // Poll for completion and refresh the list when done
-    pollForCompletion(routineId);
+    pollForCompletion(agentId);
   };
 
-  const pollForCompletion = async (routineId) => {
+  const pollForCompletion = async (agentId) => {
     // Poll every 2 seconds to check if execution completed
     const pollInterval = setInterval(async () => {
       try {
-        const response = await fetch(`/api/routines/${routineId}/executions?limit=1`, {
+        const response = await fetch(`/api/agents/${agentId}/executions?limit=1`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -181,9 +189,9 @@ function AgentsPage() {
 
         if (!response.ok) {
           clearInterval(pollInterval);
-          setRunningRoutines(prev => {
+          setRunningAgents(prev => {
             const newSet = new Set(prev);
-            newSet.delete(routineId);
+            newSet.delete(agentId);
             return newSet;
           });
           return;
@@ -195,20 +203,20 @@ function AgentsPage() {
         // If execution completed or failed, refresh the list
         if (latestExecution && (latestExecution.status === 'completed' || latestExecution.status === 'failed')) {
           clearInterval(pollInterval);
-          setRunningRoutines(prev => {
+          setRunningAgents(prev => {
             const newSet = new Set(prev);
-            newSet.delete(routineId);
+            newSet.delete(agentId);
             return newSet;
           });
-          // Refresh the routines list to update "Last run" timestamp
-          fetchRoutines();
+          // Refresh the agents list to update "Last run" timestamp
+          fetchAgents();
         }
       } catch (err) {
         console.error('Error polling for completion:', err);
         clearInterval(pollInterval);
-        setRunningRoutines(prev => {
+        setRunningAgents(prev => {
           const newSet = new Set(prev);
-          newSet.delete(routineId);
+          newSet.delete(agentId);
           return newSet;
         });
       }
@@ -217,18 +225,18 @@ function AgentsPage() {
     // Stop polling after 10 minutes (safety timeout)
     setTimeout(() => {
       clearInterval(pollInterval);
-      setRunningRoutines(prev => {
+      setRunningAgents(prev => {
         const newSet = new Set(prev);
-        newSet.delete(routineId);
+        newSet.delete(agentId);
         return newSet;
       });
     }, 600000);
   };
 
-  const fetchPromptPreview = async (routineId) => {
-    setLoadingPrompts(prev => ({ ...prev, [routineId]: true }));
+  const fetchPromptPreview = async (agentId) => {
+    setLoadingPrompts(prev => ({ ...prev, [agentId]: true }));
     try {
-      const response = await fetch(`/api/routines/${routineId}/prompt-preview`, {
+      const response = await fetch(`/api/agents/${agentId}/prompt-preview`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -239,16 +247,16 @@ function AgentsPage() {
       }
 
       const data = await response.json();
-      setPromptPreviews(prev => ({ ...prev, [routineId]: data.prompt }));
+      setPromptPreviews(prev => ({ ...prev, [agentId]: data.prompt }));
     } catch (err) {
       console.error('Error fetching prompt preview:', err);
       alert('Failed to load prompt preview');
     } finally {
-      setLoadingPrompts(prev => ({ ...prev, [routineId]: false }));
+      setLoadingPrompts(prev => ({ ...prev, [agentId]: false }));
     }
   };
 
-  const activeCount = routines.filter(m => m.status === 'active').length;
+  const activeCount = agents.filter(m => m.status === 'active').length;
 
   // Format last run timestamp
   const formatLastRun = (lastRunAt) => {
@@ -272,13 +280,13 @@ function AgentsPage() {
 
   if (loading) {
     return (
-      <div className="routines-container">
+      <div className="agents-container">
         <div className="terminal">
           <span>&gt; Autonomous Operations Control</span>
         </div>
         <Navbar />
-        <div className="routines-content">
-          <p style={{ textAlign: 'center', marginTop: '40px' }}>Loading routines...</p>
+        <div className="agents-content">
+          <p style={{ textAlign: 'center', marginTop: '40px' }}>Loading agents...</p>
         </div>
       </div>
     );
@@ -286,12 +294,12 @@ function AgentsPage() {
 
   if (error) {
     return (
-      <div className="routines-container">
+      <div className="agents-container">
         <div className="terminal">
           <span>&gt; Autonomous Operations Control</span>
         </div>
         <Navbar />
-        <div className="routines-content">
+        <div className="agents-content">
           <p style={{ textAlign: 'center', marginTop: '40px', color: '#ff4444' }}>
             Error: {error}
           </p>
@@ -337,20 +345,20 @@ function AgentsPage() {
 
       <Navbar />
 
-      <div className="routines-container">
+      <div className="agents-container">
 
-      <div className="routines-content">
-        <div className="routines-header">
+      <div className="agents-content">
+        <div className="agents-header">
           <h2>Agents</h2>
-          <p className="routines-subtitle">
+          <p className="agents-subtitle">
             Autonomous AI agents that run on schedules to handle your tasks
           </p>
-          <p className="routines-status">
+          <p className="agents-status">
             {activeCount} {activeCount === 1 ? 'agent' : 'agents'} active
           </p>
         </div>
 
-        {routines.length === 0 ? (
+        {agents.length === 0 ? (
           <div style={{ textAlign: 'center', marginTop: '40px', color: '#666' }}>
             <p>No agents created yet.</p>
             <p style={{ fontSize: '14px', marginTop: '10px' }}>
@@ -358,107 +366,111 @@ function AgentsPage() {
             </p>
           </div>
         ) : (
-          <div className="routines-list">
-            {routines.map((routine) => {
-              const isExpanded = expandedRoutines.has(routine.id);
-              const config = routine.config || {};
+          <div className="agents-list">
+            {agents.map((agent) => {
+              const isExpanded = expandedAgents.has(agent.id);
+              const config = agent.config || {};
 
               return (
-                <div key={routine.id} className="routine-card">
-                        <div className="routine-main">
+                <div key={agent.id} className="agent-card">
+                        <div className="agent-main">
                           <button
                             className="expand-btn"
-                            onClick={() => toggleRoutineExpand(routine.id)}
+                            onClick={() => toggleAgentExpand(agent.id)}
                             aria-label={isExpanded ? "Collapse details" : "Expand details"}
                           >
                             <span className={`chevron ${isExpanded ? 'expanded' : ''}`}>▼</span>
                           </button>
 
-                          <div className="routine-info">
-                            <h3 className={`routine-name ${routine.status !== 'active' ? 'disabled' : ''}`}>
-                              {routine.name}
+                          <div className="agent-info">
+                            <h3 className={`agent-name ${agent.status !== 'active' ? 'disabled' : ''}`}>
+                              {agent.name}
                             </h3>
-                            <p className={`routine-description ${routine.status !== 'active' ? 'disabled' : ''}`}>
-                              {routine.description}
+                            <p className={`agent-description ${agent.status !== 'active' ? 'disabled' : ''}`}>
+                              {agent.description}
                             </p>
 
-                            <div className="routine-meta">
-                              <span className={`routine-status ${routine.status}`}>
-                                {routine.status}
+                            <div className="agent-meta">
+                              <span className={`agent-status ${agent.status}`}>
+                                {agent.status}
                               </span>
-                              <span className="routine-type">
-                                Type: {routine.type}
+                              <span className="agent-type">
+                                Type: {agent.agent_type || agent.type}
                               </span>
-                              {routine.agent_name && (
-                                <span className="routine-agent">
-                                  Agent: {routine.agent_name}
-                                </span>
-                              )}
-                              <span className="routine-last-run">
-                                Last run: {formatLastRun(routine.last_run_at)}
+                              <span className="agent-type">
+                                Mode: {agent.execution_mode || 'on_demand'}
+                              </span>
+                              <span className="agent-last-run">
+                                Last run: {formatLastRun(agent.last_run_at)}
                               </span>
                             </div>
                           </div>
 
-                          <div className="routine-controls">
+                          <div className="agent-controls">
                             <button
                               className="toggle-status-btn"
-                              onClick={() => toggleRoutineStatus(routine.id, routine.status)}
+                              onClick={() => toggleAgentStatus(agent.id, agent.status)}
                             >
-                              {routine.status === 'active' ? 'Disable' : 'Enable'}
+                              {agent.status === 'active' ? 'Disable' : 'Enable'}
                             </button>
                             <button
                               className="run-now-btn"
-                              onClick={() => runRoutineNow(routine.id, routine.name)}
-                              disabled={runningRoutines.has(routine.id)}
+                              onClick={() => runAgentNow(agent.id, agent.name)}
+                              disabled={runningAgents.has(agent.id)}
                             >
-                              {runningRoutines.has(routine.id) ? 'Running...' : 'Run Now'}
+                              {runningAgents.has(agent.id) ? 'Running...' : 'Run Now'}
                             </button>
                             <select
-                              className="routine-frequency-select"
-                              value={routine.frequency}
-                              onChange={(e) => updateFrequency(routine.id, e.target.value)}
+                              className="agent-frequency-select"
+                              value={
+                                agent.execution_mode === 'scheduled'
+                                  ? (agent.schedule_frequency || agent.frequency || 'daily')
+                                  : 'manual'
+                              }
+                              onChange={(e) => updateFrequency(agent.id, e.target.value)}
                             >
+                              <option value="manual">MANUAL</option>
                               <option value="auto">AUTO</option>
                               <option value="daily">DAILY</option>
                               <option value="weekly">WEEKLY</option>
-                              <option value="manual">MANUAL</option>
                             </select>
                           </div>
                         </div>
 
                         {isExpanded && (
-                          <div className="routine-details">
+                          <div className="agent-details">
                             {/* COMPLETE EXECUTION CONFIGURATION */}
                             <div className="detail-section" style={{ backgroundColor: '#f9f9f9', padding: '15px', borderLeft: '3px solid #000' }}>
                               <h4 className="detail-label" style={{ fontSize: '1.1em', marginBottom: '15px' }}>📋 Complete Execution Configuration</h4>
                               <div style={{ fontSize: '.9em', lineHeight: '1.7' }}>
                                 <p style={{ margin: '0 0 10px', fontWeight: '600' }}>What runs:</p>
                                 <ul style={{ margin: '0 0 15px', paddingLeft: '20px' }}>
-                                  <li><strong>Routine:</strong> {routine.name}</li>
-                                  <li><strong>Type:</strong> {routine.type}</li>
-                                  <li><strong>Frequency:</strong> {routine.frequency}</li>
-                                  <li><strong>Owning Agent:</strong> {routine.agent_name} ({routine.agent_status})</li>
+                                  <li><strong>Agent:</strong> {agent.name}</li>
+                                  <li><strong>Type:</strong> {agent.agent_type || agent.type}</li>
+                                  <li><strong>Execution Mode:</strong> {agent.execution_mode || 'on_demand'}</li>
+                                  {agent.execution_mode === 'scheduled' && (
+                                    <li><strong>Schedule Frequency:</strong> {agent.schedule_frequency || agent.frequency || 'daily'}</li>
+                                  )}
                                 </ul>
 
                                 <p style={{ margin: '0 0 10px', fontWeight: '600' }}>How it runs:</p>
                                 <ul style={{ margin: '0 0 15px', paddingLeft: '20px' }}>
                                   <li><strong>MCP Tools Available:</strong> {config.mcpMounts?.length > 0 ? config.mcpMounts.join(', ') : 'None'}</li>
                                   <li><strong>Max Turns:</strong> {config.maxTurns || 'Default (100)'}</li>
-                                  {routine.type === 'render_analytics' && (
+                                  {agent.type === 'render_analytics' && (
                                     <li><strong>Pre-execution:</strong> GitHub repo auto-cloned to ./github-repo</li>
                                   )}
                                 </ul>
 
                                 <p style={{ margin: '0 0 10px', fontWeight: '600' }}>What it does:</p>
                                 <div style={{ backgroundColor: '#fff', padding: '10px', border: '1px solid #ddd', whiteSpace: 'pre-wrap' }}>
-                                  {config.goal || routine.description || 'No goal specified'}
+                                  {config.goal || agent.description || 'No goal specified'}
                                 </div>
                               </div>
                             </div>
 
                             {/* Special note for render_analytics */}
-                            {routine.type === 'render_analytics' && (
+                            {agent.type === 'render_analytics' && (
                               <div className="detail-section" style={{ backgroundColor: '#f0f9ff', padding: '15px', borderLeft: '3px solid #0066cc' }}>
                                 <h4 className="detail-label" style={{ color: '#0066cc' }}>🔄 Auto-Clone Behavior</h4>
                                 <div className="detail-content" style={{ fontSize: '.95em', lineHeight: '1.6' }}>
@@ -469,7 +481,7 @@ function AgentsPage() {
                                     The agent will use standard file reading tools (cat, grep, etc.) to explore the repository and understand the database schema.
                                   </p>
                                   <p style={{ margin: '0', fontStyle: 'italic', color: '#666' }}>
-                                    Note: GitHub MCP is automatically excluded for this routine type since the repository is already available locally.
+                                    Note: GitHub MCP is automatically excluded for this agent type since the repository is already available locally.
                                   </p>
                                 </div>
                               </div>
@@ -480,26 +492,26 @@ function AgentsPage() {
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                                 <h4 className="detail-label" style={{ margin: 0 }}>Complete Prompt Sent to Agent</h4>
                                 <button
-                                  onClick={() => fetchPromptPreview(routine.id)}
-                                  disabled={loadingPrompts[routine.id]}
+                                  onClick={() => fetchPromptPreview(agent.id)}
+                                  disabled={loadingPrompts[agent.id]}
                                   className="toggle-status-btn"
                                   style={{ fontSize: '11px', padding: '3px 10px' }}
                                 >
-                                  {loadingPrompts[routine.id] ? 'Loading...' : promptPreviews[routine.id] ? 'Refresh' : 'View Full Prompt'}
+                                  {loadingPrompts[agent.id] ? 'Loading...' : promptPreviews[agent.id] ? 'Refresh' : 'View Full Prompt'}
                                 </button>
                               </div>
-                              {!promptPreviews[routine.id] ? (
+                              {!promptPreviews[agent.id] ? (
                                 <div style={{ padding: '15px', backgroundColor: '#f9f9f9', border: '1px solid #ddd', fontSize: '.9em', color: '#666' }}>
                                   Click "View Full Prompt" to see the exact prompt that will be sent to the agent, including:<br/>
                                   • Agent role and identity<br/>
-                                  • Routine goal and instructions<br/>
+                                  • Agent goal and instructions<br/>
                                   • Current date/time context<br/>
                                   • Workspace and repository information<br/>
                                   • Available MCP tools
                                 </div>
                               ) : (
                                 <div className="detail-content prompt-content" style={{ backgroundColor: '#f9f9f9', whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '.85em', maxHeight: '400px', overflow: 'auto' }}>
-                                  {promptPreviews[routine.id]}
+                                  {promptPreviews[agent.id]}
                                 </div>
                               )}
                             </div>
@@ -575,10 +587,10 @@ function AgentsPage() {
                               </div>
                             )}
 
-                            {/* Routine-specific settings */}
+                            {/* Agent-specific settings */}
                             {(config.maxEmails || config.query) && (
                               <div className="detail-section">
-                                <h4 className="detail-label">Routine-Specific Settings</h4>
+                                <h4 className="detail-label">Agent-Specific Settings</h4>
                                 <div className="detail-content settings-grid">
                                   {config.maxEmails && (
                                     <div className="setting-item">
@@ -603,13 +615,13 @@ function AgentsPage() {
                                 <div className="setting-item">
                                   <span className="setting-key">Created:</span>
                                   <span className="setting-value">
-                                    {new Date(routine.created_at).toLocaleString()}
+                                    {new Date(agent.created_at).toLocaleString()}
                                   </span>
                                 </div>
                                 <div className="setting-item">
                                   <span className="setting-key">Last Updated:</span>
                                   <span className="setting-value">
-                                    {new Date(routine.updated_at).toLocaleString()}
+                                    {new Date(agent.updated_at).toLocaleString()}
                                   </span>
                                 </div>
                               </div>

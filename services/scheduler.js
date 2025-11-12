@@ -1,16 +1,13 @@
 /**
  * Scheduler Service
- * CURRENTLY ONLY MODULES ARE SCHEDULED (routines, brain, and agents are DISABLED)
  *
- * Checks for modules that need to run and triggers their execution
- * Routines, Brain cycles, and agent task listeners are temporarily disabled
- * to ensure manual-only execution.
+ * Checks for scheduled agents that need to run and triggers their execution
+ * Unified system: modules, routines, and agents are all now "agents" with execution_mode
  */
 
 const cron = require('node-cron');
-const { getActiveModulesForScheduling, getModuleExecutions, getRoutinesDueForExecution, pool } = require('../db');
+const { pool } = require('../db');
 const { runModule } = require('./agent-runner');
-const { runRoutine } = require('./routine-executor');
 const { runBrainCycle, getLastBrainDecision } = require('./brain-orchestrator');
 const { startTaskAssignmentListener, stopTaskAssignmentListener } = require('./task-assignment-listener');
 
@@ -19,47 +16,29 @@ const scheduledTasks = new Map();
 
 /**
  * Start the scheduler
- * ONLY modules are scheduled - all other automatic execution is disabled
  *
  * Active:
- * - Module checks every hour (legacy modules only)
- *
- * Disabled (manual execution only):
- * - Routine checks (commented out)
- * - Brain cycles (commented out)
- * - Task assignment listener for agents (commented out)
+ * - Scheduled agents (execution_mode='scheduled') checked every hour
+ * - Brain cycles once per day at 9 AM (optional)
  */
 function startScheduler() {
-    console.log('[Scheduler] Starting scheduler (MODULES ONLY - routines/brain/agents disabled)');
+    console.log('[Scheduler] Starting scheduler for scheduled agents');
 
-    // Run module checks every hour (legacy support during migration)
-    const moduleTask = cron.schedule('0 * * * *', async () => {
-        console.log('[Scheduler] Checking for modules to execute');
-        await checkAndRunModules();
+    // Run scheduled agent checks every hour
+    const agentTask = cron.schedule('0 * * * *', async () => {
+        console.log('[Scheduler] Checking for scheduled agents to execute');
+        await checkAndRunScheduledAgents();
     });
 
-    scheduledTasks.set('modules', moduleTask);
+    scheduledTasks.set('agents', agentTask);
 
-    // DISABLED: Run routine checks every hour
-    // Temporarily disabled to prevent automatic execution
-    // const routineTask = cron.schedule('0 * * * *', async () => {
-    //     console.log('[Scheduler] Checking for routines to execute');
-    //     await checkAndRunRoutines();
-    // });
-    // scheduledTasks.set('routines', routineTask);
-
-    // DISABLED: Run Brain cycle checks once per day at 9 AM
-    // Temporarily disabled to prevent automatic execution
+    // OPTIONAL: Run Brain cycle checks once per day at 9 AM
+    // Uncomment to enable:
     // const brainTask = cron.schedule('0 9 * * *', async () => {
     //     console.log('[Scheduler] Checking for Brain cycles to execute');
     //     await checkAndRunBrainCycles();
     // });
     // scheduledTasks.set('brain', brainTask);
-
-    // DISABLED: Start task assignment listener for real-time agent execution
-    // Temporarily disabled to prevent automatic execution
-    // console.log('[Scheduler] Starting task assignment listener for agents');
-    // startTaskAssignmentListener();
 
     console.log('[Scheduler] Scheduler started successfully');
 }
@@ -82,122 +61,97 @@ function stopScheduler() {
 }
 
 /**
- * Check for modules that should run and execute them
+ * Check for scheduled agents that should run and execute them
  */
-async function checkAndRunModules() {
+async function checkAndRunScheduledAgents() {
+    const client = await pool.connect();
     try {
-        const modules = await getActiveModulesForScheduling();
+        // Get all agents with execution_mode='scheduled' that are active
+        const result = await client.query(`
+            SELECT id, user_id, name, agent_type, schedule_frequency, last_run_at, next_run_at
+            FROM agents
+            WHERE execution_mode = 'scheduled'
+              AND status = 'active'
+              AND (next_run_at IS NULL OR next_run_at <= NOW())
+            ORDER BY next_run_at NULLS FIRST
+        `);
 
-        console.log(`[Scheduler] Found ${modules.length} active modules`);
+        const agents = result.rows;
+        console.log(`[Scheduler] Found ${agents.length} scheduled agents due for execution`);
 
-        for (const module of modules) {
+        for (const agent of agents) {
             try {
-                const shouldRun = await shouldModuleRun(module);
+                console.log(`[Scheduler] Triggering agent: ${agent.name} (ID: ${agent.id}, type: ${agent.agent_type})`);
 
-                if (shouldRun) {
-                    console.log(`[Scheduler] Triggering module: ${module.name} (ID: ${module.id})`);
-
-                    // Run module asynchronously (don't await to prevent blocking)
-                    runModule(module.id, module.user_id, {
-                        trigger_type: 'scheduled',
-                    }).catch((error) => {
-                        console.error(`[Scheduler] Error running module ${module.id}:`, error);
-                    });
-                }
-            } catch (error) {
-                console.error(`[Scheduler] Error processing module ${module.id}:`, error);
-            }
-        }
-    } catch (error) {
-        console.error('[Scheduler] Error checking modules:', error);
-    }
-}
-
-/**
- * Determine if a module should run based on its frequency and last execution
- * @param {Object} module - Module configuration
- * @returns {Promise<boolean>} Whether the module should run
- */
-async function shouldModuleRun(module) {
-    const { frequency, id, user_id } = module;
-
-    // Manual modules don't run on schedule
-    if (frequency === 'manual') {
-        return false;
-    }
-
-    // Get last execution
-    const executions = await getModuleExecutions(id, user_id, 1);
-    const lastExecution = executions[0];
-
-    // If never run before, run it
-    if (!lastExecution) {
-        console.log(`[Scheduler] Module ${id} has never run before`);
-        return true;
-    }
-
-    // Check if enough time has passed based on frequency
-    const now = Date.now();
-    const lastRunTime = new Date(lastExecution.created_at).getTime();
-    const timeSinceLastRun = now - lastRunTime;
-
-    let shouldRun = false;
-
-    switch (frequency) {
-        case 'auto':
-            // Auto runs every 6 hours
-            shouldRun = timeSinceLastRun >= 6 * 60 * 60 * 1000;
-            break;
-
-        case 'daily':
-            // Daily runs once per day
-            shouldRun = timeSinceLastRun >= 24 * 60 * 60 * 1000;
-            break;
-
-        case 'weekly':
-            // Weekly runs once per week
-            shouldRun = timeSinceLastRun >= 7 * 24 * 60 * 60 * 1000;
-            break;
-
-        default:
-            console.warn(`[Scheduler] Unknown frequency: ${frequency}`);
-            break;
-    }
-
-    if (shouldRun) {
-        console.log(`[Scheduler] Module ${id} is due to run (last run: ${timeSinceLastRun / 1000}s ago)`);
-    }
-
-    return shouldRun;
-}
-
-/**
- * Check for routines that should run and execute them via their owning agents
- */
-async function checkAndRunRoutines() {
-    try {
-        const routines = await getRoutinesDueForExecution();
-
-        console.log(`[Scheduler] Found ${routines.length} routines due for execution`);
-
-        for (const routine of routines) {
-            try {
-                console.log(`[Scheduler] Triggering routine: ${routine.name} (ID: ${routine.id}) via agent ${routine.agent_name || routine.agent_id}`);
-
-                // Run routine asynchronously via agent (don't await to prevent blocking)
-                runRoutine(routine.id, routine.user_id, {
+                // Run agent asynchronously (don't await to prevent blocking)
+                runModule(agent.id, agent.user_id, {
                     trigger_type: 'scheduled',
+                }).then(() => {
+                    // Update last_run_at and calculate next_run_at after execution
+                    return updateAgentSchedule(agent.id, agent.schedule_frequency);
                 }).catch((error) => {
-                    console.error(`[Scheduler] Error running routine ${routine.id}:`, error);
+                    console.error(`[Scheduler] Error running agent ${agent.id}:`, error);
                 });
             } catch (error) {
-                console.error(`[Scheduler] Error processing routine ${routine.id}:`, error);
+                console.error(`[Scheduler] Error processing agent ${agent.id}:`, error);
             }
         }
     } catch (error) {
-        console.error('[Scheduler] Error checking routines:', error);
+        console.error('[Scheduler] Error checking scheduled agents:', error);
+    } finally {
+        client.release();
     }
 }
+
+/**
+ * Update agent's schedule after execution
+ * @param {number} agentId - Agent ID
+ * @param {string} frequency - Schedule frequency (auto, daily, weekly)
+ */
+async function updateAgentSchedule(agentId, frequency) {
+    const client = await pool.connect();
+    try {
+        const now = new Date();
+        let nextRunAt = new Date();
+
+        // Calculate next_run_at based on frequency
+        switch (frequency) {
+            case 'auto':
+                // Auto runs every 6 hours
+                nextRunAt.setHours(nextRunAt.getHours() + 6);
+                break;
+
+            case 'daily':
+                // Daily runs once per day
+                nextRunAt.setDate(nextRunAt.getDate() + 1);
+                break;
+
+            case 'weekly':
+                // Weekly runs once per week
+                nextRunAt.setDate(nextRunAt.getDate() + 7);
+                break;
+
+            default:
+                console.warn(`[Scheduler] Unknown frequency: ${frequency}`);
+                // Default to daily
+                nextRunAt.setDate(nextRunAt.getDate() + 1);
+                break;
+        }
+
+        await client.query(`
+            UPDATE agents
+            SET last_run_at = $1, next_run_at = $2, updated_at = $1
+            WHERE id = $3
+        `, [now, nextRunAt, agentId]);
+
+        console.log(`[Scheduler] Updated agent ${agentId} schedule: next run at ${nextRunAt.toISOString()}`);
+    } catch (error) {
+        console.error(`[Scheduler] Error updating agent schedule for ${agentId}:`, error);
+    } finally {
+        client.release();
+    }
+}
+
 
 /**
  * Check for users that should have Brain cycles run and execute them
@@ -277,6 +231,7 @@ async function shouldBrainCycleRun(userId) {
 module.exports = {
     startScheduler,
     stopScheduler,
-    checkAndRunModules,
+    checkAndRunScheduledAgents,
+    updateAgentSchedule,
     checkAndRunBrainCycles,
 };
