@@ -49,6 +49,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
   const [reports, setReports] = useState([]);
   const [isDocumentModalOpen, setIsDocumentModalOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState(null);
+  const [isPolsiaModalOpen, setIsPolsiaModalOpen] = useState(false);
 
   // Use publicUser if in public mode, otherwise use authenticated user
   const { token, user: authUser } = useAuth();
@@ -276,7 +277,12 @@ function Dashboard({ isPublic = false, publicUser = null }) {
               {user?.company_name || 'Company'}
             </span>
             <button
-              onClick={() => window.location.href = '/'}
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsPolsiaModalOpen(true);
+              }}
               className="nav-button"
               style={{ marginLeft: '10px' }}
             >
@@ -681,6 +687,106 @@ function Dashboard({ isPublic = false, publicUser = null }) {
               }}
             >
               {selectedDocument.content}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Polsia Info Modal */}
+      {isPolsiaModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }}
+          onClick={() => setIsPolsiaModalOpen(false)}
+        >
+          <div
+            style={{
+              backgroundColor: '#fff',
+              padding: '40px',
+              borderRadius: '4px',
+              maxWidth: '700px',
+              width: '100%',
+              maxHeight: '80vh',
+              overflow: 'auto',
+              border: '1px solid #000',
+              position: 'relative'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+              <h1 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif', fontSize: '2.5em' }}>Polsia</h1>
+              <button
+                onClick={() => setIsPolsiaModalOpen(false)}
+                style={{
+                  background: 'linear-gradient(top, #ffffff, #888888)',
+                  border: '1px solid #1a1a1a',
+                  padding: '6px 12px',
+                  cursor: 'pointer',
+                  borderRadius: '2px',
+                  fontFamily: 'Arial, Helvetica, sans-serif',
+                  fontSize: '13px'
+                }}
+              >
+                Close
+              </button>
+            </div>
+            <div
+              style={{
+                fontFamily: 'Times New Roman, Times, serif',
+                fontSize: '16px',
+                lineHeight: '1.6'
+              }}
+            >
+              <p style={{ fontSize: '1.3em', fontWeight: 'bold', marginBottom: '20px' }}>
+                AI That Runs Your Company While You Sleep.
+              </p>
+              <p style={{ marginBottom: '20px' }}>
+                Polsia thinks, builds, and markets your projects autonomously. It plans, codes, and promotes your ideas continuously — operating 24/7, adapting to data, and improving itself without human intervention.
+              </p>
+              <p style={{ marginBottom: '20px', fontStyle: 'italic', color: '#666' }}>
+                Warning: System operates independently. Human oversight recommended.
+              </p>
+              <div style={{ marginTop: '30px', display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => window.location.href = '/'}
+                  style={{
+                    background: 'linear-gradient(top, #ffffff, #888888)',
+                    border: '1px solid #1a1a1a',
+                    padding: '8px 16px',
+                    cursor: 'pointer',
+                    borderRadius: '2px',
+                    fontFamily: 'Arial, Helvetica, sans-serif',
+                    fontSize: '14px'
+                  }}
+                >
+                  Learn More
+                </button>
+                <button
+                  onClick={() => window.location.href = 'mailto:system@polsia.com'}
+                  style={{
+                    background: 'linear-gradient(top, #ffffff, #888888)',
+                    border: '1px solid #1a1a1a',
+                    padding: '8px 16px',
+                    cursor: 'pointer',
+                    borderRadius: '2px',
+                    fontFamily: 'Arial, Helvetica, sans-serif',
+                    fontSize: '14px'
+                  }}
+                >
+                  Contact Us
+                </button>
+              </div>
             </div>
           </div>
         </div>
