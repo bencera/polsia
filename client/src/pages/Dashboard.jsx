@@ -50,6 +50,14 @@ function Dashboard({ isPublic = false, publicUser = null }) {
   const [isDocumentModalOpen, setIsDocumentModalOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [isPolsiaModalOpen, setIsPolsiaModalOpen] = useState(false);
+  const [isFundersModalOpen, setIsFundersModalOpen] = useState(false);
+  const [allFunders, setAllFunders] = useState([]);
+  const [isAutoFundModalOpen, setIsAutoFundModalOpen] = useState(false);
+  const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
+  const [allActivity, setAllActivity] = useState([]);
+  const [activityPage, setActivityPage] = useState(1);
+  const [hasMoreActivity, setHasMoreActivity] = useState(true);
+  const [loadingMoreActivity, setLoadingMoreActivity] = useState(false);
 
   // Use publicUser if in public mode, otherwise use authenticated user
   const { token, user: authUser } = useAuth();
@@ -126,6 +134,53 @@ function Dashboard({ isPublic = false, publicUser = null }) {
     } catch (err) {
       console.error('Failed to fetch top funders:', err);
     }
+  };
+
+  const fetchAllFunders = async () => {
+    if (!user?.id) return;
+    try {
+      const response = await fetch(`/api/donations/user/${user.id}/top-donors`);
+      const data = await response.json();
+      if (response.ok) {
+        setAllFunders(data.topDonors || []);
+        setIsFundersModalOpen(true);
+      }
+    } catch (err) {
+      console.error('Failed to fetch all funders:', err);
+    }
+  };
+
+  const fetchAllActivity = async (page = 1) => {
+    if (!user?.id) return;
+    try {
+      const limit = 10;
+      const response = await fetch(`/api/tasks?limit=${limit}&offset=${(page - 1) * limit}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await response.json();
+      if (response.ok) {
+        const newTasks = data.tasks || [];
+        if (page === 1) {
+          setAllActivity(newTasks);
+          setIsActivityModalOpen(true);
+        } else {
+          setAllActivity(prev => [...prev, ...newTasks]);
+        }
+        setHasMoreActivity(newTasks.length === limit);
+        setActivityPage(page);
+      }
+    } catch (err) {
+      console.error('Failed to fetch all activity:', err);
+    } finally {
+      setLoadingMoreActivity(false);
+    }
+  };
+
+  const loadMoreActivity = () => {
+    setLoadingMoreActivity(true);
+    fetchAllActivity(activityPage + 1);
   };
 
   const fetchFundingProjects = async () => {
@@ -335,7 +390,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
             </div>
             <div className="dashboard-section" style={{marginTop: '10px'}}>
               <span className="dashboard-stat">Auto-fund: <span className="dashboard-value">OFF</span></span>
-              <button className="dashboard-btn">Enable</button>
+              <button className="dashboard-btn" onClick={() => setIsAutoFundModalOpen(true)}>Enable</button>
             </div>
             <div className="dashboard-stat" style={{marginTop: '15px'}}>
               Funders: <span className="dashboard-value">{topFunders.length}</span>
@@ -351,7 +406,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
                   ))}
                 </div>
                 <div style={{marginTop: '8px'}}>
-                  <button className="dashboard-btn">Show All</button>
+                  <button className="dashboard-btn" onClick={fetchAllFunders}>Show All</button>
                 </div>
               </>
             )}
@@ -374,17 +429,22 @@ function Dashboard({ isPublic = false, publicUser = null }) {
               </div>
             )}
             {!loading && !error && tasks.length > 0 && (
-              <div className="recent-activity-scroll">
-                {tasks.slice(0, 3).map((task) => (
-                  <div key={task.id} className="activity-item">
-                    <div className="activity-title">{task.title}</div>
-                    {task.description && (
-                      <div className="activity-description">{task.description}</div>
-                    )}
-                    <div className="activity-timestamp">{formatTimeAgo(task.created_at)}</div>
-                  </div>
-                ))}
-              </div>
+              <>
+                <div className="recent-activity-scroll">
+                  {tasks.slice(0, 3).map((task) => (
+                    <div key={task.id} className="activity-item">
+                      <div className="activity-title">{task.title}</div>
+                      {task.description && (
+                        <div className="activity-description">{task.description}</div>
+                      )}
+                      <div className="activity-timestamp">{formatTimeAgo(task.created_at)}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{marginTop: '10px'}}>
+                  <button className="dashboard-btn" onClick={() => fetchAllActivity(1)}>Show All</button>
+                </div>
+              </>
             )}
           </div>
 
@@ -787,6 +847,248 @@ function Dashboard({ isPublic = false, publicUser = null }) {
                   Contact Us
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* All Funders Modal */}
+      {isFundersModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }}
+          onClick={() => setIsFundersModalOpen(false)}
+        >
+          <div
+            style={{
+              backgroundColor: '#fff',
+              padding: '30px',
+              borderRadius: '4px',
+              maxWidth: '600px',
+              width: '100%',
+              maxHeight: '80vh',
+              overflow: 'auto',
+              border: '1px solid #000',
+              position: 'relative'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif' }}>All Funders</h2>
+              <button
+                onClick={() => setIsFundersModalOpen(false)}
+                className="dashboard-btn"
+              >
+                Close
+              </button>
+            </div>
+            <div style={{ fontFamily: 'Times New Roman, Times, serif', fontSize: '14px' }}>
+              {allFunders.length === 0 ? (
+                <p style={{ color: '#666', fontStyle: 'italic' }}>No funders yet.</p>
+              ) : (
+                <div>
+                  {allFunders.map((funder, index) => (
+                    <div
+                      key={index}
+                      style={{
+                        padding: '12px 0',
+                        borderBottom: index < allFunders.length - 1 ? '1px solid #ddd' : 'none',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{funder.donor_name}</div>
+                        {funder.message && (
+                          <div style={{ fontSize: '12px', color: '#666', fontStyle: 'italic' }}>
+                            "{funder.message}"
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ fontWeight: 'bold', fontSize: '16px', marginLeft: '20px', whiteSpace: 'nowrap' }}>
+                        ${parseFloat(funder.total_donated).toFixed(2)}
+                      </div>
+                    </div>
+                  ))}
+                  <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '2px solid #000', display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
+                    <span>Total:</span>
+                    <span>${allFunders.reduce((sum, funder) => sum + parseFloat(funder.total_donated), 0).toFixed(2)}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Auto-fund Modal */}
+      {isAutoFundModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }}
+          onClick={() => setIsAutoFundModalOpen(false)}
+        >
+          <div
+            style={{
+              backgroundColor: '#fff',
+              padding: '40px',
+              borderRadius: '4px',
+              maxWidth: '500px',
+              width: '100%',
+              border: '1px solid #000',
+              position: 'relative'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+              <h2 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif' }}>Automated Top-ups</h2>
+              <button
+                onClick={() => setIsAutoFundModalOpen(false)}
+                className="dashboard-btn"
+              >
+                Close
+              </button>
+            </div>
+            <div style={{ fontFamily: 'Times New Roman, Times, serif', fontSize: '14px', lineHeight: '1.6' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', marginBottom: '20px', padding: '15px', backgroundColor: '#fff3cd', border: '1px solid #ffc107', borderRadius: '4px' }}>
+                <span style={{ fontSize: '20px', marginRight: '10px', color: '#856404' }}>⚠</span>
+                <p style={{ margin: 0, color: '#856404' }}>
+                  You need to add a payment method before setting up automated top-ups.
+                </p>
+              </div>
+              <p style={{ marginBottom: '20px' }}>
+                Auto-fund automatically adds funds to your account when your balance falls below a specified threshold. This ensures your autonomous operations never stop running.
+              </p>
+              <div style={{ marginTop: '30px', textAlign: 'center' }}>
+                <button
+                  onClick={() => window.location.href = '/settings'}
+                  className="dashboard-btn"
+                  style={{ padding: '10px 20px', fontSize: '14px' }}
+                >
+                  Add Payment Method
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* All Activity Modal */}
+      {isActivityModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }}
+          onClick={() => setIsActivityModalOpen(false)}
+        >
+          <div
+            style={{
+              backgroundColor: '#fff',
+              borderRadius: '4px',
+              maxWidth: '700px',
+              width: '100%',
+              maxHeight: '80vh',
+              overflow: 'hidden',
+              border: '1px solid #000',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '30px 30px 20px 30px',
+              borderBottom: '1px solid #ddd',
+              backgroundColor: '#fff',
+              position: 'sticky',
+              top: 0,
+              zIndex: 1
+            }}>
+              <h2 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif' }}>Recent Activity</h2>
+              <button
+                onClick={() => setIsActivityModalOpen(false)}
+                className="dashboard-btn"
+              >
+                Close
+              </button>
+            </div>
+            <div style={{
+              fontFamily: 'Times New Roman, Times, serif',
+              fontSize: '14px',
+              padding: '30px',
+              overflowY: 'auto',
+              flex: 1
+            }}>
+              {allActivity.length === 0 ? (
+                <p style={{ color: '#666', fontStyle: 'italic' }}>No activity yet.</p>
+              ) : (
+                <>
+                  {allActivity.map((task) => (
+                    <div
+                      key={task.id}
+                      style={{
+                        padding: '15px 0',
+                        borderBottom: '1px solid #ddd'
+                      }}
+                    >
+                      <div style={{ fontWeight: 'bold', marginBottom: '5px', fontSize: '15px' }}>{task.title}</div>
+                      {task.description && (
+                        <div style={{ fontSize: '13px', color: '#666', marginBottom: '5px' }}>
+                          {task.description}
+                        </div>
+                      )}
+                      <div style={{ fontSize: '12px', color: '#999' }}>{formatTimeAgo(task.created_at)}</div>
+                    </div>
+                  ))}
+                  {hasMoreActivity && (
+                    <div style={{ marginTop: '20px', textAlign: 'center' }}>
+                      <button
+                        onClick={loadMoreActivity}
+                        className="dashboard-btn"
+                        disabled={loadingMoreActivity}
+                      >
+                        {loadingMoreActivity ? 'Loading...' : 'Load More'}
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </div>

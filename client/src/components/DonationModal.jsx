@@ -88,7 +88,7 @@ function DonationModal({ isOpen, onClose, userId, projectId, projectName, isOwnA
   return (
     <div className="donation-modal-overlay" onClick={onClose}>
       <div className="donation-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="donation-modal-close" onClick={onClose}>×</button>
+        <button className="donation-modal-close" onClick={onClose}>Close</button>
 
         <h2 className="donation-modal-title">{isOwnAccount ? 'Add Funds' : 'Donate Funds'}</h2>
         {projectName && (
@@ -183,14 +183,6 @@ function DonationModal({ isOpen, onClose, userId, projectId, projectName, isOwnA
           )}
 
           <div className="donation-actions">
-            <button
-              type="button"
-              className="donation-btn donation-btn-cancel"
-              onClick={onClose}
-              disabled={loading}
-            >
-              Cancel
-            </button>
             <button
               type="submit"
               className="donation-btn donation-btn-submit"
