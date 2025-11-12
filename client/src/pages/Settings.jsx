@@ -73,6 +73,20 @@ function Settings() {
 
           <button
             className="settings-link-button"
+            onClick={() => navigate('/tasks')}
+          >
+            Tasks
+          </button>
+
+          <button
+            className="settings-link-button"
+            onClick={() => navigate('/agents')}
+          >
+            Agents
+          </button>
+
+          <button
+            className="settings-link-button"
             onClick={() => navigate('/tools')}
           >
             Tools

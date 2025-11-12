@@ -47,15 +47,6 @@ function Navbar() {
       </div>
       <div className="navbar-actions">
         <span className="user-info">{user?.email}</span>
-        <button onClick={handleHome} className="nav-button">
-          Home
-        </button>
-        <button onClick={handleTasks} className="nav-button">
-          Tasks
-        </button>
-        <button onClick={handleAgents} className="nav-button">
-          Agents
-        </button>
         <button onClick={handleSettings} className="nav-button">
           Settings
         </button>
