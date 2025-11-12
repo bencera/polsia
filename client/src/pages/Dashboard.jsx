@@ -58,6 +58,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
   const [activityPage, setActivityPage] = useState(1);
   const [hasMoreActivity, setHasMoreActivity] = useState(true);
   const [loadingMoreActivity, setLoadingMoreActivity] = useState(false);
+  const [isAllDocumentsModalOpen, setIsAllDocumentsModalOpen] = useState(false);
 
   // Use publicUser if in public mode, otherwise use authenticated user
   const { token, user: authUser } = useAuth();
@@ -617,13 +618,13 @@ function Dashboard({ isPublic = false, publicUser = null }) {
                   ))}
                 </div>
 
-                {/* See More Button */}
+                {/* Show All Button */}
                 <div style={{marginTop: '10px'}}>
                   <button
                     className="dashboard-btn"
-                    onClick={() => window.location.href = '/documents'}
+                    onClick={() => setIsAllDocumentsModalOpen(true)}
                   >
-                    See More
+                    Show All
                   </button>
                 </div>
               </>
@@ -709,36 +710,42 @@ function Dashboard({ isPublic = false, publicUser = null }) {
           <div
             style={{
               backgroundColor: '#fff',
-              padding: '30px',
               borderRadius: '4px',
               maxWidth: '800px',
               width: '100%',
               maxHeight: '80vh',
-              overflow: 'auto',
               border: '1px solid #000',
-              position: 'relative'
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden'
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <div style={{
+              position: 'sticky',
+              top: 0,
+              backgroundColor: '#fff',
+              zIndex: 1,
+              padding: '30px 30px 20px 30px',
+              borderBottom: '1px solid #ddd',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
               <h2 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif' }}>{selectedDocument.type}</h2>
               <button
                 onClick={handleDocumentModalClose}
-                style={{
-                  background: 'linear-gradient(top, #ffffff, #888888)',
-                  border: '1px solid #1a1a1a',
-                  padding: '6px 12px',
-                  cursor: 'pointer',
-                  borderRadius: '2px',
-                  fontFamily: 'Arial, Helvetica, sans-serif',
-                  fontSize: '13px'
-                }}
+                className="dashboard-btn"
               >
                 Close
               </button>
             </div>
             <div
               style={{
+                flex: 1,
+                overflowY: 'auto',
+                padding: '20px 30px 30px 30px',
                 fontFamily: 'Times New Roman, Times, serif',
                 fontSize: '14px',
                 lineHeight: '1.6',
@@ -788,15 +795,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
               <h1 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif', fontSize: '2.5em' }}>Polsia</h1>
               <button
                 onClick={() => setIsPolsiaModalOpen(false)}
-                style={{
-                  background: 'linear-gradient(top, #ffffff, #888888)',
-                  border: '1px solid #1a1a1a',
-                  padding: '6px 12px',
-                  cursor: 'pointer',
-                  borderRadius: '2px',
-                  fontFamily: 'Arial, Helvetica, sans-serif',
-                  fontSize: '13px'
-                }}
+                className="dashboard-btn"
               >
                 Close
               </button>
@@ -820,29 +819,15 @@ function Dashboard({ isPublic = false, publicUser = null }) {
               <div style={{ marginTop: '30px', display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
                 <button
                   onClick={() => window.location.href = '/'}
-                  style={{
-                    background: 'linear-gradient(top, #ffffff, #888888)',
-                    border: '1px solid #1a1a1a',
-                    padding: '8px 16px',
-                    cursor: 'pointer',
-                    borderRadius: '2px',
-                    fontFamily: 'Arial, Helvetica, sans-serif',
-                    fontSize: '14px'
-                  }}
+                  className="dashboard-btn"
+                  style={{ padding: '8px 16px' }}
                 >
                   Learn More
                 </button>
                 <button
                   onClick={() => window.location.href = 'mailto:system@polsia.com'}
-                  style={{
-                    background: 'linear-gradient(top, #ffffff, #888888)',
-                    border: '1px solid #1a1a1a',
-                    padding: '8px 16px',
-                    cursor: 'pointer',
-                    borderRadius: '2px',
-                    fontFamily: 'Arial, Helvetica, sans-serif',
-                    fontSize: '14px'
-                  }}
+                  className="dashboard-btn"
+                  style={{ padding: '8px 16px' }}
                 >
                   Contact Us
                 </button>
@@ -1086,6 +1071,146 @@ function Dashboard({ isPublic = false, publicUser = null }) {
                         {loadingMoreActivity ? 'Loading...' : 'Load More'}
                       </button>
                     </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* All Documents Modal */}
+      {isAllDocumentsModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }}
+          onClick={() => setIsAllDocumentsModalOpen(false)}
+        >
+          <div
+            style={{
+              backgroundColor: '#fff',
+              borderRadius: '4px',
+              maxWidth: '700px',
+              width: '100%',
+              maxHeight: '80vh',
+              overflow: 'hidden',
+              border: '1px solid #000',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '30px 30px 20px 30px',
+              borderBottom: '1px solid #ddd',
+              backgroundColor: '#fff',
+              position: 'sticky',
+              top: 0,
+              zIndex: 1
+            }}>
+              <h2 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif' }}>All Documents</h2>
+              <button
+                onClick={() => setIsAllDocumentsModalOpen(false)}
+                className="dashboard-btn"
+              >
+                Close
+              </button>
+            </div>
+            <div style={{
+              fontFamily: 'Times New Roman, Times, serif',
+              fontSize: '14px',
+              padding: '30px',
+              overflowY: 'auto',
+              flex: 1
+            }}>
+              {!documents ? (
+                <p style={{ color: '#666', fontStyle: 'italic' }}>Loading documents...</p>
+              ) : (
+                <>
+                  {/* Vision Document */}
+                  {documents.vision_md && documents.vision_md.trim().length > 0 && (
+                    <div
+                      style={{
+                        padding: '15px 0',
+                        borderBottom: '1px solid #ddd',
+                        cursor: 'pointer'
+                      }}
+                      onClick={() => {
+                        handleDocumentClick('Vision', documents.vision_md);
+                        setIsAllDocumentsModalOpen(false);
+                      }}
+                    >
+                      <div style={{ fontWeight: 'bold', marginBottom: '5px', fontSize: '15px' }}>Vision</div>
+                      <div style={{ fontSize: '13px', color: '#666' }}>Strategic vision document</div>
+                    </div>
+                  )}
+
+                  {/* Goals Document */}
+                  {documents.goals_md && documents.goals_md.trim().length > 0 && (
+                    <div
+                      style={{
+                        padding: '15px 0',
+                        borderBottom: '1px solid #ddd',
+                        cursor: 'pointer'
+                      }}
+                      onClick={() => {
+                        handleDocumentClick('Goals', documents.goals_md);
+                        setIsAllDocumentsModalOpen(false);
+                      }}
+                    >
+                      <div style={{ fontWeight: 'bold', marginBottom: '5px', fontSize: '15px' }}>Goals</div>
+                      <div style={{ fontSize: '13px', color: '#666' }}>Company goals and objectives</div>
+                    </div>
+                  )}
+
+                  {/* All Reports */}
+                  {reports.length > 0 ? (
+                    <>
+                      <div style={{ marginTop: '20px', marginBottom: '10px', fontWeight: 'bold', fontSize: '16px' }}>
+                        Reports
+                      </div>
+                      {reports.map((report) => (
+                        <div
+                          key={report.id}
+                          style={{
+                            padding: '15px 0',
+                            borderBottom: '1px solid #ddd',
+                            cursor: 'pointer'
+                          }}
+                          onClick={() => {
+                            handleDocumentClick(report.name, report.content);
+                            setIsAllDocumentsModalOpen(false);
+                          }}
+                        >
+                          <div style={{ fontWeight: 'bold', marginBottom: '5px', fontSize: '15px' }}>{report.name}</div>
+                          <div style={{ fontSize: '13px', color: '#666', marginBottom: '5px' }}>
+                            {report.report_type} • {new Date(report.report_date).toLocaleDateString()}
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#999' }}>{formatTimeAgo(report.created_at)}</div>
+                        </div>
+                      ))}
+                    </>
+                  ) : null}
+
+                  {(!documents.vision_md || documents.vision_md.trim().length === 0) &&
+                   (!documents.goals_md || documents.goals_md.trim().length === 0) &&
+                   reports.length === 0 && (
+                    <p style={{ color: '#666', fontStyle: 'italic' }}>No documents or reports yet.</p>
                   )}
                 </>
               )}
