@@ -42,7 +42,7 @@ function Analytics() {
     return `[${time}] ${log.stage ? `[${log.stage}] ` : ''}${log.message}`;
   };
 
-  const displayLogs = terminalLogs.slice(-4);
+  const displayLogs = terminalLogs.slice(-5);
 
   const formatValue = (value, key) => {
     if (value === null || value === undefined) {
@@ -132,14 +132,14 @@ function Analytics() {
             <div>&nbsp;</div>
             <div>&nbsp;</div>
             <div>&nbsp;</div>
-          </>
+            <div>&nbsp;</div></>
         ) : (
           <>
             {displayLogs.map((log, index) => (
               <div key={`${log.id}-${index}`}>&gt; {formatLogMessage(log)}</div>
             ))}
-            {displayLogs.length < 4 &&
-              Array.from({ length: 4 - displayLogs.length }).map((_, i) => (
+            {displayLogs.length < 5 &&
+              Array.from({ length: 5 - displayLogs.length }).map((_, i) => (
                 <div key={`empty-${i}`}>&nbsp;</div>
               ))
             }

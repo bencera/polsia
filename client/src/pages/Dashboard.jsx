@@ -35,7 +35,7 @@ function useCountdown(targetDate) {
   return timeLeft;
 }
 
-function Dashboard() {
+function Dashboard({ isPublic = false, publicUser = null }) {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -44,7 +44,10 @@ function Dashboard() {
   const [fundingProjects, setFundingProjects] = useState([]);
   const [isDonationModalOpen, setIsDonationModalOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState(null);
-  const { token, user } = useAuth();
+
+  // Use publicUser if in public mode, otherwise use authenticated user
+  const { token, user: authUser } = useAuth();
+  const user = isPublic ? publicUser : authUser;
   const { terminalLogs } = useTerminal();
 
   // CEO next decision countdown - set to a fixed target time for demo (6 hours from now)
@@ -55,24 +58,26 @@ function Dashboard() {
   const countdown = useCountdown(nextDecisionTime);
 
   useEffect(() => {
-    fetchTasks();
-    fetchBalance();
-    fetchTopFunders();
-    fetchFundingProjects();
-  }, []);
+    if (user?.id) {
+      fetchTasks();
+      fetchBalance();
+      fetchTopFunders();
+      fetchFundingProjects();
+    }
+  }, [user]);
 
   const fetchTasks = async () => {
     try {
-      const response = await fetch('/api/tasks', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      // Use public endpoint if in public mode (assuming we create /api/tasks/user/:userId endpoint)
+      const url = isPublic ? `/api/tasks/user/${user.id}` : '/api/tasks';
+      const headers = isPublic ? {} : { 'Authorization': `Bearer ${token}` };
+
+      const response = await fetch(url, { headers });
 
       const data = await response.json();
 
       if (response.ok) {
-        setTasks(data.tasks);
+        setTasks(data.tasks || []);
       } else {
         setError(data.message || 'Failed to load tasks');
       }
@@ -85,11 +90,11 @@ function Dashboard() {
 
   const fetchBalance = async () => {
     try {
-      const response = await fetch('/api/balance', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      // Use public endpoint if in public mode
+      const url = isPublic ? `/api/balance/user/${user.id}` : '/api/balance';
+      const headers = isPublic ? {} : { 'Authorization': `Bearer ${token}` };
+
+      const response = await fetch(url, { headers });
       const data = await response.json();
       if (response.ok) {
         setBalance(data.balance);
@@ -114,11 +119,11 @@ function Dashboard() {
 
   const fetchFundingProjects = async () => {
     try {
-      const response = await fetch('/api/funding-projects', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      // Use public endpoint if in public mode
+      const url = isPublic ? `/api/funding-projects/user/${user.id}` : '/api/funding-projects';
+      const headers = isPublic ? {} : { 'Authorization': `Bearer ${token}` };
+
+      const response = await fetch(url, { headers });
       const data = await response.json();
       if (response.ok) {
         setFundingProjects(data.projects || []);
@@ -167,16 +172,17 @@ function Dashboard() {
     return `[${time}] ${log.stage ? `[${log.stage}] ` : ''}${log.message}`;
   };
 
-  // Get last 4 logs for terminal display
-  const displayLogs = terminalLogs.slice(-4);
+  // Get last 5 logs for terminal display
+  const displayLogs = terminalLogs.slice(-5);
 
   return (
     <>
       <div className="terminal">
         {displayLogs.length === 0 ? (
-          // Show 4 lines when idle
+          // Show 5 lines when idle
           <>
             <div>&gt; Autonomous Operations Control</div>
+            <div>&nbsp;</div>
             <div>&nbsp;</div>
             <div>&nbsp;</div>
             <div>&nbsp;</div>
@@ -187,8 +193,8 @@ function Dashboard() {
             {displayLogs.map((log, index) => (
               <div key={`${log.id}-${index}`}>&gt; {formatLogMessage(log)}</div>
             ))}
-            {displayLogs.length < 4 &&
-              Array.from({ length: 4 - displayLogs.length }).map((_, i) => (
+            {displayLogs.length < 5 &&
+              Array.from({ length: 5 - displayLogs.length }).map((_, i) => (
                 <div key={`empty-${i}`}>&nbsp;</div>
               ))
             }
@@ -196,7 +202,27 @@ function Dashboard() {
         )}
       </div>
 
-      <Navbar />
+      {/* Show full Navbar with navigation buttons in private mode, simple header in public mode */}
+      {isPublic ? (
+        <nav className="navbar">
+          <div className="navbar-brand-container">
+            <span className="navbar-brand">
+              {user?.company_name || 'Company'}
+            </span>
+            <button
+              onClick={() => window.location.href = '/'}
+              className="nav-button"
+              style={{ marginLeft: '10px' }}
+            >
+              Run by Polsia
+            </button>
+          </div>
+          <div className="navbar-actions">
+          </div>
+        </nav>
+      ) : (
+        <Navbar />
+      )}
 
       <div className="dashboard-container">
 
@@ -302,55 +328,84 @@ function Dashboard() {
 
             {/* Engineering */}
             <h2 className="paperclips-title">Engineering</h2>
-            <div className="paperclips-stat">
-              Active Agents: <span className="paperclips-value">5</span>
+            <div className="paperclips-project">
+              <div className="paperclips-project-title">
+                <strong>Fix authentication bug</strong> ($12)
+              </div>
+              <div className="paperclips-project-desc">
+                Users unable to login with GitHub OAuth. Investigate token refresh issue.
+              </div>
             </div>
-            <div className="paperclips-stat">
-              Services Connected: <span className="paperclips-value">8</span>
+            <div className="paperclips-project">
+              <div className="paperclips-project-title">
+                <strong>Optimize database queries</strong> ($25)
+              </div>
+              <div className="paperclips-project-desc">
+                Slow loading times on dashboard. Add indexes to agents and executions tables.
+              </div>
             </div>
-            <div className="paperclips-stat">
-              Tasks Completed: <span className="paperclips-value">1,247</span>
-            </div>
-            <div className="paperclips-stat">
-              LOC Written: <span className="paperclips-value">3,892</span>
-            </div>
-            <div className="paperclips-section" style={{marginTop: '15px'}}>
-              <button className="paperclips-btn">Take Action</button>
+            <div className="paperclips-project">
+              <div className="paperclips-project-title">
+                <strong>Implement caching layer</strong> ($45)
+              </div>
+              <div className="paperclips-project-desc">
+                Add Redis caching for API responses to reduce database load by 60%.
+              </div>
             </div>
 
             {/* Marketing */}
             <h2 className="paperclips-title">Marketing</h2>
-            <div className="paperclips-stat">
-              Active Agents: <span className="paperclips-value">3</span>
+            <div className="paperclips-project">
+              <div className="paperclips-project-title">
+                <strong>Launch product announcement</strong> ($18)
+              </div>
+              <div className="paperclips-project-desc">
+                Create and schedule social media posts for new agent marketplace launch.
+              </div>
             </div>
-            <div className="paperclips-stat">
-              Content Created: <span className="paperclips-value">156</span>
+            <div className="paperclips-project">
+              <div className="paperclips-project-title">
+                <strong>Write blog post</strong> ($22)
+              </div>
+              <div className="paperclips-project-desc">
+                Technical deep-dive on autonomous agents. Target: 2,000 words with code examples.
+              </div>
             </div>
-            <div className="paperclips-stat">
-              Social Posts: <span className="paperclips-value">89</span>
-            </div>
-            <div className="paperclips-section" style={{marginTop: '15px'}}>
-              <button className="paperclips-btn">Take Action</button>
+            <div className="paperclips-project">
+              <div className="paperclips-project-title">
+                <strong>Generate Instagram content</strong> ($15)
+              </div>
+              <div className="paperclips-project-desc">
+                Create 10 engaging posts with AI-generated images for next week's schedule.
+              </div>
             </div>
 
-            {/* 5. Funding Projects */}
-            <h2 className="paperclips-title" style={{marginTop: '30px'}}>Funding Projects</h2>
-            {fundingProjects.length > 0 ? (
-              fundingProjects.slice(0, 3).map((project) => (
-                <div key={project.id} className="paperclips-project">
-                  <div className="paperclips-project-title">
-                    <strong>{project.name}</strong> (${parseFloat(project.goal_amount_usd).toFixed(0)})
-                  </div>
-                  <div className="paperclips-project-desc">
-                    {project.description}
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="paperclips-stat" style={{fontStyle: 'italic', color: '#666'}}>
-                No funding projects yet
+            {/* 5. Operations */}
+            <h2 className="paperclips-title" style={{marginTop: '30px'}}>Operations</h2>
+            <div className="paperclips-project">
+              <div className="paperclips-project-title">
+                <strong>Automate customer onboarding</strong> ($30)
               </div>
-            )}
+              <div className="paperclips-project-desc">
+                Build workflow to send welcome emails, create accounts, and schedule check-ins.
+              </div>
+            </div>
+            <div className="paperclips-project">
+              <div className="paperclips-project-title">
+                <strong>Invoice processing automation</strong> ($28)
+              </div>
+              <div className="paperclips-project-desc">
+                Extract data from PDFs, validate against POs, and update accounting system.
+              </div>
+            </div>
+            <div className="paperclips-project">
+              <div className="paperclips-project-title">
+                <strong>Daily metrics report</strong> ($8)
+              </div>
+              <div className="paperclips-project-desc">
+                Generate and email summary of key business metrics every morning at 8am.
+              </div>
+            </div>
           </div>
         </div>
       </div>

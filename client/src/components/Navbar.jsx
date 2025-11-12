@@ -27,12 +27,23 @@ function Navbar() {
     navigate('/settings');
   };
 
+  const handlePolsiaClick = () => {
+    navigate('/');
+  };
+
   return (
     <nav className="navbar">
       <div className="navbar-brand-container">
         <Link to="/dashboard" className="navbar-brand">
-          {user?.company_name || 'My Company'} <span className="navbar-subtitle">Run by Polsia</span>
+          {user?.company_name || 'My Company'}
         </Link>
+        <button
+          onClick={handlePolsiaClick}
+          className="nav-button"
+          style={{ marginLeft: '10px' }}
+        >
+          Run by Polsia
+        </button>
       </div>
       <div className="navbar-actions">
         <span className="user-info">{user?.email}</span>

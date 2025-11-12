@@ -15,15 +15,18 @@
   background-color: #000;
   color: #fff;
   font-family: 'Courier New', Courier, monospace;
-  padding: 10px 20px;
+  padding: 25px 20px;
   margin: 0 0 30px 0;
   font-size: 13px;
   line-height: 1.4;
-  height: 82px; /* Fixed height for exactly 4 lines (13px * 1.4 * 4 + 20px padding) */
+  height: 120px; /* Significantly increased height for 5 lines with more spacing */
   overflow: hidden;
   width: 100vw;
   margin-left: calc(-50vw + 50%);
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
 }
 
 .terminal div {
