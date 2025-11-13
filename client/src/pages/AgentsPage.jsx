@@ -16,6 +16,9 @@ function AgentsPage() {
   const [loadingPrompts, setLoadingPrompts] = useState({});
   const [filterMode, setFilterMode] = useState('all'); // 'all', 'scheduled', 'on_demand', 'task_driven'
 
+  // Check if page is embedded in modal
+  const isEmbedded = new URLSearchParams(window.location.search).get('embedded') === 'true';
+
   // Fetch agents from API
   useEffect(() => {
     fetchAgents();
@@ -327,45 +330,49 @@ function AgentsPage() {
 
   return (
     <>
-      <div className="terminal">
-        {displayLogs.length === 0 ? (
-          // Show 5 lines when idle
-          <>
-            <div>&gt; Autonomous Operations Control</div>
-            <div>&nbsp;</div>
-            <div>&nbsp;</div>
-            <div>&nbsp;</div>
-            <div>&nbsp;</div>
-          </>
-        ) : (
-          // Show logs and fill remaining lines
-          <>
-            {displayLogs.map((log, index) => (
-              <div key={`${log.id}-${index}`}>&gt; {formatLogMessage(log)}</div>
-            ))}
-            {displayLogs.length < 5 &&
-              Array.from({ length: 5 - displayLogs.length }).map((_, i) => (
-                <div key={`empty-${i}`}>&nbsp;</div>
-              ))
-            }
-          </>
-        )}
-      </div>
+      {!isEmbedded && (
+        <div className="terminal">
+          {displayLogs.length === 0 ? (
+            // Show 5 lines when idle
+            <>
+              <div>&gt; Autonomous Operations Control</div>
+              <div>&nbsp;</div>
+              <div>&nbsp;</div>
+              <div>&nbsp;</div>
+              <div>&nbsp;</div>
+            </>
+          ) : (
+            // Show logs and fill remaining lines
+            <>
+              {displayLogs.map((log, index) => (
+                <div key={`${log.id}-${index}`}>&gt; {formatLogMessage(log)}</div>
+              ))}
+              {displayLogs.length < 5 &&
+                Array.from({ length: 5 - displayLogs.length }).map((_, i) => (
+                  <div key={`empty-${i}`}>&nbsp;</div>
+                ))
+              }
+            </>
+          )}
+        </div>
+      )}
 
-      <Navbar />
+      {!isEmbedded && <Navbar />}
 
       <div className="agents-container">
 
       <div className="agents-content">
-        <div className="agents-header">
-          <h2>Agents</h2>
-          <p className="agents-subtitle">
-            Autonomous AI agents that run on schedules to handle your tasks
-          </p>
-          <p className="agents-status">
-            {activeCount} {activeCount === 1 ? 'agent' : 'agents'} active
-          </p>
-        </div>
+        {!isEmbedded && (
+          <div className="agents-header">
+            <h2>Agents</h2>
+            <p className="agents-subtitle">
+              Autonomous AI agents that run on schedules to handle your tasks
+            </p>
+            <p className="agents-status">
+              {activeCount} {activeCount === 1 ? 'agent' : 'agents'} active
+            </p>
+          </div>
+        )}
 
         {agents.length === 0 ? (
           <div style={{ textAlign: 'center', marginTop: '40px', color: '#666' }}>

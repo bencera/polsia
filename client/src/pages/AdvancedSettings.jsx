@@ -15,6 +15,9 @@ function AdvancedSettings() {
   const [slugAvailable, setSlugAvailable] = useState(null);
   const [checkingSlug, setCheckingSlug] = useState(false);
 
+  // Check if page is embedded in modal
+  const isEmbedded = new URLSearchParams(window.location.search).get('embedded') === 'true';
+
   useEffect(() => {
     fetchSettings();
   }, []);
@@ -141,10 +144,10 @@ function AdvancedSettings() {
 
   return (
     <>
-      <Navbar />
+      {!isEmbedded && <Navbar />}
       <div className="settings-container">
         <div className="settings-content">
-          <h1>Advanced Settings</h1>
+          {!isEmbedded && <h1>Advanced Settings</h1>}
 
           {loading && <p>Loading settings...</p>}
 

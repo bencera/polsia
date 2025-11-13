@@ -11,6 +11,9 @@ function Analytics() {
   const { token } = useAuth();
   const { terminalLogs } = useTerminal();
 
+  // Check if page is embedded in modal
+  const isEmbedded = new URLSearchParams(window.location.search).get('embedded') === 'true';
+
   useEffect(() => {
     fetchAnalytics();
   }, []);
@@ -125,29 +128,31 @@ function Analytics() {
 
   return (
     <div className="analytics-container">
-      <div className="terminal">
-        {displayLogs.length === 0 ? (
-          <>
-            <div>&gt; Business Analytics Dashboard</div>
-            <div>&nbsp;</div>
-            <div>&nbsp;</div>
-            <div>&nbsp;</div>
-            <div>&nbsp;</div></>
-        ) : (
-          <>
-            {displayLogs.map((log, index) => (
-              <div key={`${log.id}-${index}`}>&gt; {formatLogMessage(log)}</div>
-            ))}
-            {displayLogs.length < 5 &&
-              Array.from({ length: 5 - displayLogs.length }).map((_, i) => (
-                <div key={`empty-${i}`}>&nbsp;</div>
-              ))
-            }
-          </>
-        )}
-      </div>
+      {!isEmbedded && (
+        <div className="terminal">
+          {displayLogs.length === 0 ? (
+            <>
+              <div>&gt; Business Analytics Dashboard</div>
+              <div>&nbsp;</div>
+              <div>&nbsp;</div>
+              <div>&nbsp;</div>
+              <div>&nbsp;</div></>
+          ) : (
+            <>
+              {displayLogs.map((log, index) => (
+                <div key={`${log.id}-${index}`}>&gt; {formatLogMessage(log)}</div>
+              ))}
+              {displayLogs.length < 5 &&
+                Array.from({ length: 5 - displayLogs.length }).map((_, i) => (
+                  <div key={`empty-${i}`}>&nbsp;</div>
+                ))
+              }
+            </>
+          )}
+        </div>
+      )}
 
-      <Navbar />
+      {!isEmbedded && <Navbar />}
 
       <div className="analytics-content">
         {loading && (
@@ -170,17 +175,19 @@ function Analytics() {
 
         {!loading && analytics && (
           <>
-            <div className="analytics-header">
-              <h1>📊 Business Analytics</h1>
-              <p className="analytics-subtitle">
-                Real-time business metrics from all connected sources
-              </p>
-              {analytics.timestamp && (
-                <p className="analytics-timestamp">
-                  Last updated: {new Date(analytics.timestamp).toLocaleString()}
+            {!isEmbedded && (
+              <div className="analytics-header">
+                <h1>📊 Business Analytics</h1>
+                <p className="analytics-subtitle">
+                  Real-time business metrics from all connected sources
                 </p>
-              )}
-            </div>
+                {analytics.timestamp && (
+                  <p className="analytics-timestamp">
+                    Last updated: {new Date(analytics.timestamp).toLocaleString()}
+                  </p>
+                )}
+              </div>
+            )}
 
             {Object.entries(getMetricsByCategory()).map(([category, metrics]) => (
               <div key={category} className="metrics-category">

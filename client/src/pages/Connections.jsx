@@ -40,6 +40,9 @@ function Connections() {
   const { token } = useAuth();
   const { terminalLogs } = useTerminal();
 
+  // Check if page is embedded in modal
+  const isEmbedded = new URLSearchParams(window.location.search).get('embedded') === 'true';
+
   useEffect(() => {
     fetchConnections();
 
@@ -911,37 +914,41 @@ function Connections() {
 
   return (
     <div className="settings-container">
-      <div className="terminal">
-        {displayLogs.length === 0 ? (
-          // Show 5 lines when idle
-          <>
-            <div>&gt; Autonomous Operations Control</div>
-            <div>&nbsp;</div>
-            <div>&nbsp;</div>
-            <div>&nbsp;</div>
-            <div>&nbsp;</div></>
-        ) : (
-          // Show logs and fill remaining lines
-          <>
-            {displayLogs.map((log, index) => (
-              <div key={`${log.id}-${index}`}>&gt; {formatLogMessage(log)}</div>
-            ))}
-            {displayLogs.length < 5 &&
-              Array.from({ length: 5 - displayLogs.length }).map((_, i) => (
-                <div key={`empty-${i}`}>&nbsp;</div>
-              ))
-            }
-          </>
-        )}
-      </div>
+      {!isEmbedded && (
+        <div className="terminal">
+          {displayLogs.length === 0 ? (
+            // Show 5 lines when idle
+            <>
+              <div>&gt; Autonomous Operations Control</div>
+              <div>&nbsp;</div>
+              <div>&nbsp;</div>
+              <div>&nbsp;</div>
+              <div>&nbsp;</div></>
+          ) : (
+            // Show logs and fill remaining lines
+            <>
+              {displayLogs.map((log, index) => (
+                <div key={`${log.id}-${index}`}>&gt; {formatLogMessage(log)}</div>
+              ))}
+              {displayLogs.length < 5 &&
+                Array.from({ length: 5 - displayLogs.length }).map((_, i) => (
+                  <div key={`empty-${i}`}>&nbsp;</div>
+                ))
+              }
+            </>
+          )}
+        </div>
+      )}
 
-      <Navbar />
+      {!isEmbedded && <Navbar />}
 
       <div className="settings-content">
-        <div className="settings-header">
-          <h2>Connections</h2>
-          <p>Manage your service connections</p>
-        </div>
+        {!isEmbedded && (
+          <div className="settings-header">
+            <h2>Connections</h2>
+            <p>Manage your service connections</p>
+          </div>
+        )}
 
         {loading && (
           <div className="loading-state">

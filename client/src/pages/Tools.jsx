@@ -15,6 +15,9 @@ function Tools() {
   const { token } = useAuth();
   const { terminalLogs } = useTerminal();
 
+  // Check if page is embedded in modal
+  const isEmbedded = new URLSearchParams(window.location.search).get('embedded') === 'true';
+
   useEffect(() => {
     fetchMcpServers();
   }, []);
@@ -95,36 +98,40 @@ function Tools() {
 
   return (
     <div className="tools-container">
-      <div className="terminal">
-        {displayLogs.length === 0 ? (
-          <>
-            <div>&gt; MCP Server Catalog</div>
-            <div>&nbsp;</div>
-            <div>&nbsp;</div>
-            <div>&nbsp;</div>
-            <div>&nbsp;</div></>
-        ) : (
-          <>
-            {displayLogs.map((log, index) => (
-              <div key={`${log.id}-${index}`}>&gt; {formatLogMessage(log)}</div>
-            ))}
-            {displayLogs.length < 5 &&
-              Array.from({ length: 5 - displayLogs.length }).map((_, i) => (
-                <div key={`empty-${i}`}>&nbsp;</div>
-              ))
-            }
-          </>
-        )}
-      </div>
-
-      <Navbar />
-      <div className="tools-content">
-        <div className="tools-header">
-          <h1>Tools</h1>
-          <p className="tools-subtitle">
-            MCP (Model Context Protocol) servers extend agents with external capabilities
-          </p>
+      {!isEmbedded && (
+        <div className="terminal">
+          {displayLogs.length === 0 ? (
+            <>
+              <div>&gt; MCP Server Catalog</div>
+              <div>&nbsp;</div>
+              <div>&nbsp;</div>
+              <div>&nbsp;</div>
+              <div>&nbsp;</div></>
+          ) : (
+            <>
+              {displayLogs.map((log, index) => (
+                <div key={`${log.id}-${index}`}>&gt; {formatLogMessage(log)}</div>
+              ))}
+              {displayLogs.length < 5 &&
+                Array.from({ length: 5 - displayLogs.length }).map((_, i) => (
+                  <div key={`empty-${i}`}>&nbsp;</div>
+                ))
+              }
+            </>
+          )}
         </div>
+      )}
+
+      {!isEmbedded && <Navbar />}
+      <div className="tools-content">
+        {!isEmbedded && (
+          <div className="tools-header">
+            <h1>Tools</h1>
+            <p className="tools-subtitle">
+              MCP (Model Context Protocol) servers extend agents with external capabilities
+            </p>
+          </div>
+        )}
 
         {summary && (
           <div className="tools-summary">

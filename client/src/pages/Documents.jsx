@@ -21,6 +21,9 @@ function Documents() {
   const { token } = useAuth();
   const { terminalLogs } = useTerminal();
 
+  // Check if page is embedded in modal
+  const isEmbedded = new URLSearchParams(window.location.search).get('embedded') === 'true';
+
   useEffect(() => {
     fetchDocuments();
     fetchReportTypes();
@@ -199,29 +202,31 @@ function Documents() {
 
   return (
     <div className="documents-container">
-      <div className="terminal">
-        {displayLogs.length === 0 ? (
-          <>
-            <div>&gt; Document Library</div>
-            <div>&nbsp;</div>
-            <div>&nbsp;</div>
-            <div>&nbsp;</div>
-            <div>&nbsp;</div></>
-        ) : (
-          <>
-            {displayLogs.map((log, index) => (
-              <div key={`${log.id}-${index}`}>&gt; {formatLogMessage(log)}</div>
-            ))}
-            {displayLogs.length < 5 &&
-              Array.from({ length: 5 - displayLogs.length }).map((_, i) => (
-                <div key={`empty-${i}`}>&nbsp;</div>
-              ))
-            }
-          </>
-        )}
-      </div>
+      {!isEmbedded && (
+        <div className="terminal">
+          {displayLogs.length === 0 ? (
+            <>
+              <div>&gt; Document Library</div>
+              <div>&nbsp;</div>
+              <div>&nbsp;</div>
+              <div>&nbsp;</div>
+              <div>&nbsp;</div></>
+          ) : (
+            <>
+              {displayLogs.map((log, index) => (
+                <div key={`${log.id}-${index}`}>&gt; {formatLogMessage(log)}</div>
+              ))}
+              {displayLogs.length < 5 &&
+                Array.from({ length: 5 - displayLogs.length }).map((_, i) => (
+                  <div key={`empty-${i}`}>&nbsp;</div>
+                ))
+              }
+            </>
+          )}
+        </div>
+      )}
 
-      <Navbar />
+      {!isEmbedded && <Navbar />}
 
       <div className="documents-content">
         {loading && (
@@ -238,12 +243,14 @@ function Documents() {
 
         {!loading && documents && (
           <>
-            <div className="documents-header">
-              <h1>Documents & Reports</h1>
-              <p className="documents-subtitle">
-                Strategic documents and auto-generated business reports
-              </p>
-            </div>
+            {!isEmbedded && (
+              <div className="documents-header">
+                <h1>Documents & Reports</h1>
+                <p className="documents-subtitle">
+                  Strategic documents and auto-generated business reports
+                </p>
+              </div>
+            )}
 
             {/* High-Level Documents */}
             <section className="documents-section">

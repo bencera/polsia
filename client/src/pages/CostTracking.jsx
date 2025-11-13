@@ -14,6 +14,9 @@ function CostTracking() {
   const { terminalLogs } = useTerminal();
   const navigate = useNavigate();
 
+  // Check if page is embedded in modal
+  const isEmbedded = new URLSearchParams(window.location.search).get('embedded') === 'true';
+
   useEffect(() => {
     fetchCostData();
   }, []);
@@ -91,43 +94,47 @@ function CostTracking() {
 
   return (
     <>
-      <div className="terminal">
-        {displayLogs.length === 0 ? (
-          <>
-            <div>&gt; Cost Analytics Dashboard</div>
-            <div>&nbsp;</div>
-            <div>&nbsp;</div>
-            <div>&nbsp;</div>
-            <div>&nbsp;</div></>
-        ) : (
-          <>
-            {displayLogs.map((log, index) => (
-              <div key={`${log.id}-${index}`}>&gt; {formatLogMessage(log)}</div>
-            ))}
-            {displayLogs.length < 5 &&
-              Array.from({ length: 5 - displayLogs.length }).map((_, i) => (
-                <div key={`empty-${i}`}>&nbsp;</div>
-              ))
-            }
-          </>
-        )}
-      </div>
+      {!isEmbedded && (
+        <div className="terminal">
+          {displayLogs.length === 0 ? (
+            <>
+              <div>&gt; Cost Analytics Dashboard</div>
+              <div>&nbsp;</div>
+              <div>&nbsp;</div>
+              <div>&nbsp;</div>
+              <div>&nbsp;</div></>
+          ) : (
+            <>
+              {displayLogs.map((log, index) => (
+                <div key={`${log.id}-${index}`}>&gt; {formatLogMessage(log)}</div>
+              ))}
+              {displayLogs.length < 5 &&
+                Array.from({ length: 5 - displayLogs.length }).map((_, i) => (
+                  <div key={`empty-${i}`}>&nbsp;</div>
+                ))
+              }
+            </>
+          )}
+        </div>
+      )}
 
-      <Navbar />
+      {!isEmbedded && <Navbar />}
 
       <div className="cost-tracking-container">
         <div className="cost-tracking-content">
-          <div className="cost-tracking-header">
-            <h2>Cost Tracking</h2>
-            <div className="header-buttons">
-              <button onClick={() => navigate('/module-costs')} className="view-modules-button">
-                View by Module
-              </button>
-              <button onClick={fetchCostData} className="refresh-button" disabled={loading}>
-                {loading ? 'Refreshing...' : 'Refresh'}
-              </button>
+          {!isEmbedded && (
+            <div className="cost-tracking-header">
+              <h2>Cost Tracking</h2>
+              <div className="header-buttons">
+                <button onClick={() => navigate('/module-costs')} className="view-modules-button">
+                  View by Module
+                </button>
+                <button onClick={fetchCostData} className="refresh-button" disabled={loading}>
+                  {loading ? 'Refreshing...' : 'Refresh'}
+                </button>
+              </div>
             </div>
-          </div>
+          )}
 
           {error && <div className="error-message">{error}</div>}
 

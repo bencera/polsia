@@ -13,6 +13,9 @@ function Tasks() {
   const { token } = useAuth();
   const { terminalLogs } = useTerminal();
 
+  // Check if page is embedded in modal
+  const isEmbedded = new URLSearchParams(window.location.search).get('embedded') === 'true';
+
   useEffect(() => {
     fetchTasks();
   }, [statusFilter]);
@@ -175,36 +178,39 @@ function Tasks() {
 
   return (
     <>
-      <div className="terminal">
-        {displayLogs.length === 0 ? (
-          <>
-            <div>&gt; Task Management System</div>
-            <div>&nbsp;</div>
-            <div>&nbsp;</div>
-            <div>&nbsp;</div>
-            <div>&nbsp;</div></>
-        ) : (
-          <>
-            {displayLogs.map((log, index) => (
-              <div key={`${log.id}-${index}`}>&gt; {formatLogMessage(log)}</div>
-            ))}
-            {displayLogs.length < 5 &&
-              Array.from({ length: 5 - displayLogs.length }).map((_, i) => (
-                <div key={`empty-${i}`}>&nbsp;</div>
-              ))
-            }
-          </>
-        )}
-      </div>
+      {!isEmbedded && (
+        <div className="terminal">
+          {displayLogs.length === 0 ? (
+            <>
+              <div>&gt; Task Management System</div>
+              <div>&nbsp;</div>
+              <div>&nbsp;</div>
+              <div>&nbsp;</div>
+              <div>&nbsp;</div></>
+          ) : (
+            <>
+              {displayLogs.map((log, index) => (
+                <div key={`${log.id}-${index}`}>&gt; {formatLogMessage(log)}</div>
+              ))}
+              {displayLogs.length < 5 &&
+                Array.from({ length: 5 - displayLogs.length }).map((_, i) => (
+                  <div key={`empty-${i}`}>&nbsp;</div>
+                ))
+              }
+            </>
+          )}
+        </div>
+      )}
 
-      <Navbar />
+      {!isEmbedded && <Navbar />}
 
       <div className="tasks-container">
 
       <div className="tasks-content">
-        <div className="tasks-header">
-          <h1>Tasks</h1>
-          <div className="tasks-filter">
+        {!isEmbedded && (
+          <div className="tasks-header">
+            <h1>Tasks</h1>
+            <div className="tasks-filter">
             <label htmlFor="status-filter">Filter by Status:</label>
             <select
               id="status-filter"
@@ -223,6 +229,7 @@ function Tasks() {
             </select>
           </div>
         </div>
+        )}
 
         {loading && (
           <div className="status-message">
