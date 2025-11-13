@@ -46,7 +46,5 @@ body.dark-mode iframe {
   filter: invert(1) hue-rotate(180deg);
 }
 
-/* Keep navbar background black in dark mode */
-body.dark-mode .navbar {
-  background-color: #000;
-}
+/* Navbar background should be black in dark mode - no double inversion needed */
+/* The navbar will naturally invert with the body filter */

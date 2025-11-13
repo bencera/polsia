@@ -465,6 +465,23 @@ function Dashboard({ isPublic = false, publicUser = null }) {
               <span className="dashboard-stat">Auto-refill: <span className="dashboard-value">OFF</span></span>
               <button className="dashboard-btn" onClick={() => setIsAutoFundModalOpen(true)}>Enable</button>
             </div>
+            <div className="dashboard-section" style={{marginTop: '10px'}}>
+              <span className="dashboard-stat">Model:</span>
+              <select
+                className="model-selector"
+                style={{
+                  padding: '4px 8px',
+                  border: '1px solid #1a1a1a',
+                  borderRadius: '2px',
+                  fontFamily: 'Arial, Helvetica, sans-serif',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  backgroundColor: '#fff'
+                }}
+              >
+                <option value="claude-sonnet-4-5-20250929">claude-sonnet-4-5-20250929</option>
+              </select>
+            </div>
             <div className="dashboard-stat" style={{marginTop: '15px'}}>
               Contributors: <span className="dashboard-value">{topFunders.length}</span>
             </div>
@@ -586,7 +603,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
             <h2 className="dashboard-title">Engineering Projects</h2>
             <div className="dashboard-project">
               <div className="dashboard-project-title">
-                <strong>Fix authentication bug</strong> ($12)
+                <strong>Fix authentication bug</strong> (1,200 ops)
               </div>
               <div className="dashboard-project-desc">
                 Users unable to login with GitHub OAuth. Investigate token refresh issue.
@@ -594,7 +611,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
             </div>
             <div className="dashboard-project">
               <div className="dashboard-project-title">
-                <strong>Optimize database queries</strong> ($25)
+                <strong>Optimize database queries</strong> (2,500 ops)
               </div>
               <div className="dashboard-project-desc">
                 Slow loading times on dashboard. Add indexes to agents and executions tables.
@@ -602,7 +619,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
             </div>
             <div className="dashboard-project">
               <div className="dashboard-project-title">
-                <strong>Implement caching layer</strong> ($45)
+                <strong>Implement caching layer</strong> (4,500 ops)
               </div>
               <div className="dashboard-project-desc">
                 Add Redis caching for API responses to reduce database load by 60%.
@@ -613,7 +630,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
             <h2 className="dashboard-title">Marketing Projects</h2>
             <div className="dashboard-project">
               <div className="dashboard-project-title">
-                <strong>Launch product announcement</strong> ($18)
+                <strong>Launch product announcement</strong> (1,800 ops)
               </div>
               <div className="dashboard-project-desc">
                 Create and schedule social media posts for new agent marketplace launch.
@@ -621,7 +638,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
             </div>
             <div className="dashboard-project">
               <div className="dashboard-project-title">
-                <strong>Write blog post</strong> ($22)
+                <strong>Write blog post</strong> (2,200 ops)
               </div>
               <div className="dashboard-project-desc">
                 Technical deep-dive on autonomous agents. Target: 2,000 words with code examples.
@@ -629,7 +646,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
             </div>
             <div className="dashboard-project">
               <div className="dashboard-project-title">
-                <strong>Generate Instagram content</strong> ($15)
+                <strong>Generate Instagram content</strong> (1,500 ops)
               </div>
               <div className="dashboard-project-desc">
                 Create 10 engaging posts with AI-generated images for next week's schedule.
