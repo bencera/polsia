@@ -479,7 +479,18 @@ function Dashboard({ isPublic = false, publicUser = null }) {
                   ))}
                 </div>
                 <div style={{marginTop: '8px'}}>
-                  <button className="dashboard-btn" onClick={fetchAllFunders}>Show All</button>
+                  <a
+                    onClick={fetchAllFunders}
+                    style={{
+                      color: '#000',
+                      textDecoration: 'underline',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontFamily: 'Times New Roman, Times, serif'
+                    }}
+                  >
+                    View all →
+                  </a>
                 </div>
               </>
             )}
@@ -515,7 +526,18 @@ function Dashboard({ isPublic = false, publicUser = null }) {
                   ))}
                 </div>
                 <div style={{marginTop: '10px'}}>
-                  <button className="dashboard-btn" onClick={() => fetchAllActivity(1)}>Show All</button>
+                  <a
+                    onClick={() => fetchAllActivity(1)}
+                    style={{
+                      color: '#000',
+                      textDecoration: 'underline',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontFamily: 'Times New Roman, Times, serif'
+                    }}
+                  >
+                    View all →
+                  </a>
                 </div>
               </>
             )}
@@ -690,14 +712,20 @@ function Dashboard({ isPublic = false, publicUser = null }) {
                   ))}
                 </div>
 
-                {/* Show All Button */}
+                {/* View All Link */}
                 <div style={{marginTop: '10px'}}>
-                  <button
-                    className="dashboard-btn"
+                  <a
                     onClick={() => setIsAllDocumentsModalOpen(true)}
+                    style={{
+                      color: '#000',
+                      textDecoration: 'underline',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontFamily: 'Times New Roman, Times, serif'
+                    }}
                   >
-                    Show All
-                  </button>
+                    View all →
+                  </a>
                 </div>
               </>
             ) : (
@@ -725,12 +753,18 @@ function Dashboard({ isPublic = false, publicUser = null }) {
                         </div>
                       ))}
                     <div style={{marginTop: '10px'}}>
-                      <button
-                        className="dashboard-btn"
+                      <a
                         onClick={() => setIsConnectionsModalOpen(true)}
+                        style={{
+                          color: '#000',
+                          textDecoration: 'underline',
+                          cursor: 'pointer',
+                          fontSize: '14px',
+                          fontFamily: 'Times New Roman, Times, serif'
+                        }}
                       >
-                        Show All
-                      </button>
+                        View all →
+                      </a>
                     </div>
                   </>
                 )}
