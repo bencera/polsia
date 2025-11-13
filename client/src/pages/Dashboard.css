@@ -469,7 +469,16 @@
     min-width: 100%;
   }
 
+  .dashboard-middle {
+    flex: 1;
+    min-width: 100%;
+    padding-left: 0;
+    border-left: none;
+  }
+
   .dashboard-right {
+    flex: 1;
+    min-width: 100%;
     border-left: none;
     border-top: 1px solid #000;
     padding-left: 0;

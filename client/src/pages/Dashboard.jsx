@@ -438,16 +438,16 @@ function Dashboard({ isPublic = false, publicUser = null }) {
               Monthly Active Users: <span className="dashboard-value">1,579</span>
             </div>
             <div className="dashboard-stat">
-              All-time Revenue: <span className="dashboard-value">$ 487,230</span>
+              All-time Revenue: <span className="dashboard-value">$487,230</span>
             </div>
             <div className="dashboard-stat">
-              Monthly Revenue: <span className="dashboard-value">$ 12,450</span>
+              Monthly Revenue: <span className="dashboard-value">$12,450</span>
             </div>
             <div className="dashboard-stat">
               Monthly Churn: <span className="dashboard-value">2.3%</span>
             </div>
             <div className="dashboard-stat">
-              Cost per User: <span className="dashboard-value">$ 0.52</span>
+              Cost per User: <span className="dashboard-value">$0.52</span>
             </div>
             <div style={{marginTop: '10px'}}>
               <button className="dashboard-btn">Refresh</button>
@@ -456,25 +456,25 @@ function Dashboard({ isPublic = false, publicUser = null }) {
             {/* 2. Autonomous Resources */}
             <h2 className="dashboard-title">Autonomous Resources</h2>
             <div className="dashboard-section">
-              <span className="dashboard-stat">Available Funds: <span className="dashboard-value">
-                $ {balance ? parseFloat(balance.current_balance_usd).toFixed(2) : '0.00'}
+              <span className="dashboard-stat">Operations: <span className="dashboard-value">
+                {balance ? Math.round(parseFloat(balance.current_balance_usd) * 100) : '0'}
               </span></span>
-              <button className="dashboard-btn" onClick={() => handleDonateClick()}>Add Funds</button>
+              <button className="dashboard-btn" onClick={() => handleDonateClick()}>Add Ops</button>
             </div>
             <div className="dashboard-section" style={{marginTop: '10px'}}>
-              <span className="dashboard-stat">Auto-fund: <span className="dashboard-value">OFF</span></span>
+              <span className="dashboard-stat">Auto-refill: <span className="dashboard-value">OFF</span></span>
               <button className="dashboard-btn" onClick={() => setIsAutoFundModalOpen(true)}>Enable</button>
             </div>
             <div className="dashboard-stat" style={{marginTop: '15px'}}>
-              Funders: <span className="dashboard-value">{topFunders.length}</span>
+              Contributors: <span className="dashboard-value">{topFunders.length}</span>
             </div>
             {topFunders.length > 0 && (
               <>
                 <div className="dashboard-stat" style={{marginTop: '5px'}}>
-                  Top Funders: {topFunders.slice(0, 5).map((funder, index) => (
+                  Top Contributors: {topFunders.slice(0, 5).map((funder, index) => (
                     <span key={index}>
                       {index > 0 && ', '}
-                      {funder.donor_name} (${parseFloat(funder.total_donated).toFixed(0)})
+                      {funder.donor_name} ({Math.round(parseFloat(funder.total_donated) * 100)} ops)
                     </span>
                   ))}
                 </div>
@@ -961,7 +961,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h2 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif' }}>All Funders</h2>
+              <h2 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif' }}>All Contributors</h2>
               <button
                 onClick={() => setIsFundersModalOpen(false)}
                 className="dashboard-btn"
@@ -971,7 +971,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
             </div>
             <div style={{ fontFamily: 'Times New Roman, Times, serif', fontSize: '14px' }}>
               {allFunders.length === 0 ? (
-                <p style={{ color: '#666', fontStyle: 'italic' }}>No funders yet.</p>
+                <p style={{ color: '#666', fontStyle: 'italic' }}>No contributors yet.</p>
               ) : (
                 <div>
                   {allFunders.map((funder, index) => (
@@ -994,13 +994,13 @@ function Dashboard({ isPublic = false, publicUser = null }) {
                         )}
                       </div>
                       <div style={{ fontWeight: 'bold', fontSize: '16px', marginLeft: '20px', whiteSpace: 'nowrap' }}>
-                        ${parseFloat(funder.total_donated).toFixed(2)}
+                        {Math.round(parseFloat(funder.total_donated) * 100)} ops
                       </div>
                     </div>
                   ))}
                   <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '2px solid #000', display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
                     <span>Total:</span>
-                    <span>${allFunders.reduce((sum, funder) => sum + parseFloat(funder.total_donated), 0).toFixed(2)}</span>
+                    <span>{Math.round(allFunders.reduce((sum, funder) => sum + parseFloat(funder.total_donated), 0) * 100)} ops</span>
                   </div>
                 </div>
               )}
