@@ -54,11 +54,20 @@ function Dashboard({ isPublic = false, publicUser = null }) {
   const [allFunders, setAllFunders] = useState([]);
   const [isAutoFundModalOpen, setIsAutoFundModalOpen] = useState(false);
   const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
+  const [isConnectionsModalOpen, setIsConnectionsModalOpen] = useState(false);
   const [allActivity, setAllActivity] = useState([]);
   const [activityPage, setActivityPage] = useState(1);
   const [hasMoreActivity, setHasMoreActivity] = useState(true);
   const [loadingMoreActivity, setLoadingMoreActivity] = useState(false);
   const [isAllDocumentsModalOpen, setIsAllDocumentsModalOpen] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isTasksModalOpen, setIsTasksModalOpen] = useState(false);
+  const [isAgentsModalOpen, setIsAgentsModalOpen] = useState(false);
+  const [isToolsModalOpen, setIsToolsModalOpen] = useState(false);
+  const [isDocumentsModalOpen, setIsDocumentsModalOpen] = useState(false);
+  const [isAnalyticsModalOpen, setIsAnalyticsModalOpen] = useState(false);
+  const [isCostTrackingModalOpen, setIsCostTrackingModalOpen] = useState(false);
+  const [isAdvancedSettingsModalOpen, setIsAdvancedSettingsModalOpen] = useState(false);
 
   // Use publicUser if in public mode, otherwise use authenticated user
   const { token, user: authUser } = useAuth();
@@ -246,6 +255,69 @@ function Dashboard({ isPublic = false, publicUser = null }) {
     }
   };
 
+  // Connection functions
+  const connectGitHub = () => {
+    const isProduction = window.location.hostname !== 'localhost';
+    const backendUrl = isProduction ? window.location.origin : (import.meta.env.VITE_API_URL || 'http://localhost:3000');
+    window.location.href = `${backendUrl}/api/auth/github?token=${token}`;
+  };
+
+  const connectGmail = () => {
+    const isProduction = window.location.hostname !== 'localhost';
+    const backendUrl = isProduction ? window.location.origin : (import.meta.env.VITE_API_URL || 'http://localhost:3000');
+    window.location.href = `${backendUrl}/api/auth/gmail?token=${token}`;
+  };
+
+  const connectSlack = () => {
+    const isProduction = window.location.hostname !== 'localhost';
+    const backendUrl = isProduction ? window.location.origin : (import.meta.env.VITE_API_URL || 'http://localhost:3000');
+    window.location.href = `${backendUrl}/api/auth/slack?token=${token}`;
+  };
+
+  const connectInstagram = () => {
+    const isProduction = window.location.hostname !== 'localhost';
+    const backendUrl = isProduction ? window.location.origin : (import.meta.env.VITE_API_URL || 'http://localhost:3000');
+    window.location.href = `${backendUrl}/api/auth/instagram?token=${token}`;
+  };
+
+  const connectMetaAds = () => {
+    const isProduction = window.location.hostname !== 'localhost';
+    const backendUrl = isProduction ? window.location.origin : (import.meta.env.VITE_API_URL || 'http://localhost:3000');
+    window.location.href = `${backendUrl}/api/auth/meta-ads?token=${token}`;
+  };
+
+  const connectSentry = () => {
+    const isProduction = window.location.hostname !== 'localhost';
+    const backendUrl = isProduction ? window.location.origin : (import.meta.env.VITE_API_URL || 'http://localhost:3000');
+    window.location.href = `${backendUrl}/api/auth/sentry?token=${token}`;
+  };
+
+  const disconnectService = async (serviceName, connectionId) => {
+    if (!confirm(`Are you sure you want to disconnect your ${serviceName.charAt(0).toUpperCase() + serviceName.slice(1)} account?`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/auth/${serviceName}/${connectionId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setConnections(connections.filter(conn => conn.id !== connectionId));
+        alert(`${serviceName.charAt(0).toUpperCase() + serviceName.slice(1)} account disconnected successfully!`);
+      } else {
+        alert(data.error || `Failed to disconnect ${serviceName}`);
+      }
+    } catch (err) {
+      alert(`Failed to disconnect ${serviceName}. Please try again.`);
+    }
+  };
+
   const handleDonateClick = (project = null) => {
     setSelectedProject(project);
     setIsDonationModalOpen(true);
@@ -349,7 +421,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
           </div>
         </nav>
       ) : (
-        <Navbar />
+        <Navbar isPublic={false} />
       )}
 
       <div className="dashboard-content">
@@ -578,7 +650,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
                       <div className="activity-description" style={{fontSize: '12px'}}>Strategic vision document</div>
                     </div>
                   ) : (
-                    <div className="activity-item" style={{cursor: 'pointer', padding: '8px 0'}} onClick={() => window.location.href = '/documents'}>
+                    <div className="activity-item" style={{cursor: 'pointer', padding: '8px 0'}} onClick={() => setIsDocumentsModalOpen(true)}>
                       <div className="activity-title" style={{fontSize: '13px'}}>Vision</div>
                       <div className="activity-description" style={{color: '#999', fontSize: '12px'}}>Not set - click to define</div>
                     </div>
@@ -595,7 +667,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
                       <div className="activity-description" style={{fontSize: '12px'}}>Company goals and objectives</div>
                     </div>
                   ) : (
-                    <div className="activity-item" style={{cursor: 'pointer', padding: '8px 0'}} onClick={() => window.location.href = '/documents'}>
+                    <div className="activity-item" style={{cursor: 'pointer', padding: '8px 0'}} onClick={() => setIsDocumentsModalOpen(true)}>
                       <div className="activity-title" style={{fontSize: '13px'}}>Goals</div>
                       <div className="activity-description" style={{color: '#999', fontSize: '12px'}}>Not set - click to define</div>
                     </div>
@@ -638,32 +710,24 @@ function Dashboard({ isPublic = false, publicUser = null }) {
             {!isPublic && (
               <>
                 <h2 className="dashboard-title">Connections</h2>
-                {connections.length === 0 ? (
+                {connections.filter(c => c.status === 'connected').length === 0 ? (
                   <div className="dashboard-stat" style={{fontStyle: 'italic', color: '#666'}}>
                     No connections yet. Connect your accounts in Settings.
                   </div>
                 ) : (
                   <>
-                    {connections.map((connection) => (
-                      <div key={connection.id} className="dashboard-stat" style={{margin: '2px 0'}}>
-                        {connection.service_name.charAt(0).toUpperCase() + connection.service_name.slice(1)}:
-                        {connection.status === 'connected' ? (
+                    {connections
+                      .filter(connection => connection.status === 'connected')
+                      .map((connection) => (
+                        <div key={connection.id} className="dashboard-stat" style={{margin: '2px 0'}}>
+                          {connection.service_name.charAt(0).toUpperCase() + connection.service_name.slice(1)}:
                           <span className="dashboard-value"> Connected</span>
-                        ) : (
-                          <button
-                            className="dashboard-btn"
-                            style={{marginLeft: '5px'}}
-                            onClick={() => window.location.href = '/settings'}
-                          >
-                            Connect
-                          </button>
-                        )}
-                      </div>
-                    ))}
+                        </div>
+                      ))}
                     <div style={{marginTop: '10px'}}>
                       <button
                         className="dashboard-btn"
-                        onClick={() => window.location.href = '/connections'}
+                        onClick={() => setIsConnectionsModalOpen(true)}
                       >
                         Show All
                       </button>
@@ -792,7 +856,10 @@ function Dashboard({ isPublic = false, publicUser = null }) {
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-              <h1 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif', fontSize: '2.5em' }}>Polsia</h1>
+              <div>
+                <h1 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif', fontSize: '2.5em' }}>Polsia</h1>
+                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.431</p>
+              </div>
               <button
                 onClick={() => setIsPolsiaModalOpen(false)}
                 className="dashboard-btn"
@@ -816,22 +883,46 @@ function Dashboard({ isPublic = false, publicUser = null }) {
               <p style={{ marginBottom: '20px', fontStyle: 'italic', color: '#666' }}>
                 Warning: System operates independently. Human oversight recommended.
               </p>
-              <div style={{ marginTop: '30px', display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
-                <button
-                  onClick={() => window.location.href = '/'}
-                  className="dashboard-btn"
-                  style={{ padding: '8px 16px' }}
-                >
-                  Learn More
-                </button>
-                <button
-                  onClick={() => window.location.href = 'mailto:system@polsia.com'}
-                  className="dashboard-btn"
-                  style={{ padding: '8px 16px' }}
-                >
-                  Contact Us
-                </button>
-              </div>
+
+              {/* Only show waitlist form on public dashboard */}
+              {isPublic && (
+                <form onSubmit={(e) => {
+                  e.preventDefault();
+                  const email = e.target.email.value;
+                  if (email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                    window.location.href = `https://form.typeform.com/to/W4lyrtBc#email=${encodeURIComponent(email)}&variant=autonomous`;
+                  }
+                }} style={{ marginTop: '30px', marginBottom: '30px' }}>
+                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                    <input
+                      type="email"
+                      name="email"
+                      placeholder="your@email.com"
+                      required
+                      style={{
+                        flex: '1',
+                        minWidth: '200px',
+                        padding: '8px 12px',
+                        border: '1px solid #000',
+                        borderRadius: '2px',
+                        fontFamily: 'Arial, Helvetica, sans-serif',
+                        fontSize: '14px'
+                      }}
+                    />
+                    <button
+                      type="submit"
+                      className="dashboard-btn"
+                      style={{ padding: '8px 16px', minWidth: '120px' }}
+                    >
+                      Join Waitlist
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              <p style={{ marginTop: '20px', fontSize: '14px', color: '#666' }}>
+                Contact: <a href="mailto:system@polsia.com" style={{ color: '#000', textDecoration: 'underline' }}>system@polsia.com</a>
+              </p>
             </div>
           </div>
         </div>
@@ -969,7 +1060,10 @@ function Dashboard({ isPublic = false, publicUser = null }) {
               </p>
               <div style={{ marginTop: '30px', textAlign: 'center' }}>
                 <button
-                  onClick={() => window.location.href = '/settings'}
+                  onClick={() => {
+                    setIsAutoFundModalOpen(false);
+                    setIsSettingsModalOpen(true);
+                  }}
                   className="dashboard-btn"
                   style={{ padding: '10px 20px', fontSize: '14px' }}
                 >
@@ -1215,6 +1309,600 @@ function Dashboard({ isPublic = false, publicUser = null }) {
                 </>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Connections Modal */}
+      {isConnectionsModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }}
+          onClick={() => setIsConnectionsModalOpen(false)}
+        >
+          <div
+            style={{
+              backgroundColor: '#fff',
+              borderRadius: '4px',
+              maxWidth: '1200px',
+              width: '100%',
+              maxHeight: '90vh',
+              height: '90vh',
+              border: '1px solid #000',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{
+              position: 'sticky',
+              top: 0,
+              backgroundColor: '#fff',
+              zIndex: 1,
+              padding: '20px 30px',
+              borderBottom: '1px solid #ddd',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <h2 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif' }}>Connections</h2>
+              <button
+                onClick={() => setIsConnectionsModalOpen(false)}
+                className="dashboard-btn"
+              >
+                Close
+              </button>
+            </div>
+            <iframe
+              src="/connections"
+              style={{
+                flex: 1,
+                border: 'none',
+                width: '100%',
+                height: '100%'
+              }}
+              title="Connections"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Settings Modal */}
+      {isSettingsModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }}
+          onClick={() => setIsSettingsModalOpen(false)}
+        >
+          <div
+            style={{
+              backgroundColor: '#fff',
+              borderRadius: '4px',
+              maxWidth: '1200px',
+              width: '100%',
+              maxHeight: '90vh',
+              height: '90vh',
+              border: '1px solid #000',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{
+              position: 'sticky',
+              top: 0,
+              backgroundColor: '#fff',
+              zIndex: 1,
+              padding: '20px 30px',
+              borderBottom: '1px solid #ddd',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <h2 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif' }}>Settings</h2>
+              <button
+                onClick={() => setIsSettingsModalOpen(false)}
+                className="dashboard-btn"
+              >
+                Close
+              </button>
+            </div>
+            <iframe
+              src="/settings"
+              style={{
+                flex: 1,
+                border: 'none',
+                width: '100%',
+                height: '100%'
+              }}
+              title="Settings"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Tasks Modal */}
+      {isTasksModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }}
+          onClick={() => setIsTasksModalOpen(false)}
+        >
+          <div
+            style={{
+              backgroundColor: '#fff',
+              borderRadius: '4px',
+              maxWidth: '1200px',
+              width: '100%',
+              maxHeight: '90vh',
+              height: '90vh',
+              border: '1px solid #000',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{
+              position: 'sticky',
+              top: 0,
+              backgroundColor: '#fff',
+              zIndex: 1,
+              padding: '20px 30px',
+              borderBottom: '1px solid #ddd',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <h2 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif' }}>Tasks</h2>
+              <button
+                onClick={() => setIsTasksModalOpen(false)}
+                className="dashboard-btn"
+              >
+                Close
+              </button>
+            </div>
+            <iframe
+              src="/tasks"
+              style={{
+                flex: 1,
+                border: 'none',
+                width: '100%',
+                height: '100%'
+              }}
+              title="Tasks"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Agents Modal */}
+      {isAgentsModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }}
+          onClick={() => setIsAgentsModalOpen(false)}
+        >
+          <div
+            style={{
+              backgroundColor: '#fff',
+              borderRadius: '4px',
+              maxWidth: '1200px',
+              width: '100%',
+              maxHeight: '90vh',
+              height: '90vh',
+              border: '1px solid #000',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{
+              position: 'sticky',
+              top: 0,
+              backgroundColor: '#fff',
+              zIndex: 1,
+              padding: '20px 30px',
+              borderBottom: '1px solid #ddd',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <h2 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif' }}>Agents</h2>
+              <button
+                onClick={() => setIsAgentsModalOpen(false)}
+                className="dashboard-btn"
+              >
+                Close
+              </button>
+            </div>
+            <iframe
+              src="/agents"
+              style={{
+                flex: 1,
+                border: 'none',
+                width: '100%',
+                height: '100%'
+              }}
+              title="Agents"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Tools Modal */}
+      {isToolsModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }}
+          onClick={() => setIsToolsModalOpen(false)}
+        >
+          <div
+            style={{
+              backgroundColor: '#fff',
+              borderRadius: '4px',
+              maxWidth: '1200px',
+              width: '100%',
+              maxHeight: '90vh',
+              height: '90vh',
+              border: '1px solid #000',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{
+              position: 'sticky',
+              top: 0,
+              backgroundColor: '#fff',
+              zIndex: 1,
+              padding: '20px 30px',
+              borderBottom: '1px solid #ddd',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <h2 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif' }}>Tools</h2>
+              <button
+                onClick={() => setIsToolsModalOpen(false)}
+                className="dashboard-btn"
+              >
+                Close
+              </button>
+            </div>
+            <iframe
+              src="/tools"
+              style={{
+                flex: 1,
+                border: 'none',
+                width: '100%',
+                height: '100%'
+              }}
+              title="Tools"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Documents Modal */}
+      {isDocumentsModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }}
+          onClick={() => setIsDocumentsModalOpen(false)}
+        >
+          <div
+            style={{
+              backgroundColor: '#fff',
+              borderRadius: '4px',
+              maxWidth: '1200px',
+              width: '100%',
+              maxHeight: '90vh',
+              height: '90vh',
+              border: '1px solid #000',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{
+              position: 'sticky',
+              top: 0,
+              backgroundColor: '#fff',
+              zIndex: 1,
+              padding: '20px 30px',
+              borderBottom: '1px solid #ddd',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <h2 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif' }}>Documents</h2>
+              <button
+                onClick={() => setIsDocumentsModalOpen(false)}
+                className="dashboard-btn"
+              >
+                Close
+              </button>
+            </div>
+            <iframe
+              src="/documents"
+              style={{
+                flex: 1,
+                border: 'none',
+                width: '100%',
+                height: '100%'
+              }}
+              title="Documents"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Analytics Modal */}
+      {isAnalyticsModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }}
+          onClick={() => setIsAnalyticsModalOpen(false)}
+        >
+          <div
+            style={{
+              backgroundColor: '#fff',
+              borderRadius: '4px',
+              maxWidth: '1200px',
+              width: '100%',
+              maxHeight: '90vh',
+              height: '90vh',
+              border: '1px solid #000',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{
+              position: 'sticky',
+              top: 0,
+              backgroundColor: '#fff',
+              zIndex: 1,
+              padding: '20px 30px',
+              borderBottom: '1px solid #ddd',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <h2 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif' }}>Analytics</h2>
+              <button
+                onClick={() => setIsAnalyticsModalOpen(false)}
+                className="dashboard-btn"
+              >
+                Close
+              </button>
+            </div>
+            <iframe
+              src="/analytics"
+              style={{
+                flex: 1,
+                border: 'none',
+                width: '100%',
+                height: '100%'
+              }}
+              title="Analytics"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Cost Tracking Modal */}
+      {isCostTrackingModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }}
+          onClick={() => setIsCostTrackingModalOpen(false)}
+        >
+          <div
+            style={{
+              backgroundColor: '#fff',
+              borderRadius: '4px',
+              maxWidth: '1200px',
+              width: '100%',
+              maxHeight: '90vh',
+              height: '90vh',
+              border: '1px solid #000',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{
+              position: 'sticky',
+              top: 0,
+              backgroundColor: '#fff',
+              zIndex: 1,
+              padding: '20px 30px',
+              borderBottom: '1px solid #ddd',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <h2 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif' }}>Cost Tracking</h2>
+              <button
+                onClick={() => setIsCostTrackingModalOpen(false)}
+                className="dashboard-btn"
+              >
+                Close
+              </button>
+            </div>
+            <iframe
+              src="/cost-tracking"
+              style={{
+                flex: 1,
+                border: 'none',
+                width: '100%',
+                height: '100%'
+              }}
+              title="Cost Tracking"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Advanced Settings Modal */}
+      {isAdvancedSettingsModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }}
+          onClick={() => setIsAdvancedSettingsModalOpen(false)}
+        >
+          <div
+            style={{
+              backgroundColor: '#fff',
+              borderRadius: '4px',
+              maxWidth: '1200px',
+              width: '100%',
+              maxHeight: '90vh',
+              height: '90vh',
+              border: '1px solid #000',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{
+              position: 'sticky',
+              top: 0,
+              backgroundColor: '#fff',
+              zIndex: 1,
+              padding: '20px 30px',
+              borderBottom: '1px solid #ddd',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <h2 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif' }}>Advanced Settings</h2>
+              <button
+                onClick={() => setIsAdvancedSettingsModalOpen(false)}
+                className="dashboard-btn"
+              >
+                Close
+              </button>
+            </div>
+            <iframe
+              src="/settings/advanced"
+              style={{
+                flex: 1,
+                border: 'none',
+                width: '100%',
+                height: '100%'
+              }}
+              title="Advanced Settings"
+            />
           </div>
         </div>
       )}

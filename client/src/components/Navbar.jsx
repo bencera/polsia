@@ -3,10 +3,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import './Navbar.css';
 
-function Navbar() {
+function Navbar({ isPublic = false }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [isPolsiaModalOpen, setIsPolsiaModalOpen] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [waitlistEmail, setWaitlistEmail] = useState('');
   const [waitlistButtonText, setWaitlistButtonText] = useState('Join Waitlist');
   const [waitlistButtonDisabled, setWaitlistButtonDisabled] = useState(false);
@@ -29,7 +30,7 @@ function Navbar() {
   };
 
   const handleSettings = () => {
-    navigate('/settings');
+    setIsSettingsModalOpen(true);
   };
 
   const handlePolsiaClick = (e) => {
@@ -182,41 +183,109 @@ function Navbar() {
                 Warning: System operates independently. Human oversight recommended.
               </p>
 
-              {/* Waitlist Form */}
-              <form onSubmit={handleWaitlistSubmit} style={{ marginTop: '30px', marginBottom: '30px' }}>
-                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                  <input
-                    type="email"
-                    id="modal-email-input"
-                    placeholder="your@email.com"
-                    value={waitlistEmail}
-                    onChange={(e) => setWaitlistEmail(e.target.value)}
-                    disabled={waitlistButtonDisabled}
-                    style={{
-                      flex: '1',
-                      minWidth: '200px',
-                      padding: '8px 12px',
-                      border: '1px solid #000',
-                      borderRadius: '2px',
-                      fontFamily: 'Arial, Helvetica, sans-serif',
-                      fontSize: '14px'
-                    }}
-                  />
-                  <button
-                    type="submit"
-                    className="nav-button"
-                    disabled={waitlistButtonDisabled}
-                    style={{ padding: '8px 16px', minWidth: '120px' }}
-                  >
-                    {waitlistButtonText}
-                  </button>
-                </div>
-              </form>
+              {/* Waitlist Form - Only show on public dashboards */}
+              {isPublic && (
+                <form onSubmit={handleWaitlistSubmit} style={{ marginTop: '30px', marginBottom: '30px' }}>
+                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                    <input
+                      type="email"
+                      id="modal-email-input"
+                      placeholder="your@email.com"
+                      value={waitlistEmail}
+                      onChange={(e) => setWaitlistEmail(e.target.value)}
+                      disabled={waitlistButtonDisabled}
+                      style={{
+                        flex: '1',
+                        minWidth: '200px',
+                        padding: '8px 12px',
+                        border: '1px solid #000',
+                        borderRadius: '2px',
+                        fontFamily: 'Arial, Helvetica, sans-serif',
+                        fontSize: '14px'
+                      }}
+                    />
+                    <button
+                      type="submit"
+                      className="nav-button"
+                      disabled={waitlistButtonDisabled}
+                      style={{ padding: '8px 16px', minWidth: '120px' }}
+                    >
+                      {waitlistButtonText}
+                    </button>
+                  </div>
+                </form>
+              )}
 
               <p style={{ marginTop: '20px', fontSize: '14px', color: '#666' }}>
                 Contact: <a href="mailto:system@polsia.com" style={{ color: '#000', textDecoration: 'underline' }}>system@polsia.com</a>
               </p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Settings Modal */}
+      {isSettingsModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }}
+          onClick={() => setIsSettingsModalOpen(false)}
+        >
+          <div
+            style={{
+              backgroundColor: '#fff',
+              borderRadius: '4px',
+              maxWidth: '1200px',
+              width: '100%',
+              maxHeight: '90vh',
+              height: '90vh',
+              border: '1px solid #000',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{
+              position: 'sticky',
+              top: 0,
+              backgroundColor: '#fff',
+              zIndex: 1,
+              padding: '20px 30px',
+              borderBottom: '1px solid #ddd',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <h2 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif' }}>Settings</h2>
+              <button
+                onClick={() => setIsSettingsModalOpen(false)}
+                className="nav-button"
+              >
+                Close
+              </button>
+            </div>
+            <iframe
+              src="/settings"
+              style={{
+                flex: 1,
+                border: 'none',
+                width: '100%',
+                height: '100%'
+              }}
+              title="Settings"
+            />
           </div>
         </div>
       )}
