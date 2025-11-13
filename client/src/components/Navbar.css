@@ -3,10 +3,11 @@
 .navbar {
   padding: 10px 20px;
   border-bottom: 1px solid #000;
-  margin-bottom: 30px;
+  margin: 0 0 30px 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  background-color: #fff;
 }
 
 .navbar-brand-container {

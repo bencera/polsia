@@ -45,3 +45,8 @@ body.dark-mode video,
 body.dark-mode iframe {
   filter: invert(1) hue-rotate(180deg);
 }
+
+/* Keep navbar background black in dark mode */
+body.dark-mode .navbar {
+  background-color: #000;
+}
