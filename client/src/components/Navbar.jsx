@@ -277,7 +277,7 @@ function Navbar({ isPublic = false }) {
               </button>
             </div>
             <iframe
-              src="/settings"
+              src="/settings?embedded=true"
               style={{
                 flex: 1,
                 border: 'none',

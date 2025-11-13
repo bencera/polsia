@@ -1366,7 +1366,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
               </button>
             </div>
             <iframe
-              src="/connections"
+              src="/connections?embedded=true"
               style={{
                 flex: 1,
                 border: 'none',
@@ -1432,7 +1432,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
               </button>
             </div>
             <iframe
-              src="/settings"
+              src="/settings?embedded=true"
               style={{
                 flex: 1,
                 border: 'none',
@@ -1498,7 +1498,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
               </button>
             </div>
             <iframe
-              src="/tasks"
+              src="/tasks?embedded=true"
               style={{
                 flex: 1,
                 border: 'none',
@@ -1564,7 +1564,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
               </button>
             </div>
             <iframe
-              src="/agents"
+              src="/agents?embedded=true"
               style={{
                 flex: 1,
                 border: 'none',
@@ -1630,7 +1630,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
               </button>
             </div>
             <iframe
-              src="/tools"
+              src="/tools?embedded=true"
               style={{
                 flex: 1,
                 border: 'none',
@@ -1696,7 +1696,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
               </button>
             </div>
             <iframe
-              src="/documents"
+              src="/documents?embedded=true"
               style={{
                 flex: 1,
                 border: 'none',
@@ -1762,7 +1762,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
               </button>
             </div>
             <iframe
-              src="/analytics"
+              src="/analytics?embedded=true"
               style={{
                 flex: 1,
                 border: 'none',
@@ -1828,7 +1828,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
               </button>
             </div>
             <iframe
-              src="/cost-tracking"
+              src="/cost-tracking?embedded=true"
               style={{
                 flex: 1,
                 border: 'none',
@@ -1894,7 +1894,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
               </button>
             </div>
             <iframe
-              src="/settings/advanced"
+              src="/settings/advanced?embedded=true"
               style={{
                 flex: 1,
                 border: 'none',

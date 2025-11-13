@@ -9,6 +9,9 @@ function Settings() {
   const { logout } = useAuth();
   const { terminalLogs } = useTerminal();
 
+  // Check if page is embedded in modal
+  const isEmbedded = new URLSearchParams(window.location.search).get('embedded') === 'true';
+
   const handleLogout = () => {
     logout();
     navigate('/login');
@@ -30,7 +33,8 @@ function Settings() {
 
   return (
     <>
-      <div className="terminal">
+      {!isEmbedded && (
+        <div className="terminal">
         {displayLogs.length === 0 ? (
           <>
             <div>&gt; System Configuration</div>
@@ -50,18 +54,21 @@ function Settings() {
             }
           </>
         )}
-      </div>
+        </div>
+      )}
 
-      <Navbar />
+      {!isEmbedded && <Navbar />}
 
       <div className="settings-container">
         <div className="settings-content">
-          <div className="settings-header">
-            <h2>Settings</h2>
-            <p className="settings-subtitle">
-              Manage your connections, tools, documents, and analytics
-            </p>
-          </div>
+          {!isEmbedded && (
+            <div className="settings-header">
+              <h2>Settings</h2>
+              <p className="settings-subtitle">
+                Manage your connections, tools, documents, and analytics
+              </p>
+            </div>
+          )}
 
         <div className="settings-sections">
           <button
