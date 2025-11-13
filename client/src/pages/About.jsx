@@ -4,6 +4,10 @@ import './About.css';
 function About() {
   return (
     <div className="about-container">
+      <audio autoPlay loop>
+        <source src="/audio/giorgio.mp3" type="audio/mpeg" />
+        Your browser does not support the audio element.
+      </audio>
       <div className="about-content">
         <Link to="/" className="back-link">← Back to Home</Link>
 
@@ -16,33 +20,32 @@ function About() {
           </p>
 
           <p>
-            I was living between Paris and San Francisco; was working alone<br />
-            And when I finally broke away from the idea of building one app at a time and started building Polsia<br />
+            I was living between Paris, LA and San Francisco; was working alone<br />
+            And when I finally broke away from the idea of building products manually and used AI<br />
             I thought, "Well, now I may have a little bit of a chance"<br />
-            Because all I really wanted to do was create systems<br />
+            Because all I really wanted to do was build products<br />
             And not only build them, but make them think for themselves
           </p>
 
           <p>
-            At that time, around '24, '25, in San Francisco, AI was exploding<br />
-            So, I would stay up all night, writing code, designing, testing loops<br />
-            Running maybe five or six small SaaS products<br />
-            I think I had about seven, eight modules<br />
+            At that time, in San Francisco, in '24, '25, they already had AI<br />
+            So, I would stay up all night, writing code with AI<br />
+            Building apps in like 2 hours,<br />
+            I think I built about seven, eight apps<br />
             I would partially sleep on the couch<br />
             Because I didn't want to stop building, and that kept me going for about<br />
             Almost two years in the beginning
           </p>
 
           <p>
-            I wanted to create a platform that could build companies<br />
-            Like people would build startups in the 2010s, the 2020s<br />
-            Really have a system that could build the companies of the future<br />
-            And I said, "Wait a second, I know the Claude Agent SDK<br />
-            Why don't I use the Claude Agent SDK as the brain of the company?"<br />
-            And I didn't have any idea what it would become<br />
-            But I knew I needed agents, so I built loops and connected APIs<br />
+            I wanted to create a platform with the vibes of the 1990s, the vibes of the 2000s,<br />
+            of the 2010s, and then have a feature of the future,<br />
+            And I said, "Wait a second, I know the Agent SDK<br />
+            Why don't I use the Agent SDK which is the feature of the future?"<br />
+            And I didn't have any idea what to do,<br />
+            But I knew I needed agents, so I put agents in loops and connected MCPs<br />
             Which then were synced to real products running in production<br />
-            I knew that could be the platform of the future<br />
+            I knew that could be a feature of the future<br />
             But I didn't realize how much the impact would be
           </p>
 

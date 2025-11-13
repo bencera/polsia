@@ -452,6 +452,9 @@ function Dashboard({ isPublic = false, publicUser = null }) {
             <div style={{marginTop: '10px'}}>
               <button className="dashboard-btn">Refresh</button>
             </div>
+            <div className="dashboard-stat" style={{marginTop: '5px', fontSize: '12px', color: '#666'}}>
+              Cost: 200 ops
+            </div>
 
             {/* 2. Autonomous Resources */}
             <h2 className="dashboard-title">Autonomous Resources</h2>
@@ -562,14 +565,39 @@ function Dashboard({ isPublic = false, publicUser = null }) {
 
           {/* Middle Column */}
           <div className="dashboard-middle">
-            {/* 4. CEO */}
-            <h2 className="dashboard-title">CEO</h2>
+            {/* 4. Operating Cycle */}
+            <h2 className="dashboard-title">Operating Cycle</h2>
             <div className="dashboard-stat">
               Decisions Made: <span className="dashboard-value">42</span>
             </div>
-            <div className="dashboard-section" style={{marginTop: '10px'}}>
+            <div className="dashboard-section" style={{marginTop: '10px', display: 'flex', alignItems: 'center', gap: '10px'}}>
               <span className="dashboard-stat">Next Decision: <span className="dashboard-value">{countdown}</span></span>
+              <select
+                className="frequency-selector"
+                style={{
+                  padding: '4px 8px',
+                  border: '1px solid #1a1a1a',
+                  borderRadius: '2px',
+                  fontFamily: 'Arial, Helvetica, sans-serif',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  backgroundColor: '#fff'
+                }}
+              >
+                <option value="auto">auto</option>
+                <option value="every_hour">every hour</option>
+                <option value="every_3_hours">every 3 hours</option>
+                <option value="every_6_hours" selected>every 6 hours</option>
+                <option value="every_12_hours">every 12 hours</option>
+                <option value="daily">daily</option>
+                <option value="weekly">weekly</option>
+              </select>
+            </div>
+            <div style={{marginTop: '10px'}}>
               <button className="dashboard-btn">Make Decision Now</button>
+            </div>
+            <div className="dashboard-stat" style={{marginTop: '5px', fontSize: '12px', color: '#666'}}>
+              Cost: 500 ops
             </div>
 
             {/* Recent Decisions */}

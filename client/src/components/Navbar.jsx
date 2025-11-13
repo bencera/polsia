@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import './Navbar.css';
 
 function Navbar({ isPublic = false }) {
-  const { user, logout } = useAuth();
+  const { user, logout, token } = useAuth();
   const { isDarkMode, toggleDarkMode } = useTheme();
   const navigate = useNavigate();
   const [isPolsiaModalOpen, setIsPolsiaModalOpen] = useState(false);
@@ -13,6 +13,29 @@ function Navbar({ isPublic = false }) {
   const [waitlistEmail, setWaitlistEmail] = useState('');
   const [waitlistButtonText, setWaitlistButtonText] = useState('Join Waitlist');
   const [waitlistButtonDisabled, setWaitlistButtonDisabled] = useState(false);
+  const [balance, setBalance] = useState(null);
+
+  useEffect(() => {
+    if (user?.id && token && !isPublic) {
+      fetchBalance();
+    }
+  }, [user, token, isPublic]);
+
+  const fetchBalance = async () => {
+    try {
+      const response = await fetch('/api/balance', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setBalance(data.balance);
+      }
+    } catch (err) {
+      console.error('Failed to fetch balance:', err);
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -117,7 +140,9 @@ function Navbar({ isPublic = false }) {
           </button>
         </div>
         <div className="navbar-actions">
-          <span className="user-info">{user?.email}</span>
+          <span className="user-info">
+            {balance ? `${Math.round(parseFloat(balance.current_balance_usd) * 100)} ops` : '0 ops'}
+          </span>
           <button onClick={toggleDarkMode} className="nav-button" title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}>
             {isDarkMode ? 'Light' : 'Dark'}
           </button>
