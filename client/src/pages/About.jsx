@@ -5,7 +5,7 @@ function About() {
   return (
     <div className="about-container">
       <audio autoPlay loop>
-        <source src="/audio/giorgio.mp3" type="audio/mpeg" />
+        <source src="/audio/background.wav" type="audio/wav" />
         Your browser does not support the audio element.
       </audio>
       <div className="about-content">

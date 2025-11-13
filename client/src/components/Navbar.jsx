@@ -14,6 +14,7 @@ function Navbar({ isPublic = false }) {
   const [waitlistButtonText, setWaitlistButtonText] = useState('Join Waitlist');
   const [waitlistButtonDisabled, setWaitlistButtonDisabled] = useState(false);
   const [balance, setBalance] = useState(null);
+  const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
 
   useEffect(() => {
     if (user?.id && token && !isPublic) {
@@ -172,22 +173,23 @@ function Navbar({ isPublic = false }) {
         >
           <div
             style={{
-              backgroundColor: '#fff',
+              backgroundColor: isDarkMode ? '#000' : '#fff',
               padding: '40px',
               borderRadius: '4px',
               maxWidth: '700px',
               width: '100%',
               maxHeight: '80vh',
               overflow: 'auto',
-              border: '1px solid #000',
-              position: 'relative'
+              border: isDarkMode ? '1px solid #fff' : '1px solid #000',
+              position: 'relative',
+              color: isDarkMode ? '#fff' : '#000'
             }}
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
               <div>
-                <h1 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif', fontSize: '2.5em' }}>Polsia</h1>
-                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.431</p>
+                <h1 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif', fontSize: '2.5em', color: isDarkMode ? '#fff' : '#000' }}>Polsia</h1>
+                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: isDarkMode ? '#ccc' : '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.154</p>
               </div>
               <button
                 onClick={() => setIsPolsiaModalOpen(false)}
@@ -200,16 +202,17 @@ function Navbar({ isPublic = false }) {
               style={{
                 fontFamily: 'Times New Roman, Times, serif',
                 fontSize: '16px',
-                lineHeight: '1.6'
+                lineHeight: '1.6',
+                color: isDarkMode ? '#fff' : '#000'
               }}
             >
-              <p style={{ fontSize: '1.3em', fontWeight: 'bold', marginBottom: '20px' }}>
+              <p style={{ fontSize: '1.3em', fontWeight: 'bold', marginBottom: '20px', color: isDarkMode ? '#fff' : '#000' }}>
                 AI That Runs Your Company While You Sleep.
               </p>
-              <p style={{ marginBottom: '20px' }}>
+              <p style={{ marginBottom: '20px', color: isDarkMode ? '#fff' : '#000' }}>
                 Polsia thinks, builds, and markets your projects autonomously. It plans, codes, and promotes your ideas continuously — operating 24/7, adapting to data, and improving itself without human intervention.
               </p>
-              <p style={{ marginBottom: '20px', fontStyle: 'italic', color: '#666' }}>
+              <p style={{ marginBottom: '20px', fontStyle: 'italic', color: isDarkMode ? '#ccc' : '#666' }}>
                 Warning: System operates independently. Human oversight recommended.
               </p>
 
@@ -228,10 +231,12 @@ function Navbar({ isPublic = false }) {
                         flex: '1',
                         minWidth: '200px',
                         padding: '8px 12px',
-                        border: '1px solid #000',
+                        border: isDarkMode ? '1px solid #fff' : '1px solid #000',
                         borderRadius: '2px',
                         fontFamily: 'Arial, Helvetica, sans-serif',
-                        fontSize: '14px'
+                        fontSize: '14px',
+                        backgroundColor: isDarkMode ? '#000' : '#fff',
+                        color: isDarkMode ? '#fff' : '#000'
                       }}
                     />
                     <button
@@ -246,8 +251,21 @@ function Navbar({ isPublic = false }) {
                 </form>
               )}
 
-              <p style={{ marginTop: '20px', fontSize: '14px', color: '#666' }}>
-                Contact: <a href="mailto:system@polsia.com" style={{ color: '#000', textDecoration: 'underline' }}>system@polsia.com</a>
+              <p style={{ marginTop: '20px', fontSize: '14px', color: isDarkMode ? '#ccc' : '#666' }}>
+                <a
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setIsPolsiaModalOpen(false);
+                    setIsAboutModalOpen(true);
+                  }}
+                  style={{ color: isDarkMode ? '#fff' : '#000', textDecoration: 'underline', cursor: 'pointer' }}
+                >
+                  About
+                </a>
+                {' • '}
+                <a href="mailto:system@polsia.com" style={{ color: isDarkMode ? '#fff' : '#000', textDecoration: 'underline' }}>system@polsia.com</a>
+                {' • '}
+                <a href="https://x.com/polsiaHQ" target="_blank" rel="noopener noreferrer" style={{ color: isDarkMode ? '#fff' : '#000', textDecoration: 'underline' }}>x.com/polsiaHQ</a>
               </p>
             </div>
           </div>
@@ -316,6 +334,114 @@ function Navbar({ isPublic = false }) {
               }}
               title="Settings"
             />
+          </div>
+        </div>
+      )}
+
+      {/* About Modal */}
+      {isAboutModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }}
+          onClick={() => setIsAboutModalOpen(false)}
+        >
+          <audio autoPlay loop>
+            <source src="/audio/background.wav" type="audio/wav" />
+            Your browser does not support the audio element.
+          </audio>
+          <div
+            style={{
+              backgroundColor: isDarkMode ? '#000' : '#fff',
+              padding: '40px',
+              borderRadius: '4px',
+              maxWidth: '700px',
+              width: '100%',
+              maxHeight: '80vh',
+              overflow: 'auto',
+              border: isDarkMode ? '1px solid #fff' : '1px solid #000',
+              position: 'relative',
+              color: isDarkMode ? '#fff' : '#000'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+              <h2 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif', fontSize: '2em', color: isDarkMode ? '#fff' : '#000' }}>About</h2>
+              <button
+                onClick={() => setIsAboutModalOpen(false)}
+                className="nav-button"
+              >
+                Close
+              </button>
+            </div>
+            <div
+              style={{
+                fontFamily: 'Times New Roman, Times, serif',
+                fontSize: '16px',
+                lineHeight: '1.6',
+                color: isDarkMode ? '#fff' : '#000'
+              }}
+            >
+              <p style={{ color: isDarkMode ? '#fff' : '#000' }}>
+                When I was 38, 39, when I really started to build AI products<br />
+                I definitely wanted to build companies that could run themselves<br />
+                It was almost impossible because the dream was so big<br />
+                That I didn't see any chance because
+              </p>
+
+              <p style={{ color: isDarkMode ? '#fff' : '#000' }}>
+                I was living between Paris, LA and San Francisco; was working alone<br />
+                And when I finally broke away from the idea of building products manually and used AI<br />
+                I thought, "Well, now I may have a little bit of a chance"<br />
+                Because all I really wanted to do was build products<br />
+                And not only build them, but make them think for themselves
+              </p>
+
+              <p style={{ color: isDarkMode ? '#fff' : '#000' }}>
+                At that time, in San Francisco, in '24, '25, they already had AI<br />
+                So, I would stay up all night, writing code with AI<br />
+                Building apps in like 2 hours,<br />
+                I think I built about seven, eight apps<br />
+                I would partially sleep on the couch<br />
+                Because I didn't want to stop building, and that kept me going for about<br />
+                Almost two years in the beginning
+              </p>
+
+              <p style={{ color: isDarkMode ? '#fff' : '#000' }}>
+                I wanted to create a platform with the vibes of the 1990s, the vibes of the 2000s,<br />
+                of the 2010s, and then have a feature of the future,<br />
+                And I said, "Wait a second, I know the Agent SDK<br />
+                Why don't I use the Agent SDK which is the feature of the future?"<br />
+                And I didn't have any idea what to do,<br />
+                But I knew I needed agents, so I put agents in loops and connected MCPs<br />
+                Which then were synced to real products running in production<br />
+                I knew that could be a feature of the future<br />
+                But I didn't realize how much the impact would be
+              </p>
+
+              <p style={{ color: isDarkMode ? '#fff' : '#000' }}>
+                My name is Victor-Benjamin<br />
+                But everybody calls me <a href="https://x.com/bencera_" target="_blank" rel="noopener noreferrer" style={{ color: isDarkMode ? '#fff' : '#000', textDecoration: 'underline' }}>Ben</a>
+              </p>
+
+              <p style={{ color: isDarkMode ? '#fff' : '#000' }}>
+                Once you free your mind about the concept of a company<br />
+                and what it means to build a company "the right way"<br />
+                You can do whatever you want<br />
+                So nobody told me what to build<br />
+                And there was no preconception of what to build
+              </p>
+            </div>
           </div>
         </div>
       )}

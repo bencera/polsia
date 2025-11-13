@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTerminal } from '../contexts/TerminalContext';
+import { useTheme } from '../contexts/ThemeContext';
 import Navbar from '../components/Navbar';
 import DonationModal from '../components/DonationModal';
 import './Dashboard.css';
@@ -68,11 +69,13 @@ function Dashboard({ isPublic = false, publicUser = null }) {
   const [isAnalyticsModalOpen, setIsAnalyticsModalOpen] = useState(false);
   const [isCostTrackingModalOpen, setIsCostTrackingModalOpen] = useState(false);
   const [isAdvancedSettingsModalOpen, setIsAdvancedSettingsModalOpen] = useState(false);
+  const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
 
   // Use publicUser if in public mode, otherwise use authenticated user
   const { token, user: authUser } = useAuth();
   const user = isPublic ? publicUser : authUser;
   const { terminalLogs } = useTerminal();
+  const { isDarkMode } = useTheme();
 
   // CEO next decision countdown - set to a fixed target time for demo (6 hours from now)
   const [nextDecisionTime] = useState(() => {
@@ -424,6 +427,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
         <Navbar isPublic={false} />
       )}
 
+      <div id="app-content">
       <div className="dashboard-content">
         {/* Metrics Summary Section */}
         <div className="dashboard-container">
@@ -901,6 +905,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
           </div>
         </div>
       )}
+      </div>
 
       {/* Polsia Info Modal */}
       {isPolsiaModalOpen && (
@@ -937,7 +942,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
               <div>
                 <h1 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif', fontSize: '2.5em' }}>Polsia</h1>
-                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.431</p>
+                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.154</p>
               </div>
               <button
                 onClick={() => setIsPolsiaModalOpen(false)}
@@ -1000,7 +1005,124 @@ function Dashboard({ isPublic = false, publicUser = null }) {
               )}
 
               <p style={{ marginTop: '20px', fontSize: '14px', color: '#666' }}>
+                <a
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setIsPolsiaModalOpen(false);
+                    setIsAboutModalOpen(true);
+                  }}
+                  style={{ color: '#000', textDecoration: 'underline', cursor: 'pointer' }}
+                >
+                  About
+                </a>
+                {' • '}
                 Contact: <a href="mailto:system@polsia.com" style={{ color: '#000', textDecoration: 'underline' }}>system@polsia.com</a>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* About Modal */}
+      {isAboutModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }}
+          onClick={() => setIsAboutModalOpen(false)}
+        >
+          <audio autoPlay loop>
+            <source src="/audio/background.wav" type="audio/wav" />
+            Your browser does not support the audio element.
+          </audio>
+          <div
+            style={{
+              backgroundColor: '#fff',
+              padding: '40px',
+              borderRadius: '4px',
+              maxWidth: '700px',
+              width: '100%',
+              maxHeight: '80vh',
+              overflow: 'auto',
+              border: '1px solid #000',
+              position: 'relative'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+              <h2 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif', fontSize: '2em' }}>About</h2>
+              <button
+                onClick={() => setIsAboutModalOpen(false)}
+                className="dashboard-btn"
+              >
+                Close
+              </button>
+            </div>
+            <div
+              style={{
+                fontFamily: 'Times New Roman, Times, serif',
+                fontSize: '16px',
+                lineHeight: '1.6'
+              }}
+            >
+              <p>
+                When I was 38, 39, when I really started to build AI products<br />
+                I definitely wanted to build companies that could run themselves<br />
+                It was almost impossible because the dream was so big<br />
+                That I didn't see any chance because
+              </p>
+
+              <p>
+                I was living between Paris, LA and San Francisco; was working alone<br />
+                And when I finally broke away from the idea of building products manually and used AI<br />
+                I thought, "Well, now I may have a little bit of a chance"<br />
+                Because all I really wanted to do was build products<br />
+                And not only build them, but make them think for themselves
+              </p>
+
+              <p>
+                At that time, in San Francisco, in '24, '25, they already had AI<br />
+                So, I would stay up all night, writing code with AI<br />
+                Building apps in like 2 hours,<br />
+                I think I built about seven, eight apps<br />
+                I would partially sleep on the couch<br />
+                Because I didn't want to stop building, and that kept me going for about<br />
+                Almost two years in the beginning
+              </p>
+
+              <p>
+                I wanted to create a platform with the vibes of the 1990s, the vibes of the 2000s,<br />
+                of the 2010s, and then have a feature of the future,<br />
+                And I said, "Wait a second, I know the Agent SDK<br />
+                Why don't I use the Agent SDK which is the feature of the future?"<br />
+                And I didn't have any idea what to do,<br />
+                But I knew I needed agents, so I put agents in loops and connected MCPs<br />
+                Which then were synced to real products running in production<br />
+                I knew that could be a feature of the future<br />
+                But I didn't realize how much the impact would be
+              </p>
+
+              <p>
+                My name is Victor-Benjamin<br />
+                But everybody calls me <a href="https://x.com/bencera_" target="_blank" rel="noopener noreferrer" style={{ color: '#000', textDecoration: 'underline' }}>Ben</a>
+              </p>
+
+              <p>
+                Once you free your mind about the concept of a company<br />
+                and what it means to build a company "the right way"<br />
+                You can do whatever you want<br />
+                So nobody told me what to build<br />
+                And there was no preconception of what to build
               </p>
             </div>
           </div>
@@ -1174,16 +1296,17 @@ function Dashboard({ isPublic = false, publicUser = null }) {
         >
           <div
             style={{
-              backgroundColor: '#fff',
+              backgroundColor: isDarkMode ? '#000' : '#fff',
               borderRadius: '4px',
               maxWidth: '700px',
               width: '100%',
               maxHeight: '80vh',
               overflow: 'hidden',
-              border: '1px solid #000',
+              border: isDarkMode ? '1px solid #fff' : '1px solid #000',
               position: 'relative',
               display: 'flex',
-              flexDirection: 'column'
+              flexDirection: 'column',
+              color: isDarkMode ? '#fff' : '#000'
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -1192,13 +1315,13 @@ function Dashboard({ isPublic = false, publicUser = null }) {
               justifyContent: 'space-between',
               alignItems: 'center',
               padding: '30px 30px 20px 30px',
-              borderBottom: '1px solid #ddd',
-              backgroundColor: '#fff',
+              borderBottom: isDarkMode ? '1px solid #444' : '1px solid #ddd',
+              backgroundColor: isDarkMode ? '#000' : '#fff',
               position: 'sticky',
               top: 0,
               zIndex: 1
             }}>
-              <h2 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif' }}>Recent Activity</h2>
+              <h2 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif', color: isDarkMode ? '#fff' : '#000' }}>Recent Activity</h2>
               <button
                 onClick={() => setIsActivityModalOpen(false)}
                 className="dashboard-btn"
@@ -1211,10 +1334,11 @@ function Dashboard({ isPublic = false, publicUser = null }) {
               fontSize: '14px',
               padding: '30px',
               overflowY: 'auto',
-              flex: 1
+              flex: 1,
+              color: isDarkMode ? '#fff' : '#000'
             }}>
               {allActivity.length === 0 ? (
-                <p style={{ color: '#666', fontStyle: 'italic' }}>No activity yet.</p>
+                <p style={{ color: isDarkMode ? '#ccc' : '#666', fontStyle: 'italic' }}>No activity yet.</p>
               ) : (
                 <>
                   {allActivity.map((task) => (
@@ -1222,16 +1346,16 @@ function Dashboard({ isPublic = false, publicUser = null }) {
                       key={task.id}
                       style={{
                         padding: '15px 0',
-                        borderBottom: '1px solid #ddd'
+                        borderBottom: isDarkMode ? '1px solid #444' : '1px solid #ddd'
                       }}
                     >
-                      <div style={{ fontWeight: 'bold', marginBottom: '5px', fontSize: '15px' }}>{task.title}</div>
+                      <div style={{ fontWeight: 'bold', marginBottom: '5px', fontSize: '15px', color: isDarkMode ? '#fff' : '#000' }}>{task.title}</div>
                       {task.description && (
-                        <div style={{ fontSize: '13px', color: '#666', marginBottom: '5px' }}>
+                        <div style={{ fontSize: '13px', color: isDarkMode ? '#ccc' : '#666', marginBottom: '5px' }}>
                           {task.description}
                         </div>
                       )}
-                      <div style={{ fontSize: '12px', color: '#999' }}>{formatTimeAgo(task.created_at)}</div>
+                      <div style={{ fontSize: '12px', color: isDarkMode ? '#999' : '#999' }}>{formatTimeAgo(task.created_at)}</div>
                     </div>
                   ))}
                   {hasMoreActivity && (
@@ -1272,16 +1396,17 @@ function Dashboard({ isPublic = false, publicUser = null }) {
         >
           <div
             style={{
-              backgroundColor: '#fff',
+              backgroundColor: isDarkMode ? '#000' : '#fff',
               borderRadius: '4px',
               maxWidth: '700px',
               width: '100%',
               maxHeight: '80vh',
               overflow: 'hidden',
-              border: '1px solid #000',
+              border: isDarkMode ? '1px solid #fff' : '1px solid #000',
               position: 'relative',
               display: 'flex',
-              flexDirection: 'column'
+              flexDirection: 'column',
+              color: isDarkMode ? '#fff' : '#000'
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -1290,13 +1415,13 @@ function Dashboard({ isPublic = false, publicUser = null }) {
               justifyContent: 'space-between',
               alignItems: 'center',
               padding: '30px 30px 20px 30px',
-              borderBottom: '1px solid #ddd',
-              backgroundColor: '#fff',
+              borderBottom: isDarkMode ? '1px solid #444' : '1px solid #ddd',
+              backgroundColor: isDarkMode ? '#000' : '#fff',
               position: 'sticky',
               top: 0,
               zIndex: 1
             }}>
-              <h2 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif' }}>All Documents</h2>
+              <h2 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif', color: isDarkMode ? '#fff' : '#000' }}>All Documents</h2>
               <button
                 onClick={() => setIsAllDocumentsModalOpen(false)}
                 className="dashboard-btn"
@@ -1309,10 +1434,11 @@ function Dashboard({ isPublic = false, publicUser = null }) {
               fontSize: '14px',
               padding: '30px',
               overflowY: 'auto',
-              flex: 1
+              flex: 1,
+              color: isDarkMode ? '#fff' : '#000'
             }}>
               {!documents ? (
-                <p style={{ color: '#666', fontStyle: 'italic' }}>Loading documents...</p>
+                <p style={{ color: isDarkMode ? '#ccc' : '#666', fontStyle: 'italic' }}>Loading documents...</p>
               ) : (
                 <>
                   {/* Vision Document */}
@@ -1320,7 +1446,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
                     <div
                       style={{
                         padding: '15px 0',
-                        borderBottom: '1px solid #ddd',
+                        borderBottom: isDarkMode ? '1px solid #444' : '1px solid #ddd',
                         cursor: 'pointer'
                       }}
                       onClick={() => {
@@ -1328,8 +1454,8 @@ function Dashboard({ isPublic = false, publicUser = null }) {
                         setIsAllDocumentsModalOpen(false);
                       }}
                     >
-                      <div style={{ fontWeight: 'bold', marginBottom: '5px', fontSize: '15px' }}>Vision</div>
-                      <div style={{ fontSize: '13px', color: '#666' }}>Strategic vision document</div>
+                      <div style={{ fontWeight: 'bold', marginBottom: '5px', fontSize: '15px', color: isDarkMode ? '#fff' : '#000' }}>Vision</div>
+                      <div style={{ fontSize: '13px', color: isDarkMode ? '#ccc' : '#666' }}>Strategic vision document</div>
                     </div>
                   )}
 
@@ -1338,7 +1464,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
                     <div
                       style={{
                         padding: '15px 0',
-                        borderBottom: '1px solid #ddd',
+                        borderBottom: isDarkMode ? '1px solid #444' : '1px solid #ddd',
                         cursor: 'pointer'
                       }}
                       onClick={() => {
@@ -1346,15 +1472,15 @@ function Dashboard({ isPublic = false, publicUser = null }) {
                         setIsAllDocumentsModalOpen(false);
                       }}
                     >
-                      <div style={{ fontWeight: 'bold', marginBottom: '5px', fontSize: '15px' }}>Goals</div>
-                      <div style={{ fontSize: '13px', color: '#666' }}>Company goals and objectives</div>
+                      <div style={{ fontWeight: 'bold', marginBottom: '5px', fontSize: '15px', color: isDarkMode ? '#fff' : '#000' }}>Goals</div>
+                      <div style={{ fontSize: '13px', color: isDarkMode ? '#ccc' : '#666' }}>Company goals and objectives</div>
                     </div>
                   )}
 
                   {/* All Reports */}
                   {reports.length > 0 ? (
                     <>
-                      <div style={{ marginTop: '20px', marginBottom: '10px', fontWeight: 'bold', fontSize: '16px' }}>
+                      <div style={{ marginTop: '20px', marginBottom: '10px', fontWeight: 'bold', fontSize: '16px', color: isDarkMode ? '#fff' : '#000' }}>
                         Reports
                       </div>
                       {reports.map((report) => (
@@ -1362,7 +1488,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
                           key={report.id}
                           style={{
                             padding: '15px 0',
-                            borderBottom: '1px solid #ddd',
+                            borderBottom: isDarkMode ? '1px solid #444' : '1px solid #ddd',
                             cursor: 'pointer'
                           }}
                           onClick={() => {
@@ -1370,8 +1496,8 @@ function Dashboard({ isPublic = false, publicUser = null }) {
                             setIsAllDocumentsModalOpen(false);
                           }}
                         >
-                          <div style={{ fontWeight: 'bold', marginBottom: '5px', fontSize: '15px' }}>{report.name}</div>
-                          <div style={{ fontSize: '13px', color: '#666', marginBottom: '5px' }}>
+                          <div style={{ fontWeight: 'bold', marginBottom: '5px', fontSize: '15px', color: isDarkMode ? '#fff' : '#000' }}>{report.name}</div>
+                          <div style={{ fontSize: '13px', color: isDarkMode ? '#ccc' : '#666', marginBottom: '5px' }}>
                             {report.report_type} • {new Date(report.report_date).toLocaleDateString()}
                           </div>
                           <div style={{ fontSize: '12px', color: '#999' }}>{formatTimeAgo(report.created_at)}</div>
@@ -1383,7 +1509,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
                   {(!documents.vision_md || documents.vision_md.trim().length === 0) &&
                    (!documents.goals_md || documents.goals_md.trim().length === 0) &&
                    reports.length === 0 && (
-                    <p style={{ color: '#666', fontStyle: 'italic' }}>No documents or reports yet.</p>
+                    <p style={{ color: isDarkMode ? '#ccc' : '#666', fontStyle: 'italic' }}>No documents or reports yet.</p>
                   )}
                 </>
               )}

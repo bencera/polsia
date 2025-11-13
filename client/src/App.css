@@ -13,6 +13,10 @@ body {
 /* Dark Mode */
 body.dark-mode {
   background-color: #000 !important;
+}
+
+/* Apply filter to content wrapper, NOT body */
+body.dark-mode #app-content {
   filter: invert(1) hue-rotate(180deg);
 }
 
@@ -20,12 +24,17 @@ body.dark-mode #root {
   background-color: transparent;
 }
 
-/* Keep buttons from being inverted */
-body.dark-mode button,
-body.dark-mode .dashboard-btn,
-body.dark-mode .dashboard-btn-large,
-body.dark-mode .nav-button {
+/* Keep dashboard buttons from being inverted */
+body.dark-mode #app-content button,
+body.dark-mode #app-content .dashboard-btn,
+body.dark-mode #app-content .dashboard-btn-large {
   filter: invert(1) hue-rotate(180deg);
+}
+
+/* Navbar buttons should not be inverted - keep original appearance */
+body.dark-mode .nav-button,
+body.dark-mode .navbar button {
+  filter: none;
 }
 
 /* Let project cards be inverted (dark background, light text) */
@@ -35,7 +44,8 @@ body.dark-mode .dashboard-project {
 
 /* Keep terminal black with white text in dark mode */
 body.dark-mode .terminal {
-  filter: invert(1) hue-rotate(180deg);
+  background-color: #000;
+  color: #fff;
   border-bottom: 0.5px solid #fff;
 }
 
@@ -46,5 +56,16 @@ body.dark-mode iframe {
   filter: invert(1) hue-rotate(180deg);
 }
 
-/* Navbar background should be black in dark mode - no double inversion needed */
-/* The navbar will naturally invert with the body filter */
+
+/* Navbar styling for dark mode - dark background */
+body.dark-mode .navbar {
+  background-color: #000;
+  color: #fff;
+  border-bottom: 0.5px solid #fff;
+}
+
+body.dark-mode .navbar-brand,
+body.dark-mode .user-info,
+body.dark-mode .navbar-actions span {
+  color: #fff;
+}
