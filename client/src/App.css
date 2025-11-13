@@ -3,3 +3,45 @@
   width: 100%;
   min-height: 100vh;
 }
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #fff;
+}
+
+/* Dark Mode */
+body.dark-mode {
+  background-color: #000 !important;
+  filter: invert(1) hue-rotate(180deg);
+}
+
+body.dark-mode #root {
+  background-color: transparent;
+}
+
+/* Keep buttons from being inverted */
+body.dark-mode button,
+body.dark-mode .dashboard-btn,
+body.dark-mode .dashboard-btn-large,
+body.dark-mode .nav-button {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+/* Let project cards be inverted (dark background, light text) */
+body.dark-mode .dashboard-project {
+  /* No filter applied - will be inverted with the rest of the page */
+}
+
+/* Keep terminal black with white text in dark mode */
+body.dark-mode .terminal {
+  filter: invert(1) hue-rotate(180deg);
+  border-bottom: 0.5px solid #fff;
+}
+
+/* Keep images and media from being inverted */
+body.dark-mode img,
+body.dark-mode video,
+body.dark-mode iframe {
+  filter: invert(1) hue-rotate(180deg);
+}

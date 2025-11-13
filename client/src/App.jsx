@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { TerminalProvider } from './contexts/TerminalContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import Landing from './pages/Landing';
 import About from './pages/About';
@@ -59,9 +60,10 @@ function LoginOrDashboard() {
 function App() {
   return (
     <AuthProvider>
-      <TerminalProvider>
-        <Router>
-          <Routes>
+      <ThemeProvider>
+        <TerminalProvider>
+          <Router>
+            <Routes>
             <Route path="/" element={<LandingOrDashboard />} />
             <Route path="/about" element={<About />} />
             <Route path="/login" element={<LoginOrDashboard />} />
@@ -163,9 +165,10 @@ function App() {
             />
             {/* Public dashboard route - MUST be last to avoid conflicts */}
             <Route path="/:company_slug" element={<PublicDashboard />} />
-          </Routes>
-        </Router>
-      </TerminalProvider>
+            </Routes>
+          </Router>
+        </TerminalProvider>
+      </ThemeProvider>
     </AuthProvider>
   )
 }

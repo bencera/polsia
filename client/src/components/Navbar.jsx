@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import './Navbar.css';
 
 function Navbar({ isPublic = false }) {
   const { user, logout } = useAuth();
+  const { isDarkMode, toggleDarkMode } = useTheme();
   const navigate = useNavigate();
   const [isPolsiaModalOpen, setIsPolsiaModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
@@ -116,6 +118,9 @@ function Navbar({ isPublic = false }) {
         </div>
         <div className="navbar-actions">
           <span className="user-info">{user?.email}</span>
+          <button onClick={toggleDarkMode} className="nav-button" title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}>
+            {isDarkMode ? 'Light' : 'Dark'}
+          </button>
           <button onClick={handleSettings} className="nav-button">
             Settings
           </button>
