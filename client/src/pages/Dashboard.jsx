@@ -947,13 +947,12 @@ function Dashboard({ isPublic = false, publicUser = null }) {
                   }}
                   style={{
                     padding: '4px 8px',
-                    border: isPublic ? '1px solid #ccc' : '1px solid #1a1a1a',
+                    border: '1px solid #1a1a1a',
                     borderRadius: '2px',
                     fontFamily: 'Arial, Helvetica, sans-serif',
                     fontSize: '12px',
-                    cursor: isPublic ? 'pointer' : 'pointer',
-                    backgroundColor: isPublic ? '#f5f5f5' : '#fff',
-                    color: isPublic ? '#666' : '#000',
+                    cursor: 'pointer',
+                    backgroundColor: '#fff',
                     pointerEvents: isPublic ? 'none' : 'auto'
                   }}
                 >
@@ -1404,7 +1403,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
               <div>
                 <h1 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif', fontSize: '2.5em' }}>Polsia</h1>
-                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.167</p>
+                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.168</p>
               </div>
               <button
                 onClick={() => setIsPolsiaModalOpen(false)}
