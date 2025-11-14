@@ -419,55 +419,29 @@ app.get('/api/modules/:id/executions/:executionId/logs/stream', authenticateToke
         // Send initial comment to establish connection
         res.write(': connected\n\n');
 
-        // 1. Send all existing logs
+        // 1. Send all existing logs from database (history)
         const existingLogs = await getExecutionLogs(executionId);
         for (const log of existingLogs) {
             res.write(`data: ${JSON.stringify(log)}\n\n`);
         }
 
-        // 2. Poll for new logs every second
-        let lastLogId = existingLogs.length > 0
-            ? existingLogs[existingLogs.length - 1].id
-            : 0;
+        // 2. Subscribe to real-time log stream (true streaming, no polling)
+        const logStreamEmitter = require('./services/log-stream-emitter');
+        logStreamEmitter.subscribe(executionId, res);
 
-        const pollInterval = setInterval(async () => {
-            try {
-                const newLogs = await getExecutionLogsSince(executionId, lastLogId);
-
-                for (const log of newLogs) {
-                    res.write(`data: ${JSON.stringify(log)}\n\n`);
-                    lastLogId = log.id;
-                }
-
-                // Check if execution is completed
-                const executions = await getModuleExecutions(moduleId, req.user.id, 1);
-                const currentExecution = executions.find(e => e.id === executionId);
-
-                if (currentExecution && (currentExecution.status === 'completed' || currentExecution.status === 'failed')) {
-                    // Send completion event
-                    res.write(`data: ${JSON.stringify({ type: 'completion', status: currentExecution.status })}\n\n`);
-                    clearInterval(pollInterval);
-                    res.end();
-                    console.log(`[SSE] Stream ended for execution ${executionId} (${currentExecution.status})`);
-                }
-            } catch (err) {
-                console.error('[SSE] Error polling logs:', err);
-                clearInterval(pollInterval);
-                res.end();
-            }
-        }, 1000); // Poll every second
+        console.log(`[SSE] Subscribed to real-time stream for execution ${executionId}`);
 
         // Clean up on client disconnect
         req.on('close', () => {
             console.log(`[SSE] Client disconnected from execution ${executionId}`);
-            clearInterval(pollInterval);
+            logStreamEmitter.unsubscribe(executionId, res);
             res.end();
         });
 
         // Auto-timeout after 30 minutes
         setTimeout(() => {
             console.log(`[SSE] Stream timeout for execution ${executionId}`);
-            clearInterval(pollInterval);
+            logStreamEmitter.unsubscribe(executionId, res);
             res.end();
         }, 30 * 60 * 1000);
 

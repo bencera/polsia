@@ -1357,7 +1357,15 @@ async function updateModuleExecution(executionId, updates) {
                        RETURNING *`;
 
         const result = await client.query(query, values);
-        return result.rows[0] || null;
+        const execution = result.rows[0] || null;
+
+        // Emit completion event for real-time streaming when execution finishes
+        if (execution && updates.status && (updates.status === 'completed' || updates.status === 'failed')) {
+            const logStreamEmitter = require('./services/log-stream-emitter');
+            logStreamEmitter.emitCompletion(executionId, updates.status);
+        }
+
+        return execution;
     } catch (err) {
         console.error('Error updating module execution:', err);
         throw err;
@@ -1390,21 +1398,28 @@ async function getActiveModulesForScheduling() {
 
 // Save a log entry for a module execution
 async function saveExecutionLog(executionId, logData) {
-    const client = await pool.connect();
+    const logStreamEmitter = require('./services/log-stream-emitter');
+
     try {
         const { log_level, stage, message, metadata } = logData;
-        const result = await client.query(
+
+        // Single query auto-commits immediately when promise resolves
+        const result = await pool.query(
             `INSERT INTO execution_logs (execution_id, log_level, stage, message, metadata)
              VALUES ($1, $2, $3, $4, $5)
              RETURNING *`,
             [executionId, log_level || 'info', stage || null, message, metadata || null]
         );
-        return result.rows[0];
+
+        const log = result.rows[0];
+
+        // Emit log to real-time subscribers (true streaming, bypasses database polling)
+        logStreamEmitter.emit(executionId, log);
+
+        return log;
     } catch (err) {
         console.error('Error saving execution log:', err);
         throw err;
-    } finally {
-        client.release();
     }
 }
 

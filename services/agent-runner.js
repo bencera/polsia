@@ -83,13 +83,21 @@ async function runModule(moduleId, userId, options = {}) {
 
         console.log(`[Agent Runner] Agent found: ${agent.name} (type: ${agent.agent_type})`);
 
-        // 2. Create execution record
-        executionRecord = await createModuleExecution(moduleId, userId, {
-            trigger_type,
-            status: 'running',
-        });
+        // 2. Use existing execution record or create new one
+        if (options.existingExecutionId) {
+            // Execution record already exists (created by route handler for SSE readiness)
+            // Just use a minimal object with the ID - we'll update it below
+            executionRecord = { id: options.existingExecutionId };
+            console.log(`[Agent Runner] Using existing execution record: ${executionRecord.id}`);
+        } else {
+            // Create new execution record
+            executionRecord = await createModuleExecution(moduleId, userId, {
+                trigger_type,
+                status: 'running',
+            });
 
-        console.log(`[Agent Runner] Execution record created: ${executionRecord.id}`);
+            console.log(`[Agent Runner] Execution record created: ${executionRecord.id}`);
+        }
 
         // Update execution status to running
         await updateModuleExecution(executionRecord.id, {
@@ -200,9 +208,9 @@ async function runModule(moduleId, userId, options = {}) {
                     console.log(`[Agent Runner] 📊 Stage: ${progress.stage}${progress.substage ? `/${progress.substage}` : ''}`);
                 }
 
-                // Save log to database (non-blocking)
+                // Save log to database (real-time streaming)
                 if (logMessage && executionRecord) {
-                    saveExecutionLog(executionRecord.id, {
+                    await saveExecutionLog(executionRecord.id, {
                         log_level: logLevel,
                         stage: stage,
                         message: logMessage,
@@ -1311,8 +1319,18 @@ async function runRenderAnalyticsModule(module, userId, executionRecord, startTi
     const crypto = require('crypto');
     const fs = require('fs').promises;
 
+    // Helper to log both to console and stream to frontend
+    const streamLog = async (message, level = 'info', stage = null) => {
+        console.log(message);
+        await saveExecutionLog(executionRecord.id, {
+            log_level: level,
+            stage: stage,
+            message: message.replace(/\[Agent Runner\]\s*/, '').replace(/\[Claude Agent\]\s*/, ''),
+        }).catch(err => console.error('Failed to save log:', err.message));
+    };
+
     try {
-        console.log(`[Agent Runner] 📊 Running Render Analytics Summarizer module`);
+        await streamLog('📊 Running Render Analytics Summarizer module', 'info', 'init');
 
         // Get Render connection and primary service
         const connection = await getRenderConnection(userId);
@@ -1325,21 +1343,14 @@ async function runRenderAnalyticsModule(module, userId, executionRecord, startTi
             throw new Error('No primary service configured. Please set a primary Render service in Connections.');
         }
 
-        console.log(`[Agent Runner] Analyzing service: ${primaryService.name} (${primaryService.id})`);
-
-        // Log start
-        await saveExecutionLog(executionRecord.id, {
-            log_level: 'info',
-            stage: 'started',
-            message: `Starting Render analytics for ${primaryService.name}`,
-        });
+        await streamLog(`Analyzing service: ${primaryService.name} (${primaryService.id})`, 'info', 'setup');
 
         // Load vision document for business context
         const { getDocumentStore } = require('./document-store');
         const documents = await getDocumentStore(userId);
         const visionContext = documents?.vision_md || '';
 
-        console.log(`[Agent Runner] Vision context loaded: ${visionContext ? 'Yes' : 'No'}`);
+        await streamLog(`Vision context loaded: ${visionContext ? 'Yes' : 'No'}`, 'info', 'setup');
 
         // Prepare context with Render MCP
         const context = await prepareModuleContext(module, userId);
@@ -1348,10 +1359,8 @@ async function runRenderAnalyticsModule(module, userId, executionRecord, startTi
         const githubConnection = await getServiceConnectionByName(userId, 'github');
         const primaryRepo = githubConnection?.metadata?.primary_repo;
 
-        if (!primaryRepo) {
-            console.warn(`[Agent Runner] No primary GitHub repo configured - agent will work without codebase access`);
-        } else {
-            console.log(`[Agent Runner] Primary repo: ${primaryRepo.full_name}`);
+        if (primaryRepo) {
+            await streamLog(`Primary repo: ${primaryRepo.full_name}`, 'info', 'setup');
         }
 
         // Create persistent workspace for this module (same path for session resumption)
@@ -1364,7 +1373,7 @@ async function runRenderAnalyticsModule(module, userId, executionRecord, startTi
         );
         await fs.mkdir(workspace, { recursive: true });
 
-        console.log(`[Agent Runner] Workspace: ${workspace}`);
+        await streamLog(`Workspace: ${workspace}`, 'info', 'setup');
 
         // Clone or update GitHub repository if configured
         let repoPath = null;
@@ -1376,13 +1385,7 @@ async function runRenderAnalyticsModule(module, userId, executionRecord, startTi
                 // Check if repo already exists (from previous session)
                 try {
                     await fs.access(repoPath);
-                    console.log(`[Agent Runner] Updating existing repository: ${primaryRepo.full_name}...`);
-
-                    await saveExecutionLog(executionRecord.id, {
-                        log_level: 'info',
-                        stage: 'setup',
-                        message: `Updating repository: ${primaryRepo.full_name}`,
-                    });
+                    await streamLog(`Updating existing repository: ${primaryRepo.full_name}...`, 'info', 'setup');
 
                     // Pull latest changes
                     execSync(`git -C ${repoPath} pull origin`, {
@@ -1390,16 +1393,10 @@ async function runRenderAnalyticsModule(module, userId, executionRecord, startTi
                         timeout: 60000,
                     });
 
-                    console.log(`[Agent Runner] Repository updated successfully`);
+                    await streamLog('Repository updated successfully', 'info', 'setup');
                 } catch {
                     // Repo doesn't exist, clone it
-                    console.log(`[Agent Runner] Cloning repository: ${primaryRepo.full_name}...`);
-
-                    await saveExecutionLog(executionRecord.id, {
-                        log_level: 'info',
-                        stage: 'setup',
-                        message: `Cloning repository: ${primaryRepo.full_name}`,
-                    });
+                    await streamLog(`Cloning repository: ${primaryRepo.full_name}...`, 'info', 'setup');
 
                     // Clone repo with depth=1 for faster cloning
                     execSync(`git clone --depth 1 https://github.com/${primaryRepo.full_name} ${repoPath}`, {
@@ -1407,21 +1404,12 @@ async function runRenderAnalyticsModule(module, userId, executionRecord, startTi
                         timeout: 60000,
                     });
 
-                    console.log(`[Agent Runner] Repository cloned successfully to: ${repoPath}`);
+                    await streamLog(`Repository cloned successfully`, 'info', 'setup');
                 }
 
-                await saveExecutionLog(executionRecord.id, {
-                    log_level: 'info',
-                    stage: 'setup',
-                    message: 'Repository ready',
-                });
+                await streamLog('Repository ready', 'info', 'setup');
             } catch (error) {
-                console.warn(`[Agent Runner] Failed to setup repository: ${error.message}`);
-                await saveExecutionLog(executionRecord.id, {
-                    log_level: 'warning',
-                    stage: 'setup',
-                    message: `Failed to setup repository: ${error.message}. Continuing with GitHub MCP only.`,
-                });
+                await streamLog(`Failed to setup repository: ${error.message}. Continuing with GitHub MCP only.`, 'warning', 'setup');
                 repoPath = null; // Reset if setup failed
             }
         }
@@ -1510,23 +1498,18 @@ Save to Reports database using \`create_report\` tool:
 - DO NOT write to files - save directly to database with create_report
 - Work fast - don't overthink it`;
 
-        // Log analysis start
-        await saveExecutionLog(executionRecord.id, {
-            log_level: 'info',
-            stage: 'analyzing',
-            message: 'Claude is analyzing Render metrics with MCP tools',
-        });
-
         // Check for existing session_id to enable continuous learning
         const resumeSessionId = module.session_id || null;
         if (resumeSessionId) {
-            console.log(`[Agent Runner] ♻️  Module has existing session - will resume for continuous learning`);
+            await streamLog('♻️  Resuming from previous session', 'info', 'starting');
         } else {
-            console.log(`[Agent Runner] 🆕 First run for this module - creating new session`);
+            await streamLog('🆕 Starting new session', 'info', 'starting');
         }
 
         // Track new session ID if this is first run
         let newSessionId = null;
+
+        await streamLog('Claude is analyzing Render metrics with MCP tools', 'info', 'analyzing');
 
         // Execute Claude Agent with Render MCP
         const result = await executeTask(analyticsPrompt, {
@@ -1537,19 +1520,19 @@ Save to Reports database using \`create_report\` tool:
             resumeSessionId,  // Pass session ID for resumption
             onProgress: async (progress) => {
                 if (progress.stage === 'tool_use') {
-                    await saveExecutionLog(executionRecord.id, {
-                        log_level: 'info',
-                        stage: 'analyzing',
-                        message: `Using Render tool: ${progress.tool}`,
-                        metadata: { tool: progress.tool }
-                    });
+                    await streamLog(`Using tool: ${progress.tool}`, 'info', 'analyzing');
                 } else if (progress.stage === 'initialized') {
-                    console.log(`[Agent Runner] ✓ Session initialized with model: ${progress.model}`);
+                    await streamLog(`Session initialized with model: ${progress.model}`, 'info', 'analyzing');
 
                     // Capture session ID for first-time sessions
                     if (progress.sessionId && !resumeSessionId) {
                         newSessionId = progress.sessionId;
                         console.log(`[Agent Runner] 📝 New session ID captured: ${newSessionId}`);
+                    }
+                } else if (progress.stage === 'thinking') {
+                    // Stream thinking messages
+                    if (progress.message) {
+                        await streamLog(`💭 ${progress.message}`, 'info', 'thinking');
                     }
                 }
             }
@@ -1559,18 +1542,13 @@ Save to Reports database using \`create_report\` tool:
             throw new Error(result.error || 'Render analytics analysis failed');
         }
 
-        console.log(`[Agent Runner] Claude analysis complete`);
-
         // Calculate metrics
         const duration = Date.now() - startTime;
         const cost = result.metadata?.cost_usd || 0;
         const turns = result.metadata?.num_turns || 0;
 
-        console.log(`[Agent Runner] ✓ Render Analytics Summarizer completed`);
-        console.log(`   - Service: ${primaryService.name}`);
-        console.log(`   - Duration: ${(duration / 1000).toFixed(2)}s`);
-        console.log(`   - Cost: $${cost.toFixed(4)}`);
-        console.log(`   - Turns: ${turns}`);
+        await streamLog('✓ Analysis complete', 'info', 'completed');
+        await streamLog(`Duration: ${(duration / 1000).toFixed(2)}s | Cost: $${cost.toFixed(4)} | Turns: ${turns}`, 'info', 'completed');
 
         // Update execution record
         await updateModuleExecution(executionRecord.id, {
@@ -1609,11 +1587,7 @@ Save to Reports database using \`create_report\` tool:
         const duration = Date.now() - startTime;
 
         // Log error
-        await saveExecutionLog(executionRecord.id, {
-            log_level: 'error',
-            stage: 'failed',
-            message: `Render Analytics failed: ${error.message}`,
-        });
+        await streamLog(`❌ Execution failed: ${error.message}`, 'error', 'failed');
 
         // Update execution record with error
         await updateModuleExecution(executionRecord.id, {
@@ -2721,7 +2695,7 @@ Execute this task now.`;
                 }
 
                 if (logMessage && executionRecord) {
-                    saveExecutionLog(executionRecord.id, {
+                    await saveExecutionLog(executionRecord.id, {
                         log_level: logLevel,
                         stage: stage,
                         message: logMessage,

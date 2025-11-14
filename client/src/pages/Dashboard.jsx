@@ -105,7 +105,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
   // Use publicUser if in public mode, otherwise use authenticated user
   const { token, user: authUser, refreshUser } = useAuth();
   const user = isPublic ? publicUser : authUser;
-  const { terminalLogs } = useTerminal();
+  const { terminalLogs, runRoutine } = useTerminal();
   const { isDarkMode } = useTheme();
 
   // CEO next decision countdown - set to a fixed target time for demo (6 hours from now)
@@ -448,10 +448,48 @@ function Dashboard({ isPublic = false, publicUser = null }) {
       const data = await response.json();
 
       if (response.ok) {
-        alert('Refreshing metrics...');
         // Refresh balance to show deducted operations
         fetchBalance();
-        // TODO: Trigger actual metrics refresh
+
+        // Trigger the Render Analytics Summarizer agent (ID 22)
+        const RENDER_ANALYTICS_AGENT_ID = 22;
+        const success = await runRoutine(RENDER_ANALYTICS_AGENT_ID, 'Render Analytics Summarizer');
+
+        if (success) {
+          // Poll for completion and refresh data
+          const pollInterval = setInterval(async () => {
+            try {
+              const execResponse = await fetch(`/api/agents/${RENDER_ANALYTICS_AGENT_ID}/executions?limit=1`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+              });
+
+              if (execResponse.ok) {
+                const execData = await execResponse.json();
+                const latestExecution = execData.executions?.[0];
+
+                if (latestExecution && (latestExecution.status === 'completed' || latestExecution.status === 'failed')) {
+                  clearInterval(pollInterval);
+
+                  // Refresh documents and analytics data
+                  fetchDocuments();
+
+                  if (latestExecution.status === 'completed') {
+                    alert('Metrics refreshed successfully!');
+                  } else {
+                    alert('Metrics refresh failed. Check logs for details.');
+                  }
+                }
+              }
+            } catch (err) {
+              console.error('Error polling for completion:', err);
+            }
+          }, 2000); // Poll every 2 seconds
+
+          // Timeout after 5 minutes
+          setTimeout(() => clearInterval(pollInterval), 5 * 60 * 1000);
+        } else {
+          alert('Failed to start metrics refresh');
+        }
       } else {
         // Check if error is about insufficient operations
         if (data.message && data.message.toLowerCase().includes('insufficient')) {
@@ -632,9 +670,9 @@ function Dashboard({ isPublic = false, publicUser = null }) {
   };
 
   // Get last 5 logs for terminal display
-  // Always use recentLogs - fetched from database for the user being viewed
-  // This ensures consistency between public and private views of the same dashboard
-  const displayLogs = recentLogs.slice(-5);
+  // Use real-time terminalLogs if available (for authenticated user's own dashboard)
+  // Otherwise fallback to recentLogs (for public dashboards or initial load)
+  const displayLogs = (terminalLogs && terminalLogs.length > 0 ? terminalLogs : recentLogs).slice(-5);
 
   return (
     <>
@@ -743,7 +781,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
               Cost per User: <span className="dashboard-value">$0.52</span>
             </div>
             <div style={{marginTop: '10px'}}>
-              <button className="dashboard-btn" onClick={() => requireAuth(handleRefresh)}>Refresh</button>
+              <button className="dashboard-btn" onClick={() => requireAuth(handleRefresh)}>Refresh metrics</button>
             </div>
             <div className="dashboard-stat" style={{marginTop: '5px', fontSize: '12px', color: '#666'}}>
               Cost: 200 ops
@@ -1391,7 +1429,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
               <div>
                 <h1 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif', fontSize: '2.5em' }}>Polsia</h1>
-                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.175</p>
+                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.176</p>
               </div>
               <button
                 onClick={() => setIsPolsiaModalOpen(false)}

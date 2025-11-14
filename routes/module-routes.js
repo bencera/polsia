@@ -226,13 +226,14 @@ router.post('/:id/execute', async (req, res) => {
                 console.error(`[Agent Routes] Error executing agent ${agentId}:`, error);
             });
 
-            // Poll for the execution record
+            // Poll for the execution record (more lenient - accept any status)
             let execution = null;
-            for (let i = 0; i < 5; i++) {
+            for (let i = 0; i < 10; i++) {
                 await new Promise(resolve => setTimeout(resolve, 100));
                 const executions = await db.getAgentExecutions(agentId, req.user.id, 1);
-                if (executions && executions.length > 0 && executions[0].status === 'running') {
+                if (executions && executions.length > 0) {
                     execution = executions[0];
+                    console.log(`[Agent Routes] Found execution ${execution.id} with status: ${execution.status}`);
                     break;
                 }
             }
@@ -285,31 +286,36 @@ router.post('/:id/run', async (req, res) => {
         if (agent) {
             console.log(`[Agent Routes] Manual execution triggered for agent: ${agent.name}`);
 
-            // Trigger execution asynchronously
+            // Create execution record FIRST so frontend can subscribe to SSE immediately
+            const execution = await db.createModuleExecution(agentId, req.user.id, {
+                trigger_type: 'manual',
+                status: 'pending',
+            });
+
+            console.log(`[Agent Routes] Created execution ${execution.id}, returning to frontend`);
+
+            // Return execution ID immediately so frontend can connect to SSE
+            res.json({
+                success: true,
+                message: 'Agent execution started',
+                execution: { id: execution.id },
+            });
+
+            // Give frontend 200ms to connect to SSE stream
+            await new Promise(resolve => setTimeout(resolve, 200));
+
+            // NOW start the actual execution asynchronously
+            console.log(`[Agent Routes] Starting async execution for ${execution.id}`);
             const executionPromise = runModule(agentId, req.user.id, {
                 trigger_type: 'manual',
+                existingExecutionId: execution.id, // Pass existing execution ID
             });
 
             executionPromise.catch((error) => {
                 console.error(`[Agent Routes] Error executing agent ${agentId}:`, error);
             });
 
-            // Poll for the execution record
-            let execution = null;
-            for (let i = 0; i < 5; i++) {
-                await new Promise(resolve => setTimeout(resolve, 100));
-                const executions = await db.getAgentExecutions(agentId, req.user.id, 1);
-                if (executions && executions.length > 0 && executions[0].status === 'running') {
-                    execution = executions[0];
-                    break;
-                }
-            }
-
-            return res.json({
-                success: true,
-                message: 'Agent execution started',
-                execution: execution ? { id: execution.id } : null,
-            });
+            return; // Already sent response
         }
 
         // Fallback: check legacy modules table
