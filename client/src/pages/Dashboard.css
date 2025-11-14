@@ -297,7 +297,7 @@
 
 /* Recent Activity Scroll Box */
 .recent-activity-scroll {
-  max-height: 300px;
+  max-height: 360px;
   overflow-y: auto;
   border: 1px solid #ccc;
   padding: 10px;
@@ -400,49 +400,45 @@
 
 /* Projects */
 .dashboard-project {
-  background: linear-gradient(top, #ffffff, #d0d0d0);
-  background: -webkit-linear-gradient(top, #ffffff, #d0d0d0);
-  border: 1px solid #1a1a1a;
+  background: #b3b3b3;
+  border: 1px solid #666666;
   color: #000000;
-  padding: 10px 12px;
-  margin: 8px 0;
-  font-family: "Times New Roman", Times, serif;
-  border-radius: 2px;
-  box-shadow: rgba(255, 255, 255, 0.4) 0 1px 0 0 inset, rgba(255, 255, 255, 0.4) 0 1px 0;
+  padding: 8px 10px;
+  margin: 6px 0;
+  font-family: Arial, Helvetica, sans-serif;
+  border-radius: 0;
   cursor: pointer;
+  transition: background-color 0.1s ease;
 }
 
 .dashboard-project:hover {
-  background: linear-gradient(top, #ffffff, #c0c0c0);
-  background: -webkit-linear-gradient(top, #ffffff, #c0c0c0);
+  background: #c0c0c0;
 }
 
 .dashboard-project:active {
-  background: linear-gradient(top, #d0d0d0, #ffffff);
-  background: -webkit-linear-gradient(top, #d0d0d0, #ffffff);
-  box-shadow: rgba(0, 0, 0, 0.4) 0 1px 2px 0 inset;
+  background: #a0a0a0;
 }
 
 .dashboard-project-locked {
-  background: linear-gradient(top, #dddddd, #999999);
-  background: -webkit-linear-gradient(top, #dddddd, #999999);
+  background: #999999;
   color: #666;
   cursor: not-allowed;
 }
 
 .dashboard-project-title {
-  font-size: 14px;
-  margin-bottom: 6px;
+  font-size: 13px;
+  margin-bottom: 4px;
   font-family: Arial, Helvetica, sans-serif;
-  line-height: 1.3;
-  font-weight: normal;
+  line-height: 1.2;
+  font-weight: bold;
 }
 
 .dashboard-project-desc {
-  font-size: 12px;
-  line-height: 1.4;
+  font-size: 11px;
+  line-height: 1.3;
   font-family: Arial, Helvetica, sans-serif;
   font-weight: normal;
+  color: #1a1a1a;
 }
 
 /* Responsive Design */

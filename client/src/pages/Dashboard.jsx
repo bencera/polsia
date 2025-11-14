@@ -850,7 +850,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
             <h2 className="dashboard-title">Engineering Projects</h2>
             <div className="dashboard-project">
               <div className="dashboard-project-title">
-                <strong>Fix authentication bug</strong> (1,200 ops)
+                Fix authentication bug (1,200 ops)
               </div>
               <div className="dashboard-project-desc">
                 Users unable to login with GitHub OAuth. Investigate token refresh issue.
@@ -858,7 +858,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
             </div>
             <div className="dashboard-project">
               <div className="dashboard-project-title">
-                <strong>Optimize database queries</strong> (2,500 ops)
+                Optimize database queries (2,500 ops)
               </div>
               <div className="dashboard-project-desc">
                 Slow loading times on dashboard. Add indexes to agents and executions tables.
@@ -866,7 +866,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
             </div>
             <div className="dashboard-project">
               <div className="dashboard-project-title">
-                <strong>Implement caching layer</strong> (4,500 ops)
+                Implement caching layer (4,500 ops)
               </div>
               <div className="dashboard-project-desc">
                 Add Redis caching for API responses to reduce database load by 60%.
@@ -877,7 +877,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
             <h2 className="dashboard-title">Marketing Projects</h2>
             <div className="dashboard-project">
               <div className="dashboard-project-title">
-                <strong>Launch product announcement</strong> (1,800 ops)
+                Launch product announcement (1,800 ops)
               </div>
               <div className="dashboard-project-desc">
                 Create and schedule social media posts for new agent marketplace launch.
@@ -885,7 +885,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
             </div>
             <div className="dashboard-project">
               <div className="dashboard-project-title">
-                <strong>Write blog post</strong> (2,200 ops)
+                Write blog post (2,200 ops)
               </div>
               <div className="dashboard-project-desc">
                 Technical deep-dive on autonomous agents. Target: 2,000 words with code examples.
@@ -893,7 +893,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
             </div>
             <div className="dashboard-project">
               <div className="dashboard-project-title">
-                <strong>Generate Instagram content</strong> (1,500 ops)
+                Generate Instagram content (1,500 ops)
               </div>
               <div className="dashboard-project-desc">
                 Create 10 engaging posts with AI-generated images for next week's schedule.
@@ -1174,7 +1174,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
               <div>
                 <h1 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif', fontSize: '2.5em' }}>Polsia</h1>
-                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.158</p>
+                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.159</p>
               </div>
               <button
                 onClick={() => setIsPolsiaModalOpen(false)}
