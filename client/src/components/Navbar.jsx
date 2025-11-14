@@ -185,7 +185,13 @@ function Navbar({ isPublic = false, publicUser = null }) {
           <span className="user-info">
             {authUser?.email ? `${authUser.email} | ` : ''}{balance ? `${balance.user_operations || 0} ops | ` : '0 ops | '}{authUser?.has_autonomous_company ? (authUser?.company_name || 'My Company') : 'no company'}
           </span>
-          <button onClick={handlePublicToggle} className="nav-button" title={isPublicDashboard ? 'Dashboard is public' : 'Dashboard is private'}>
+          <button
+            onClick={handlePublicToggle}
+            className="nav-button"
+            disabled={isPublic}
+            title={isPublic ? 'Viewing public dashboard' : (isPublicDashboard ? 'Dashboard is public' : 'Dashboard is private')}
+            style={isPublic ? { opacity: 0.6, cursor: 'not-allowed' } : {}}
+          >
             {isPublicDashboard ? 'Public' : 'Private'}
           </button>
           <button onClick={toggleDarkMode} className="nav-button" title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}>
@@ -233,7 +239,7 @@ function Navbar({ isPublic = false, publicUser = null }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
               <div>
                 <h1 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif', fontSize: '2.5em', color: isDarkMode ? '#fff' : '#000' }}>Polsia</h1>
-                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: isDarkMode ? '#ccc' : '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.155</p>
+                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: isDarkMode ? '#ccc' : '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.156</p>
               </div>
               <button
                 onClick={() => setIsPolsiaModalOpen(false)}

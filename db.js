@@ -173,12 +173,42 @@ async function getUserById(id) {
     const client = await pool.connect();
     try {
         const result = await client.query(
-            'SELECT id, email, name, company_name, company_slug, public_dashboard_enabled, created_at, updated_at FROM users WHERE id = $1',
+            'SELECT id, email, name, has_autonomous_company, company_name, company_slug, public_dashboard_enabled, created_at, updated_at FROM users WHERE id = $1',
             [id]
         );
         return result.rows[0] || null;
     } catch (err) {
         console.error('Error getting user by ID:', err);
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+// Create a new user
+async function createUser(email, passwordHash, name = null) {
+    const client = await pool.connect();
+    try {
+        const result = await client.query(
+            `INSERT INTO users (email, password_hash, name, has_autonomous_company)
+             VALUES ($1, $2, $3, false)
+             RETURNING id, email, name, has_autonomous_company, company_name, company_slug, public_dashboard_enabled, created_at`,
+            [email.trim().toLowerCase(), passwordHash, name]
+        );
+
+        // Initialize user balance with 500 free operations
+        await client.query(
+            `INSERT INTO user_balances (user_id, company_operations, user_operations)
+             VALUES ($1, 0, 500)`,
+            [result.rows[0].id]
+        );
+
+        return result.rows[0];
+    } catch (err) {
+        if (err.code === '23505') { // Unique violation
+            throw new Error('Email already exists');
+        }
+        console.error('Error creating user:', err);
         throw err;
     } finally {
         client.release();
@@ -3783,7 +3813,8 @@ async function getPublicDashboardData(userId) {
                 id: user.id,
                 name: user.name,
                 company_name: user.company_name,
-                company_slug: user.company_slug
+                company_slug: user.company_slug,
+                public_dashboard_enabled: user.public_dashboard_enabled
             },
             tasks: tasksResult.rows,
             logs: logsResult.rows.reverse() // Reverse to show oldest first (bottom-to-top)
@@ -4023,6 +4054,7 @@ async function createDonation(userId, projectId, donorName, donorEmail, amount, 
 }
 
 async function completeDonation(paymentIntentId) {
+    const { getPackageByUsd, calculateOperationsForUsd } = require('./config/operations-config');
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
@@ -4038,6 +4070,13 @@ async function completeDonation(paymentIntentId) {
         }
 
         const donation = donationResult.rows[0];
+        const usdAmount = parseFloat(donation.amount_usd);
+
+        // Calculate operations with package bonuses
+        const packageDeal = getPackageByUsd(usdAmount);
+        const operationsAmount = packageDeal
+            ? packageDeal.total_ops
+            : calculateOperationsForUsd(usdAmount); // Base rate for custom amounts
 
         // Update donation status
         await client.query(
@@ -4047,15 +4086,16 @@ async function completeDonation(paymentIntentId) {
             [paymentIntentId]
         );
 
-        // Update user balance
+        // Credit operations to user's company balance
         await ensureUserBalance(donation.user_id, client);
         await client.query(
             `UPDATE user_balances
-             SET total_donated_usd = total_donated_usd + $1,
-                 current_balance_usd = current_balance_usd + $1,
+             SET company_operations = company_operations + $1,
+                 total_donated_usd = total_donated_usd + $2,
+                 current_balance_usd = current_balance_usd + $2,
                  last_updated_at = CURRENT_TIMESTAMP
-             WHERE user_id = $2`,
-            [donation.amount_usd, donation.user_id]
+             WHERE user_id = $3`,
+            [operationsAmount, usdAmount, donation.user_id]
         );
 
         await client.query('COMMIT');
@@ -4221,6 +4261,143 @@ async function getModulesByFundingProject(projectId) {
     return result.rows;
 }
 
+/**
+ * Operations Currency System Functions
+ * Two-tier currency: Operations (user-facing) + USD (internal accounting)
+ */
+
+const { usdToOperations, operationsToUsd } = require('./config/operations-config');
+
+/**
+ * Credit operations to company balance when donation completes
+ * @param {number} userId - User ID
+ * @param {number} usdAmount - USD amount donated
+ * @param {number} operationsAmount - Operations to credit (may include bonuses)
+ * @returns {object} - Updated balance record
+ */
+async function creditOperations(userId, usdAmount, operationsAmount) {
+    await ensureUserBalance(userId);
+    const result = await pool.query(
+        `UPDATE user_balances
+         SET company_operations = company_operations + $1,
+             total_donated_usd = total_donated_usd + $2,
+             last_updated_at = CURRENT_TIMESTAMP
+         WHERE user_id = $3
+         RETURNING *`,
+        [operationsAmount, usdAmount, userId]
+    );
+    return result.rows[0];
+}
+
+/**
+ * Deduct company operations for autonomous AI execution
+ * @param {number} userId - User ID
+ * @param {number} operationsCost - Operations to deduct
+ * @param {number} usdCost - Real USD cost for accounting
+ * @returns {object} - Updated balance record
+ */
+async function deductCompanyOperations(userId, operationsCost, usdCost) {
+    await ensureUserBalance(userId);
+    const result = await pool.query(
+        `UPDATE user_balances
+         SET company_operations = company_operations - $1,
+             total_spent_usd = total_spent_usd + $2,
+             last_updated_at = CURRENT_TIMESTAMP
+         WHERE user_id = $3
+         RETURNING *`,
+        [operationsCost, usdCost, userId]
+    );
+    return result.rows[0];
+}
+
+/**
+ * Deduct user operations for manual actions
+ * @param {number} userId - User ID
+ * @param {number} operationsCost - Operations to deduct
+ * @param {string} actionType - Type of action (for logging)
+ * @returns {object} - Updated balance record
+ */
+async function deductUserOperations(userId, operationsCost, actionType = 'manual_action') {
+    await ensureUserBalance(userId);
+    const usdCost = operationsToUsd(operationsCost);
+    const result = await pool.query(
+        `UPDATE user_balances
+         SET user_operations = user_operations - $1,
+             total_spent_usd = total_spent_usd + $2,
+             last_updated_at = CURRENT_TIMESTAMP
+         WHERE user_id = $3
+         RETURNING *`,
+        [operationsCost, usdCost, userId]
+    );
+    return result.rows[0];
+}
+
+/**
+ * Transfer user operations to company operations (one-way)
+ * @param {number} userId - User ID
+ * @param {number} operationsAmount - Operations to transfer
+ * @returns {object} - Updated balance record
+ */
+async function transferToCompany(userId, operationsAmount) {
+    await ensureUserBalance(userId);
+
+    // Check if user has sufficient operations
+    const balance = await getUserBalance(userId);
+    if (balance.user_operations < operationsAmount) {
+        throw new Error('Insufficient user operations');
+    }
+
+    const result = await pool.query(
+        `UPDATE user_balances
+         SET user_operations = user_operations - $1,
+             company_operations = company_operations + $1,
+             last_updated_at = CURRENT_TIMESTAMP
+         WHERE user_id = $2
+         RETURNING *`,
+        [operationsAmount, userId]
+    );
+    return result.rows[0];
+}
+
+/**
+ * Get user's operations balance (both company and user)
+ * @param {number} userId - User ID
+ * @returns {object} - Balance object with operations and USD fields
+ */
+async function getUserOperationsBalance(userId) {
+    const result = await pool.query(
+        `SELECT user_id, company_operations, user_operations,
+                total_donated_usd, total_spent_usd, last_updated_at
+         FROM user_balances
+         WHERE user_id = $1`,
+        [userId]
+    );
+    return result.rows[0] || null;
+}
+
+/**
+ * Check company operations and pause modules if depleted
+ * @param {number} userId - User ID
+ * @returns {boolean} - True if modules were paused
+ */
+async function checkCompanyOperationsAndPauseModules(userId) {
+    const balance = await getUserBalance(userId);
+    if (balance && balance.company_operations <= 0) {
+        // Pause all active modules for this user
+        await pool.query(
+            `UPDATE modules
+             SET status = 'paused'
+             WHERE user_id = $1 AND status = 'active'`,
+            [userId]
+        );
+        return true;
+    }
+    return false;
+}
+
+// User management functions
+module.exports.createUser = createUser;
+
 // Add public dashboard and funding functions to existing exports
 module.exports.getUserByCompanySlug = getUserByCompanySlug;
 module.exports.updateUserCompanySettings = updateUserCompanySettings;
@@ -4245,3 +4422,11 @@ module.exports.deductFromBalance = deductFromBalance;
 module.exports.checkBalanceAndPauseModules = checkBalanceAndPauseModules;
 module.exports.pauseModulesByFundingProject = pauseModulesByFundingProject;
 module.exports.getModulesByFundingProject = getModulesByFundingProject;
+
+// Operations currency system functions
+module.exports.creditOperations = creditOperations;
+module.exports.deductCompanyOperations = deductCompanyOperations;
+module.exports.deductUserOperations = deductUserOperations;
+module.exports.transferToCompany = transferToCompany;
+module.exports.getUserOperationsBalance = getUserOperationsBalance;
+module.exports.checkCompanyOperationsAndPauseModules = checkCompanyOperationsAndPauseModules;
