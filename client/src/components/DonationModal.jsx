@@ -89,10 +89,14 @@ function DonationModal({ isOpen, onClose, userId, projectId, projectName, isOwnA
       <div className="donation-modal" onClick={(e) => e.stopPropagation()}>
         <button className="donation-modal-close" onClick={onClose}>Close</button>
 
-        <h2 className="donation-modal-title">{isOwnAccount ? 'Add Funds' : 'Contribute Operations'}</h2>
-        {projectName && (
-          <p className="donation-modal-subtitle">Supporting: {projectName}</p>
-        )}
+        <h2 className="donation-modal-title">
+          {isOwnAccount ? 'Transfer Ops to Company' : `Donate Ops to ${projectName}`}
+        </h2>
+        <p className="donation-modal-subtitle">
+          {isOwnAccount
+            ? 'Move ops from your personal balance to your company for autonomous operations.'
+            : 'These ops will be used exclusively for autonomous operations and actions.'}
+        </p>
 
         <form onSubmit={handleSubmit} className="donation-form">
           <div className="donation-quick-amounts">
