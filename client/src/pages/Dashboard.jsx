@@ -4,6 +4,8 @@ import { useTerminal } from '../contexts/TerminalContext';
 import { useTheme } from '../contexts/ThemeContext';
 import Navbar from '../components/Navbar';
 import DonationModal from '../components/DonationModal';
+import SignupModal from '../components/SignupModal';
+import LoginModal from '../components/LoginModal';
 import './Dashboard.css';
 
 // Countdown timer hook
@@ -70,9 +72,14 @@ function Dashboard({ isPublic = false, publicUser = null }) {
   const [isCostTrackingModalOpen, setIsCostTrackingModalOpen] = useState(false);
   const [isAdvancedSettingsModalOpen, setIsAdvancedSettingsModalOpen] = useState(false);
   const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
+  const [transferAmount, setTransferAmount] = useState('');
+  const [isCreateCompanyModalOpen, setIsCreateCompanyModalOpen] = useState(false);
+  const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [intendedAction, setIntendedAction] = useState(null);
 
   // Use publicUser if in public mode, otherwise use authenticated user
-  const { token, user: authUser } = useAuth();
+  const { token, user: authUser, refreshUser } = useAuth();
   const user = isPublic ? publicUser : authUser;
   const { terminalLogs } = useTerminal();
   const { isDarkMode } = useTheme();
@@ -92,9 +99,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
       fetchFundingProjects();
       fetchDocuments();
       fetchReports();
-      if (!isPublic) {
-        fetchConnections();
-      }
+      fetchConnections();
     }
   }, [user]);
 
@@ -122,14 +127,16 @@ function Dashboard({ isPublic = false, publicUser = null }) {
 
   const fetchBalance = async () => {
     try {
-      // Use public endpoint if in public mode
-      const url = isPublic ? `/api/balance/user/${user.id}` : '/api/balance';
+      // Use public endpoint if in public mode, operations endpoint for authenticated users
+      const url = isPublic ? `/api/balance/user/${user.id}` : '/api/operations';
       const headers = isPublic ? {} : { 'Authorization': `Bearer ${token}` };
 
       const response = await fetch(url, { headers });
       const data = await response.json();
       if (response.ok) {
-        setBalance(data.balance);
+        // For public mode, data.balance has current_balance_usd
+        // For authenticated mode, data has company_operations and user_operations
+        setBalance(isPublic ? data.balance : data);
       }
     } catch (err) {
       console.error('Failed to fetch balance:', err);
@@ -214,11 +221,10 @@ function Dashboard({ isPublic = false, publicUser = null }) {
 
   const fetchConnections = async () => {
     try {
-      const response = await fetch('/api/connections', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const url = isPublic ? `/api/connections/user/${user.id}` : '/api/connections';
+      const headers = isPublic ? {} : { 'Authorization': `Bearer ${token}` };
+
+      const response = await fetch(url, { headers });
       const data = await response.json();
       if (response.ok) {
         setConnections(data.connections || []);
@@ -321,9 +327,155 @@ function Dashboard({ isPublic = false, publicUser = null }) {
     }
   };
 
+  // requireAuth wrapper - prompts signup if not authenticated
+  const requireAuth = (action) => {
+    if (isPublic || !token) {
+      // Store the intended action and show signup modal
+      setIntendedAction(() => action);
+      setIsSignupModalOpen(true);
+      return false;
+    }
+    // User is authenticated, execute action immediately
+    action();
+    return true;
+  };
+
+  // Handle successful signup
+  const handleSignupSuccess = async (newToken, newUser) => {
+    // Refresh user data in AuthContext
+    await refreshUser();
+
+    // Execute the intended action if one was stored
+    if (intendedAction) {
+      setTimeout(() => {
+        intendedAction();
+        setIntendedAction(null);
+      }, 100);
+    }
+  };
+
+  // Handle successful login
+  const handleLoginSuccess = async (newToken, newUser) => {
+    // Refresh user data in AuthContext
+    await refreshUser();
+
+    // Execute the intended action if one was stored
+    if (intendedAction) {
+      setTimeout(() => {
+        intendedAction();
+        setIntendedAction(null);
+      }, 100);
+    }
+  };
+
+  // Switch from signup modal to login modal
+  const handleSwitchToLogin = () => {
+    setIsSignupModalOpen(false);
+    setIsLoginModalOpen(true);
+  };
+
+  // Switch from login modal to signup modal
+  const handleSwitchToSignup = () => {
+    setIsLoginModalOpen(false);
+    setIsSignupModalOpen(true);
+  };
+
+  // Handle refresh button click
+  const handleRefresh = async () => {
+    try {
+      const response = await fetch('/api/operations/deduct-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ cost: 200, action_type: 'refresh_metrics' })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert('Refreshing metrics...');
+        // Refresh balance to show deducted operations
+        fetchBalance();
+        // TODO: Trigger actual metrics refresh
+      } else {
+        alert(data.message || 'Failed to refresh metrics');
+      }
+    } catch (err) {
+      alert('Failed to refresh metrics. Please try again.');
+    }
+  };
+
+  // Handle "Make Decision Now" button click
+  const handleMakeDecision = async () => {
+    try {
+      const response = await fetch('/api/operations/deduct-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ cost: 500, action_type: 'force_ceo_decision' })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert('Forcing CEO decision...');
+        // Refresh balance to show deducted operations
+        fetchBalance();
+        // TODO: Trigger actual CEO decision
+      } else {
+        alert(data.message || 'Failed to force decision');
+      }
+    } catch (err) {
+      alert('Failed to force decision. Please try again.');
+    }
+  };
+
+  const handleTransferToCompany = async () => {
+    const amount = parseInt(transferAmount);
+
+    if (!amount || amount <= 0) {
+      alert('Please enter a valid amount greater than 0');
+      return;
+    }
+
+    if (!balance || balance.user_operations < amount) {
+      alert('Insufficient user operations for transfer');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/operations/transfer', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ amount })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert(data.message);
+        setTransferAmount('');
+        fetchBalance(); // Refresh balance
+      } else {
+        alert(data.message || 'Failed to transfer operations');
+      }
+    } catch (err) {
+      alert('Failed to transfer operations. Please try again.');
+    }
+  };
+
   const handleDonateClick = (project = null) => {
-    setSelectedProject(project);
-    setIsDonationModalOpen(true);
+    requireAuth(() => {
+      setSelectedProject(project);
+      setIsDonationModalOpen(true);
+    });
   };
 
   const handleDonationModalClose = () => {
@@ -400,8 +552,8 @@ function Dashboard({ isPublic = false, publicUser = null }) {
         )}
       </div>
 
-      {/* Show full Navbar with navigation buttons in private mode, simple header in public mode */}
-      {isPublic ? (
+      {/* Show full Navbar if authenticated, simple header if viewing public dashboard as guest */}
+      {isPublic && !token ? (
         <nav className="navbar">
           <div className="navbar-brand-container">
             <span className="navbar-brand">
@@ -424,11 +576,37 @@ function Dashboard({ isPublic = false, publicUser = null }) {
           </div>
         </nav>
       ) : (
-        <Navbar isPublic={false} />
+        <Navbar isPublic={isPublic} publicUser={publicUser} />
       )}
 
       <div id="app-content">
       <div className="dashboard-content">
+        {/* Show "Create Company" prompt if user doesn't have autonomous company */}
+        {!isPublic && user && !user.has_autonomous_company ? (
+          <div style={{
+            backgroundColor: isDarkMode ? '#1a1a1a' : '#f5f5f5',
+            border: isDarkMode ? '1px solid #333' : '1px solid #ddd',
+            borderRadius: '4px',
+            padding: '30px',
+            marginBottom: '30px',
+            textAlign: 'center'
+          }}>
+            <h2 style={{ margin: '0 0 15px 0', fontFamily: 'Times New Roman, Times, serif', fontSize: '24px' }}>
+              Create Your Autonomous Company
+            </h2>
+            <p style={{ marginBottom: '20px', color: isDarkMode ? '#ccc' : '#666', fontSize: '14px' }}>
+              You don't have an autonomous company yet. Create one to get your own AI-powered business running 24/7.
+            </p>
+            <button
+              className="dashboard-btn"
+              onClick={() => setIsCreateCompanyModalOpen(true)}
+              style={{ padding: '10px 20px', fontSize: '14px' }}
+            >
+              Create Autonomous Company
+            </button>
+          </div>
+        ) : (
+          <>
         {/* Metrics Summary Section */}
         <div className="dashboard-container">
           {/* Left Column */}
@@ -454,7 +632,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
               Cost per User: <span className="dashboard-value">$0.52</span>
             </div>
             <div style={{marginTop: '10px'}}>
-              <button className="dashboard-btn">Refresh</button>
+              <button className="dashboard-btn" onClick={() => requireAuth(handleRefresh)}>Refresh</button>
             </div>
             <div className="dashboard-stat" style={{marginTop: '5px', fontSize: '12px', color: '#666'}}>
               Cost: 200 ops
@@ -463,14 +641,14 @@ function Dashboard({ isPublic = false, publicUser = null }) {
             {/* 2. Autonomous Resources */}
             <h2 className="dashboard-title">Autonomous Resources</h2>
             <div className="dashboard-section">
-              <span className="dashboard-stat">Operations: <span className="dashboard-value">
-                {balance ? Math.round(parseFloat(balance.current_balance_usd) * 100) : '0'}
+              <span className="dashboard-stat">Company Operations: <span className="dashboard-value">
+                {balance ? (isPublic ? Math.round(parseFloat(balance.current_balance_usd) * 100) : (balance.company_operations || 0)) : '0'}
               </span></span>
               <button className="dashboard-btn" onClick={() => handleDonateClick()}>Add Ops</button>
             </div>
             <div className="dashboard-section" style={{marginTop: '10px'}}>
               <span className="dashboard-stat">Auto-refill: <span className="dashboard-value">OFF</span></span>
-              <button className="dashboard-btn" onClick={() => setIsAutoFundModalOpen(true)}>Enable</button>
+              <button className="dashboard-btn" onClick={() => requireAuth(() => setIsAutoFundModalOpen(true))}>Enable</button>
             </div>
             <div className="dashboard-section" style={{marginTop: '10px'}}>
               <span className="dashboard-stat">Model:</span>
@@ -489,6 +667,42 @@ function Dashboard({ isPublic = false, publicUser = null }) {
                 <option value="claude-sonnet-4-5-20250929">claude-sonnet-4-5-20250929</option>
               </select>
             </div>
+
+            {/* 3. User Operations - Only show in private mode */}
+            {!isPublic && (
+              <>
+                <h2 className="dashboard-title">Your Operations</h2>
+                <div className="dashboard-section">
+                  <span className="dashboard-stat">Balance: <span className="dashboard-value">
+                    {balance ? (balance.user_operations || 0) : '0'}
+                  </span></span>
+                </div>
+                <div className="dashboard-section" style={{marginTop: '10px', display: 'flex', gap: '5px', alignItems: 'center'}}>
+                  <input
+                    type="number"
+                    placeholder="Amount"
+                    value={transferAmount}
+                    onChange={(e) => setTransferAmount(e.target.value)}
+                    style={{
+                      flex: '1',
+                      padding: '6px 8px',
+                      border: '1px solid #1a1a1a',
+                      borderRadius: '2px',
+                      fontFamily: 'Arial, Helvetica, sans-serif',
+                      fontSize: '12px'
+                    }}
+                  />
+                  <button
+                    className="dashboard-btn"
+                    onClick={handleTransferToCompany}
+                    style={{fontSize: '12px', padding: '6px 12px'}}
+                  >
+                    Transfer to Company
+                  </button>
+                </div>
+              </>
+            )}
+
             <div className="dashboard-stat" style={{marginTop: '15px'}}>
               Contributors: <span className="dashboard-value">{topFunders.length}</span>
             </div>
@@ -572,12 +786,13 @@ function Dashboard({ isPublic = false, publicUser = null }) {
             {/* 4. Operating Cycle */}
             <h2 className="dashboard-title">Operating Cycle</h2>
             <div className="dashboard-stat">
-              Decisions Made: <span className="dashboard-value">42</span>
+              Cycles completed: <span className="dashboard-value">42</span>
             </div>
             <div className="dashboard-section" style={{marginTop: '10px', display: 'flex', alignItems: 'center', gap: '10px'}}>
-              <span className="dashboard-stat">Next Decision: <span className="dashboard-value">{countdown}</span></span>
+              <span className="dashboard-stat">Next cycle in: <span className="dashboard-value">{countdown}</span></span>
               <select
                 className="frequency-selector"
+                defaultValue="every_6_hours"
                 style={{
                   padding: '4px 8px',
                   border: '1px solid #1a1a1a',
@@ -591,23 +806,23 @@ function Dashboard({ isPublic = false, publicUser = null }) {
                 <option value="auto">auto</option>
                 <option value="every_hour">every hour</option>
                 <option value="every_3_hours">every 3 hours</option>
-                <option value="every_6_hours" selected>every 6 hours</option>
+                <option value="every_6_hours">every 6 hours</option>
                 <option value="every_12_hours">every 12 hours</option>
                 <option value="daily">daily</option>
                 <option value="weekly">weekly</option>
               </select>
             </div>
             <div style={{marginTop: '10px'}}>
-              <button className="dashboard-btn">Make Decision Now</button>
+              <button className="dashboard-btn" onClick={() => requireAuth(handleMakeDecision)}>Run cycle now</button>
             </div>
             <div className="dashboard-stat" style={{marginTop: '5px', fontSize: '12px', color: '#666'}}>
               Cost: 500 ops
             </div>
 
-            {/* Recent Decisions */}
+            {/* Recent cycle outcomes */}
             <div style={{marginTop: '15px'}}>
               <div className="dashboard-stat" style={{marginBottom: '10px'}}>
-                Recent Decisions
+                Recent cycle outcomes
               </div>
               <div className="recent-activity-scroll" style={{marginTop: '10px'}}>
                 <div className="activity-item">
@@ -783,48 +998,65 @@ function Dashboard({ isPublic = false, publicUser = null }) {
               </div>
             )}
 
-            {/* Connections Section - Only show in private mode */}
-            {!isPublic && (
+            {/* Connections Section */}
+            <h2 className="dashboard-title">Connections</h2>
+            {connections.filter(c => c.status === 'connected').length === 0 ? (
+              <div className="dashboard-stat" style={{fontStyle: 'italic', color: '#666'}}>
+                No connections yet. Connect your accounts in Settings.
+              </div>
+            ) : (
               <>
-                <h2 className="dashboard-title">Connections</h2>
-                {connections.filter(c => c.status === 'connected').length === 0 ? (
-                  <div className="dashboard-stat" style={{fontStyle: 'italic', color: '#666'}}>
-                    No connections yet. Connect your accounts in Settings.
-                  </div>
-                ) : (
-                  <>
-                    {connections
-                      .filter(connection => connection.status === 'connected')
-                      .map((connection) => (
-                        <div key={connection.id} className="dashboard-stat" style={{margin: '2px 0'}}>
-                          {connection.service_name.charAt(0).toUpperCase() + connection.service_name.slice(1)}:
-                          <span className="dashboard-value"> Connected</span>
-                        </div>
-                      ))}
-                    <div style={{marginTop: '10px'}}>
-                      <a
-                        onClick={() => setIsConnectionsModalOpen(true)}
-                        style={{
-                          color: '#000',
-                          textDecoration: 'underline',
-                          cursor: 'pointer',
-                          fontSize: '14px',
-                          fontFamily: 'Times New Roman, Times, serif'
-                        }}
-                      >
-                        View all →
-                      </a>
+                {connections
+                  .filter(connection => connection.status === 'connected')
+                  .map((connection) => (
+                    <div key={connection.id} className="dashboard-stat" style={{margin: '2px 0'}}>
+                      {connection.service_name.charAt(0).toUpperCase() + connection.service_name.slice(1)}:
+                      <span className="dashboard-value"> Connected</span>
                     </div>
-                  </>
-                )}
+                  ))}
+                <div style={{marginTop: '10px'}}>
+                  <a
+                    onClick={() => setIsConnectionsModalOpen(true)}
+                    style={{
+                      color: '#000',
+                      textDecoration: 'underline',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontFamily: 'Times New Roman, Times, serif'
+                    }}
+                  >
+                    View all →
+                  </a>
+                </div>
               </>
             )}
           </div>
         </div>
+          </>
+        )}
       </div>
 
       <footer className="footer">
-        <p className="footer-contact">Contact: <a href="mailto:system@polsia.com">system@polsia.com</a></p>
+        <p className="footer-contact">
+          <button
+            onClick={() => setIsAboutModalOpen(true)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'inherit',
+              textDecoration: 'underline',
+              cursor: 'pointer',
+              padding: 0,
+              font: 'inherit'
+            }}
+          >
+            About
+          </button>
+          {' | '}
+          <a href="https://x.com/polsiaHQ" target="_blank" rel="noopener noreferrer">x.com/polsiaHQ</a>
+          {' | '}
+          Contact: <a href="mailto:system@polsia.com">system@polsia.com</a>
+        </p>
       </footer>
 
       <DonationModal
@@ -942,7 +1174,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
               <div>
                 <h1 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif', fontSize: '2.5em' }}>Polsia</h1>
-                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.154</p>
+                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.155</p>
               </div>
               <button
                 onClick={() => setIsPolsiaModalOpen(false)}
@@ -2111,6 +2343,105 @@ function Dashboard({ isPublic = false, publicUser = null }) {
           </div>
         </div>
       )}
+
+      {/* Create Company Coming Soon Modal */}
+      {isCreateCompanyModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }}
+          onClick={() => setIsCreateCompanyModalOpen(false)}
+        >
+          <div
+            style={{
+              backgroundColor: '#fff',
+              padding: '40px',
+              borderRadius: '4px',
+              maxWidth: '500px',
+              width: '100%',
+              border: '1px solid #000',
+              position: 'relative'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+              <h2 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif' }}>Create Autonomous Company</h2>
+              <button
+                onClick={() => setIsCreateCompanyModalOpen(false)}
+                className="dashboard-btn"
+              >
+                Close
+              </button>
+            </div>
+            <div style={{ fontFamily: 'Times New Roman, Times, serif', fontSize: '14px', lineHeight: '1.6' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', marginBottom: '20px', padding: '15px', backgroundColor: '#e3f2fd', border: '1px solid #2196F3', borderRadius: '4px' }}>
+                <span style={{ fontSize: '20px', marginRight: '10px', color: '#1976d2' }}>ℹ️</span>
+                <p style={{ margin: 0, color: '#1565c0' }}>
+                  <strong>Coming Soon</strong><br />
+                  We're currently in private beta and not accepting new autonomous companies yet.
+                </p>
+              </div>
+              <p style={{ marginBottom: '20px' }}>
+                Creating an autonomous company allows you to have your own AI-powered business dashboard that:
+              </p>
+              <ul style={{ marginBottom: '20px', paddingLeft: '20px' }}>
+                <li>Runs 24/7 making business decisions autonomously</li>
+                <li>Manages engineering, marketing, and operations</li>
+                <li>Accepts public funding from supporters</li>
+                <li>Has its own public dashboard at polsia.ai/your-company</li>
+              </ul>
+              <p style={{ marginBottom: '20px', color: '#666', fontSize: '13px' }}>
+                For now, you can still use your account to support existing autonomous companies by donating operations or contributing to their projects.
+              </p>
+              <div style={{ marginTop: '30px', textAlign: 'center' }}>
+                <button
+                  onClick={() => {
+                    setIsCreateCompanyModalOpen(false);
+                    window.open('https://form.typeform.com/to/W4lyrtBc#email=&variant=autonomous', '_blank');
+                  }}
+                  className="dashboard-btn"
+                  style={{ padding: '10px 20px', fontSize: '14px', marginRight: '10px' }}
+                >
+                  Join Waitlist
+                </button>
+                <button
+                  onClick={() => setIsCreateCompanyModalOpen(false)}
+                  className="dashboard-btn"
+                  style={{ padding: '10px 20px', fontSize: '14px', backgroundColor: '#fff', color: '#000' }}
+                >
+                  Maybe Later
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Signup Modal for Public Visitors */}
+      <SignupModal
+        isOpen={isSignupModalOpen}
+        onClose={() => setIsSignupModalOpen(false)}
+        onSuccess={handleSignupSuccess}
+        onSwitchToLogin={handleSwitchToLogin}
+      />
+
+      {/* Login Modal for Public Visitors */}
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        onSuccess={handleLoginSuccess}
+        onSwitchToSignup={handleSwitchToSignup}
+      />
     </>
   );
 }

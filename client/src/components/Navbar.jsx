@@ -4,8 +4,10 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import './Navbar.css';
 
-function Navbar({ isPublic = false }) {
-  const { user, logout, token } = useAuth();
+function Navbar({ isPublic = false, publicUser = null }) {
+  const { user: authUser, logout, token, refreshUser } = useAuth();
+  // Use publicUser when viewing public dashboard, otherwise use authenticated user
+  const user = isPublic && publicUser ? publicUser : authUser;
   const { isDarkMode, toggleDarkMode } = useTheme();
   const navigate = useNavigate();
   const [isPolsiaModalOpen, setIsPolsiaModalOpen] = useState(false);
@@ -15,23 +17,31 @@ function Navbar({ isPublic = false }) {
   const [waitlistButtonDisabled, setWaitlistButtonDisabled] = useState(false);
   const [balance, setBalance] = useState(null);
   const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
+  const [isPublicDashboard, setIsPublicDashboard] = useState(false);
+  const [isPublicConfirmModalOpen, setIsPublicConfirmModalOpen] = useState(false);
 
   useEffect(() => {
-    if (user?.id && token && !isPublic) {
+    if (authUser?.id && token) {
       fetchBalance();
     }
-  }, [user, token, isPublic]);
+  }, [authUser, token]);
+
+  useEffect(() => {
+    if (user?.public_dashboard_enabled !== undefined) {
+      setIsPublicDashboard(user.public_dashboard_enabled);
+    }
+  }, [user]);
 
   const fetchBalance = async () => {
     try {
-      const response = await fetch('/api/balance', {
+      const response = await fetch('/api/operations', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
       const data = await response.json();
       if (response.ok) {
-        setBalance(data.balance);
+        setBalance(data);
       }
     } catch (err) {
       console.error('Failed to fetch balance:', err);
@@ -57,6 +67,37 @@ function Navbar({ isPublic = false }) {
 
   const handleSettings = () => {
     setIsSettingsModalOpen(true);
+  };
+
+  const handlePublicToggle = () => {
+    setIsPublicConfirmModalOpen(true);
+  };
+
+  const confirmPublicToggle = async () => {
+    try {
+      const newPublicState = !isPublicDashboard;
+      const response = await fetch('/api/user/public-dashboard', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ public_dashboard_enabled: newPublicState })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setIsPublicDashboard(newPublicState);
+        setIsPublicConfirmModalOpen(false);
+        // Refresh user data to ensure consistency
+        await refreshUser();
+      } else {
+        console.error('Failed to update public dashboard setting:', data.message);
+      }
+    } catch (error) {
+      console.error('Failed to update public dashboard setting:', error);
+    }
   };
 
   const handlePolsiaClick = (e) => {
@@ -142,8 +183,11 @@ function Navbar({ isPublic = false }) {
         </div>
         <div className="navbar-actions">
           <span className="user-info">
-            {balance ? `${Math.round(parseFloat(balance.current_balance_usd) * 100)} ops` : '0 ops'}
+            {authUser?.email ? `${authUser.email} | ` : ''}{balance ? `${balance.user_operations || 0} ops | ` : '0 ops | '}{authUser?.has_autonomous_company ? (authUser?.company_name || 'My Company') : 'no company'}
           </span>
+          <button onClick={handlePublicToggle} className="nav-button" title={isPublicDashboard ? 'Dashboard is public' : 'Dashboard is private'}>
+            {isPublicDashboard ? 'Public' : 'Private'}
+          </button>
           <button onClick={toggleDarkMode} className="nav-button" title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}>
             {isDarkMode ? 'Light' : 'Dark'}
           </button>
@@ -189,7 +233,7 @@ function Navbar({ isPublic = false }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
               <div>
                 <h1 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif', fontSize: '2.5em', color: isDarkMode ? '#fff' : '#000' }}>Polsia</h1>
-                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: isDarkMode ? '#ccc' : '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.154</p>
+                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: isDarkMode ? '#ccc' : '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.155</p>
               </div>
               <button
                 onClick={() => setIsPolsiaModalOpen(false)}
@@ -441,6 +485,71 @@ function Navbar({ isPublic = false }) {
                 So nobody told me what to build<br />
                 And there was no preconception of what to build
               </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Public Dashboard Confirmation Modal */}
+      {isPublicConfirmModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }}
+          onClick={() => setIsPublicConfirmModalOpen(false)}
+        >
+          <div
+            style={{
+              backgroundColor: isDarkMode ? '#000' : '#fff',
+              padding: '40px',
+              borderRadius: '4px',
+              maxWidth: '500px',
+              width: '100%',
+              border: isDarkMode ? '1px solid #fff' : '1px solid #000',
+              position: 'relative',
+              color: isDarkMode ? '#fff' : '#000'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 style={{ margin: '0 0 20px 0', fontFamily: 'Times New Roman, Times, serif', fontSize: '1.8em', color: isDarkMode ? '#fff' : '#000' }}>
+              {isPublicDashboard ? 'Make Dashboard Private?' : 'Make Dashboard Public?'}
+            </h2>
+
+            {isPublicDashboard ? (
+              <p style={{ marginBottom: '30px', lineHeight: '1.6', color: isDarkMode ? '#fff' : '#000' }}>
+                By making your company private, your dashboard will no longer be publicly accessible. Only you will be able to view it when logged in.
+              </p>
+            ) : (
+              <p style={{ marginBottom: '30px', lineHeight: '1.6', color: isDarkMode ? '#fff' : '#000' }}>
+                By making your company public, anyone can access your dashboard, fund the autonomous operations, take actions, and give feedback on your company's progress.
+              </p>
+            )}
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setIsPublicConfirmModalOpen(false)}
+                className="nav-button"
+                style={{ padding: '8px 16px' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmPublicToggle}
+                className="nav-button"
+                style={{ padding: '8px 16px' }}
+              >
+                Confirm
+              </button>
             </div>
           </div>
         </div>

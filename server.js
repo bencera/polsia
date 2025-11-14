@@ -11,6 +11,7 @@ const {
     getWaitlistCount,
     getUserByEmail,
     getUserById,
+    createUser,
     getTasksByUserId,
     getServiceConnectionsByUserId,
     updateServiceConnectionStatus
@@ -164,12 +165,69 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
             user: {
                 id: user.id,
                 email: user.email,
-                name: user.name
+                name: user.name,
+                has_autonomous_company: user.has_autonomous_company,
+                company_name: user.company_name,
+                company_slug: user.company_slug
             }
         });
     } catch (error) {
         console.error('Error during login:', error);
         res.status(500).json({ success: false, message: 'Login failed' });
+    }
+});
+
+// Registration endpoint
+app.post('/api/auth/register', loginLimiter, async (req, res) => {
+    const { email, password } = req.body;
+
+    // Validate input
+    if (!email || !password) {
+        return res.status(400).json({ success: false, message: 'Email and password are required' });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        return res.status(400).json({ success: false, message: 'Invalid email format' });
+    }
+
+    // Validate password strength (minimum 6 characters)
+    if (password.length < 6) {
+        return res.status(400).json({ success: false, message: 'Password must be at least 6 characters long' });
+    }
+
+    try {
+        // Hash password
+        const saltRounds = 10;
+        const passwordHash = await bcrypt.hash(password, saltRounds);
+
+        // Create user
+        const user = await createUser(email, passwordHash);
+
+        // Generate JWT token
+        const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
+
+        res.json({
+            success: true,
+            token,
+            user: {
+                id: user.id,
+                email: user.email,
+                name: user.name,
+                has_autonomous_company: user.has_autonomous_company,
+                company_name: user.company_name,
+                company_slug: user.company_slug
+            }
+        });
+    } catch (error) {
+        console.error('Error during registration:', error);
+
+        if (error.message === 'Email already exists') {
+            return res.status(400).json({ success: false, message: 'Email already exists' });
+        }
+
+        res.status(500).json({ success: false, message: 'Registration failed' });
     }
 });
 
@@ -180,6 +238,7 @@ app.get('/api/auth/me', authenticateToken, (req, res) => {
             id: req.user.id,
             email: req.user.email,
             name: req.user.name,
+            has_autonomous_company: req.user.has_autonomous_company,
             company_name: req.user.company_name,
             company_slug: req.user.company_slug,
             public_dashboard_enabled: req.user.public_dashboard_enabled,
@@ -423,6 +482,37 @@ app.use('/api/modules', authenticateToken, moduleRoutes);
 
 // Task Management Routes - Agent-driven task workflow system
 const taskRoutes = require('./routes/task-routes');
+const { getTasksByStatus } = require('./db');
+
+// Public tasks endpoint (for public dashboards) - must be before authenticated routes
+app.get('/api/tasks/user/:userId', async (req, res) => {
+    try {
+        const userId = parseInt(req.params.userId);
+        const { status, limit = 50, offset = 0 } = req.query;
+
+        const options = {
+            limit: parseInt(limit),
+            offset: parseInt(offset)
+        };
+
+        const tasks = await getTasksByStatus(userId, status || null, options);
+
+        res.json({
+            success: true,
+            count: tasks.length,
+            tasks
+        });
+    } catch (error) {
+        console.error('Error fetching public tasks:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to fetch tasks',
+            message: error.message
+        });
+    }
+});
+
+// Authenticated tasks endpoints
 app.use('/api/tasks', authenticateToken, taskRoutes);
 
 // Agents Routes - Task-driven AI agents system
@@ -443,9 +533,51 @@ app.use('/api/ai', authenticateToken, aiGenerationRoutes);
 
 // Document Store Routes - Manage company documents (vision, goals, analytics, memory)
 const documentRoutes = require('./routes/document-routes');
-// Public routes first (no auth required)
-app.use('/api/documents/user', documentRoutes);
-app.use('/api/reports/user', require('./routes/reports-routes'));
+const { getDocumentStore, initializeDocumentStore } = require('./services/document-store');
+const { getReportsByUserId } = require('./db');
+
+// Public documents endpoint (for public dashboards) - must be before authenticated routes
+app.get('/api/documents/user/:userId', async (req, res) => {
+  try {
+    const userId = parseInt(req.params.userId);
+
+    if (!userId || isNaN(userId)) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID' });
+    }
+
+    let documentStore = await getDocumentStore(userId);
+
+    // If no document store exists, initialize one
+    if (!documentStore) {
+      documentStore = await initializeDocumentStore(userId);
+    }
+
+    res.json({ success: true, documents: documentStore });
+  } catch (error) {
+    console.error('Error getting public documents:', error);
+    res.status(500).json({ success: false, message: 'Failed to get documents' });
+  }
+});
+
+// Public reports endpoint (for public dashboards) - must be before authenticated routes
+app.get('/api/reports/user/:userId', async (req, res) => {
+  try {
+    const userId = parseInt(req.params.userId);
+    const limit = parseInt(req.query.limit) || 5;
+
+    if (!userId || isNaN(userId)) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID' });
+    }
+
+    const reports = await getReportsByUserId(userId, {}, limit, 0);
+
+    res.json({ success: true, reports: reports || [] });
+  } catch (error) {
+    console.error('Error getting public reports:', error);
+    res.status(500).json({ success: false, message: 'Failed to get reports' });
+  }
+});
+
 // Then authenticated routes
 app.use('/api/documents', authenticateToken, documentRoutes);
 
@@ -467,6 +599,25 @@ app.use('/api/brain', authenticateToken, brainRoutes);
 
 // Connection Routes - Service connection management
 const connectionRoutes = require('./routes/connection-routes');
+
+// Public connections endpoint (for public dashboards) - must be before authenticated routes
+app.get('/api/connections/user/:userId', async (req, res) => {
+  try {
+    const userId = parseInt(req.params.userId);
+
+    if (!userId || isNaN(userId)) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID' });
+    }
+
+    const connections = await getServiceConnectionsByUserId(userId);
+
+    res.json({ success: true, connections: connections || [] });
+  } catch (error) {
+    console.error('Error getting public connections:', error);
+    res.status(500).json({ success: false, message: 'Failed to get connections' });
+  }
+});
+
 app.use('/api/connections', authenticateToken, connectionRoutes);
 
 // Public Dashboard Routes - NO authentication required
@@ -480,9 +631,11 @@ app.use('/api/user', authenticateToken, userSettingsRoutes);
 // Funding and donations routes (webhook route already registered above before express.json())
 const fundingProjectRoutes = require('./routes/funding-project-routes')(authenticateToken);
 const balanceRoutes = require('./routes/balance-routes')(authenticateToken);
+const operationsRoutes = require('./routes/operations-routes');
 app.use('/api/donations', donationRoutes); // Other donation routes (non-webhook)
 app.use('/api/funding-projects', fundingProjectRoutes);
 app.use('/api/balance', balanceRoutes);
+app.use('/api/operations', authenticateToken, operationsRoutes);
 
 // 404 for any other routes
 app.get('*', (req, res) => {
