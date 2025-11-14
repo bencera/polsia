@@ -57,6 +57,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
   const [isFundersModalOpen, setIsFundersModalOpen] = useState(false);
   const [allFunders, setAllFunders] = useState([]);
   const [isAutoFundModalOpen, setIsAutoFundModalOpen] = useState(false);
+  const [isAutoRefillInfoModalOpen, setIsAutoRefillInfoModalOpen] = useState(false);
   const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
   const [isConnectionsModalOpen, setIsConnectionsModalOpen] = useState(false);
   const [allActivity, setAllActivity] = useState([]);
@@ -661,11 +662,24 @@ function Dashboard({ isPublic = false, publicUser = null }) {
               <span className="dashboard-stat">Company Operations: <span className="dashboard-value">
                 {balance ? (balance.company_operations || 0) : '0'}
               </span></span>
-              <button className="dashboard-btn" onClick={() => handleDonateClick()}>Add Ops</button>
+              <button className="dashboard-btn" onClick={() => handleDonateClick()}>
+                {isPublic ? 'Donate Ops' : 'Add Ops'}
+              </button>
             </div>
             <div className="dashboard-section" style={{marginTop: '10px'}}>
               <span className="dashboard-stat">Auto-refill: <span className="dashboard-value">OFF</span></span>
-              <button className="dashboard-btn" onClick={() => requireAuth(() => setIsAutoFundModalOpen(true))}>Enable</button>
+              <button
+                className="dashboard-btn"
+                onClick={() => {
+                  if (isPublic) {
+                    setIsAutoRefillInfoModalOpen(true);
+                  } else {
+                    requireAuth(() => setIsAutoFundModalOpen(true));
+                  }
+                }}
+              >
+                Enable
+              </button>
             </div>
             <div className="dashboard-section" style={{marginTop: '10px'}}>
               <span className="dashboard-stat">Model:</span>
@@ -1210,7 +1224,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
               <div>
                 <h1 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif', fontSize: '2.5em' }}>Polsia</h1>
-                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.164</p>
+                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.165</p>
               </div>
               <button
                 onClick={() => setIsPolsiaModalOpen(false)}
@@ -1556,6 +1570,69 @@ function Dashboard({ isPublic = false, publicUser = null }) {
                   style={{ padding: '10px 20px', fontSize: '14px' }}
                 >
                   Add Payment Method
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Auto-refill Info Modal */}
+      {isAutoRefillInfoModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }}
+          onClick={() => setIsAutoRefillInfoModalOpen(false)}
+        >
+          <div
+            style={{
+              backgroundColor: '#fff',
+              padding: '40px',
+              borderRadius: '4px',
+              maxWidth: '500px',
+              width: '100%',
+              border: '1px solid #000',
+              position: 'relative'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif' }}>Auto-refill Feature</h2>
+              <button
+                onClick={() => setIsAutoRefillInfoModalOpen(false)}
+                className="dashboard-btn"
+              >
+                Close
+              </button>
+            </div>
+            <div style={{ fontFamily: 'Times New Roman, Times, serif', fontSize: '14px', lineHeight: '1.8' }}>
+              <p style={{ marginBottom: '20px' }}>
+                Auto-refill lets owners automatically refill ops whenever they run low. This is reserved for owners for now.
+              </p>
+              <p style={{ marginBottom: '20px' }}>
+                If you'd like to contribute, please donate ops!
+              </p>
+              <div style={{ marginTop: '30px', textAlign: 'center' }}>
+                <button
+                  onClick={() => {
+                    setIsAutoRefillInfoModalOpen(false);
+                    handleDonateClick();
+                  }}
+                  className="dashboard-btn"
+                  style={{ padding: '10px 20px', fontSize: '14px' }}
+                >
+                  Donate Ops
                 </button>
               </div>
             </div>
