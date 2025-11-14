@@ -73,6 +73,13 @@ function Settings() {
         <div className="settings-sections">
           <button
             className="settings-link-button"
+            onClick={() => navigate('/profile')}
+          >
+            Profile
+          </button>
+
+          <button
+            className="settings-link-button"
             onClick={() => navigate('/connections')}
           >
             Connections

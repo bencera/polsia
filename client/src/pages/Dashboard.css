@@ -39,9 +39,9 @@
 
 /* Dashboard Content */
 .dashboard-content {
-  margin-bottom: 30px;
+  margin-bottom: 0;
   margin-top: 10px;
-  padding: 0 20px 40px 20px;
+  padding: 0 20px 10px 20px;
 }
 
 .dashboard-content h1 {
@@ -207,9 +207,9 @@
 /* Footer */
 .footer {
   text-align: center;
-  padding: 18px 0 18px 0 !important;
+  padding: 6px 0 12px 0 !important;
   border-top: 1px solid #000;
-  margin-top: 40px;
+  margin-top: 0;
 }
 
 .footer p {
@@ -239,8 +239,8 @@
 .dashboard-container {
   display: flex;
   gap: 30px;
-  margin-bottom: 20px;
-  padding-bottom: 20px;
+  margin-bottom: 0;
+  padding-bottom: 0;
   font-family: "Times New Roman", Times, serif;
   font-size: 14px;
   line-height: 1.5;

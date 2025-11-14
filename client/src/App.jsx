@@ -11,6 +11,7 @@ import AgentsPage from './pages/AgentsPage';
 import Brain from './pages/Brain';
 import Tasks from './pages/Tasks';
 import Settings from './pages/Settings';
+import Profile from './pages/Profile';
 import Connections from './pages/Connections';
 import Documents from './pages/Documents';
 import Analytics from './pages/Analytics';
@@ -104,6 +105,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Settings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Profile />
                 </ProtectedRoute>
               }
             />

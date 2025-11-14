@@ -12,6 +12,13 @@ const {
     contributeToUser
 } = require('../db');
 const { OPERATIONS_CONFIG } = require('../config/operations-config');
+const Stripe = require('stripe');
+
+// Use correct Stripe key based on environment
+const isProduction = process.env.NODE_ENV === 'production';
+const STRIPE_SECRET_KEY = isProduction
+    ? process.env.STRIPE_SECRET_KEY_LIVE
+    : (process.env.STRIPE_SECRET_KEY_TEST || process.env.STRIPE_SECRET_KEY_LIVE);
 
 /**
  * GET /api/operations
@@ -87,6 +94,83 @@ router.post('/transfer', async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Failed to transfer operations'
+        });
+    }
+});
+
+/**
+ * POST /api/operations/purchase
+ * Purchase ops via Stripe and optionally contribute to another user
+ * Body: { opsToPurchase: number, totalOpsAmount: number (optional), recipientUserId: number (optional), message: string (optional), isAnonymous: boolean (optional) }
+ */
+router.post('/purchase', async (req, res) => {
+    try {
+        const { opsToPurchase, totalOpsAmount, recipientUserId, message, isAnonymous, returnPath } = req.body;
+        const buyerUserId = req.user.id;
+
+        // Validate ops amount to purchase
+        if (!opsToPurchase || typeof opsToPurchase !== 'number' || opsToPurchase <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid ops amount'
+            });
+        }
+
+        // Calculate USD cost (100 ops = $1) - only charge for what they're buying
+        const usdCost = opsToPurchase / 100;
+
+        // Create Stripe checkout session
+        if (!STRIPE_SECRET_KEY) {
+            return res.status(500).json({
+                success: false,
+                message: 'Payment system not configured'
+            });
+        }
+
+        const stripe = Stripe(STRIPE_SECRET_KEY);
+
+        // Use returnPath for redirect, or default to /dashboard
+        const baseUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+        const redirectPath = returnPath || '/dashboard';
+
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ['card'],
+            line_items: [{
+                price_data: {
+                    currency: 'usd',
+                    product_data: {
+                        name: `${opsToPurchase} Operations`,
+                        description: recipientUserId
+                            ? `Purchase ${opsToPurchase} ops and donate ${totalOpsAmount || opsToPurchase} ops total`
+                            : `${opsToPurchase} ops for your account`
+                    },
+                    unit_amount: Math.round(usdCost * 100) // Stripe uses cents
+                },
+                quantity: 1
+            }],
+            mode: 'payment',
+            success_url: `${baseUrl}${redirectPath}?ops_purchase=success`,
+            cancel_url: `${baseUrl}${redirectPath}?ops_purchase=cancelled`,
+            metadata: {
+                buyer_user_id: buyerUserId,
+                ops_to_purchase: opsToPurchase, // Amount being purchased
+                total_ops_amount: totalOpsAmount || opsToPurchase, // Total amount to donate (purchased + existing)
+                recipient_user_id: recipientUserId || '',
+                message: message || '',
+                is_anonymous: isAnonymous ? 'true' : 'false',
+                type: 'ops_purchase'
+            }
+        });
+
+        res.json({
+            success: true,
+            checkoutUrl: session.url
+        });
+    } catch (error) {
+        console.error('Error creating Stripe checkout:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to create checkout session'
         });
     }
 });

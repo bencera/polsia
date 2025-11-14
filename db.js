@@ -173,7 +173,7 @@ async function getUserById(id) {
     const client = await pool.connect();
     try {
         const result = await client.query(
-            'SELECT id, email, name, has_autonomous_company, company_name, company_slug, public_dashboard_enabled, created_at, updated_at FROM users WHERE id = $1',
+            'SELECT id, email, name, full_name, twitter_handle, has_autonomous_company, company_name, company_slug, public_dashboard_enabled, created_at, updated_at FROM users WHERE id = $1',
             [id]
         );
         return result.rows[0] || null;
@@ -4111,22 +4111,51 @@ async function completeDonation(paymentIntentId) {
 async function getTopDonorsByUser(userId, limit = 10) {
     const result = await pool.query(
         `SELECT
-            CASE WHEN bool_or(is_anonymous) THEN 'Anonymous' ELSE MAX(donor_name) END as donor_name,
-            donor_email,
-            SUM(amount_usd) as total_donated,
-            (SELECT message FROM donations d2
-             WHERE d2.donor_email = d1.donor_email
-             AND d2.user_id = $1
-             AND d2.status = 'completed'
-             ORDER BY d2.created_at DESC
-             LIMIT 1) as latest_message,
-            COUNT(*) as donation_count
+            CASE
+                WHEN bool_or(d1.is_anonymous) THEN 'Anonymous'
+                ELSE COALESCE(
+                    MAX(u.full_name),
+                    MAX(u.company_name),
+                    MAX(d1.donor_name)
+                )
+            END as donor_name,
+            d1.donor_email,
+            MAX((d1.metadata->>'donor_user_id')::integer) as donor_user_id,
+            MAX(u.twitter_handle) as twitter_handle,
+            SUM(d1.amount_usd) as total_donated,
+            MAX(d1.message) as latest_message,
+            COUNT(*) as donation_count,
+            MIN(d1.created_at) as first_contribution_date
          FROM donations d1
-         WHERE user_id = $1 AND status = 'completed'
-         GROUP BY donor_email
+         LEFT JOIN users u ON u.id = (d1.metadata->>'donor_user_id')::integer
+         WHERE d1.user_id = $1 AND d1.status = 'completed'
+         GROUP BY COALESCE((d1.metadata->>'donor_user_id')::text, d1.donor_email), d1.donor_email
          ORDER BY total_donated DESC
          LIMIT $2`,
         [userId, limit]
+    );
+    return result.rows;
+}
+
+// Get companies/users that a donor has contributed to
+async function getContributionsByDonor(donorUserId, limit = 50) {
+    const result = await pool.query(
+        `SELECT
+            u.id as recipient_user_id,
+            u.company_name as recipient_company_name,
+            u.company_slug as recipient_company_slug,
+            SUM(d.amount_usd) as total_donated,
+            COUNT(*) as donation_count,
+            MAX(d.created_at) as latest_contribution_date,
+            MIN(d.created_at) as first_contribution_date
+         FROM donations d
+         JOIN users u ON u.id = d.user_id
+         WHERE (d.metadata->>'donor_user_id')::integer = $1
+         AND d.status = 'completed'
+         GROUP BY u.id, u.company_name, u.company_slug
+         ORDER BY total_donated DESC
+         LIMIT $2`,
+        [donorUserId, limit]
     );
     return result.rows;
 }
@@ -4409,9 +4438,39 @@ async function contributeToUser(donorUserId, recipientUserId, operationsAmount, 
             [operationsAmount, recipientUserId]
         );
 
-        // Record the contribution for transparency (could create a contributions table in the future)
-        // For now, we'll just log it
-        console.log(`[Operations Contribution] ${isAnonymous ? 'Anonymous' : `User ${donorUserId}`} contributed ${operationsAmount} ops to User ${recipientUserId}${message ? ` with message: ${message}` : ''}`);
+        // Get donor info for donation record
+        const donorInfo = await client.query(
+            'SELECT email, company_name FROM users WHERE id = $1',
+            [donorUserId]
+        );
+        const donor = donorInfo.rows[0];
+        const donorName = isAnonymous ? 'Anonymous' : (donor?.company_name || donor?.email?.split('@')[0] || 'Anonymous');
+
+        // Convert ops to USD for donation record (100 ops = $1)
+        const usdAmount = operationsAmount / 100;
+
+        // Create donation record for contributor tracking
+        await client.query(
+            `INSERT INTO donations (user_id, donor_name, donor_email, amount_usd, stripe_payment_intent_id, status, message, metadata, is_anonymous, completed_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, CURRENT_TIMESTAMP)`,
+            [
+                recipientUserId,
+                donorName,
+                donor?.email,
+                usdAmount,
+                `ops_contribution_${Date.now()}`, // Unique ID for ops contributions
+                'completed',
+                message,
+                JSON.stringify({
+                    type: 'ops_contribution',
+                    ops_amount: operationsAmount,
+                    donor_user_id: donorUserId
+                }),
+                isAnonymous
+            ]
+        );
+
+        console.log(`[Operations Contribution] User ${donorUserId} contributed ${operationsAmount} ops to User ${recipientUserId}${message ? ` with message: ${message}` : ''}`);
 
         await client.query('COMMIT');
 
@@ -4478,6 +4537,7 @@ module.exports.deleteFundingProject = deleteFundingProject;
 module.exports.createDonation = createDonation;
 module.exports.completeDonation = completeDonation;
 module.exports.getTopDonorsByUser = getTopDonorsByUser;
+module.exports.getContributionsByDonor = getContributionsByDonor;
 module.exports.getDonationsByUser = getDonationsByUser;
 module.exports.getDonationByPaymentIntent = getDonationByPaymentIntent;
 module.exports.getUnthankedDonations = getUnthankedDonations;

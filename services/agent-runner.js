@@ -266,15 +266,23 @@ async function runModule(moduleId, userId, options = {}) {
         // 7.05. Deduct cost from user balance and check if modules should be paused
         if (cost > 0) {
             try {
-                const { deductFromBalance, checkBalanceAndPauseModules } = require('../db');
-                await deductFromBalance(userId, cost);
-                const paused = await checkBalanceAndPauseModules(userId);
+                const { deductCompanyOperations, checkCompanyOperationsAndPauseModules } = require('../db');
+                const { usdToOperations } = require('../config/operations-config');
+
+                // Convert USD cost to operations
+                const operationsCost = usdToOperations(cost);
+
+                // Deduct from company operations balance
+                await deductCompanyOperations(userId, operationsCost, cost);
+
+                // Check if company operations depleted and pause modules
+                const paused = await checkCompanyOperationsAndPauseModules(userId);
                 if (paused) {
-                    console.log(`[Agent Runner] ⚠️  Balance depleted - modules paused for user ${userId}`);
+                    console.log(`[Agent Runner] ⚠️  Company operations depleted - modules paused for user ${userId}`);
                     await saveExecutionLog(executionRecord.id, {
                         timestamp: new Date(),
                         level: 'warning',
-                        message: 'Balance depleted - all active modules have been paused. Add funds to resume operations.',
+                        message: 'Company operations depleted - all active modules have been paused. Add operations to resume.',
                         stage: 'post_execution'
                     });
                 }

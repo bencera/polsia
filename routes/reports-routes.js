@@ -65,6 +65,14 @@ router.get('/user/:userId', async (req, res) => {
  */
 router.get('/', async (req, res) => {
     try {
+        // Check if user is authenticated
+        if (!req.user || !req.user.id) {
+            return res.status(401).json({
+                success: false,
+                message: 'Authentication required',
+            });
+        }
+
         const { report_type, start_date, end_date, limit = 50, offset = 0 } = req.query;
 
         const filters = {};
@@ -98,6 +106,14 @@ router.get('/', async (req, res) => {
  */
 router.get('/types', async (req, res) => {
     try {
+        // Check if user is authenticated
+        if (!req.user || !req.user.id) {
+            return res.status(401).json({
+                success: false,
+                message: 'Authentication required',
+            });
+        }
+
         const { pool } = require('../db');
         const client = await pool.connect();
 
@@ -133,6 +149,14 @@ router.get('/types', async (req, res) => {
  */
 router.get('/type/:type', async (req, res) => {
     try {
+        // Check if user is authenticated
+        if (!req.user || !req.user.id) {
+            return res.status(401).json({
+                success: false,
+                message: 'Authentication required',
+            });
+        }
+
         const { type } = req.params;
         const { limit = 5, offset = 0 } = req.query;
 
@@ -163,6 +187,14 @@ router.get('/type/:type', async (req, res) => {
  */
 router.get('/:id', async (req, res) => {
     try {
+        // Check if user is authenticated
+        if (!req.user || !req.user.id) {
+            return res.status(401).json({
+                success: false,
+                message: 'Authentication required',
+            });
+        }
+
         const report = await getReportById(parseInt(req.params.id), req.user.id);
 
         if (!report) {

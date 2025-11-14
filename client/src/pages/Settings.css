@@ -151,3 +151,44 @@
     padding: 10px 16px;
   }
 }
+
+/* Profile Form Styles */
+.profile-form {
+  max-width: 600px;
+  margin-top: 20px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #000;
+  font-size: 14px;
+  font-family: "Times New Roman", Times, serif;
+}
+
+.form-input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #000;
+  border-radius: 0;
+  font-size: 15px;
+  font-family: "Times New Roman", Times, serif;
+  background-color: #fff;
+  color: #000;
+  box-sizing: border-box;
+}
+
+.form-input:focus {
+  outline: none;
+  border-width: 2px;
+  border-color: #000;
+}
+
+.form-input::placeholder {
+  color: #999;
+}

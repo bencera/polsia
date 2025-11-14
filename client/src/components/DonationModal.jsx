@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import './DonationModal.css';
 
-function DonationModal({ isOpen, onClose, userId, projectId, projectName, isOwnAccount = false, token, onSuccess }) {
+function DonationModal({ isOpen, onClose, userId, projectId, projectName, isOwnAccount = false, token, onSuccess, userBalance }) {
   const [amount, setAmount] = useState('');
   const [message, setMessage] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(false);
@@ -10,6 +10,13 @@ function DonationModal({ isOpen, onClose, userId, projectId, projectName, isOwnA
 
   // Predefined amount buttons (in ops)
   const quickAmounts = [100, 500, 1000, 2500, 5000, 10000];
+
+  // Check if user has enough ops
+  const opsAmount = parseInt(amount) || 0;
+  const availableOps = userBalance?.user_operations || 0;
+  const needsToBuy = opsAmount > availableOps;
+  const opsNeeded = needsToBuy ? opsAmount - availableOps : 0;
+  const usdCost = (opsNeeded / 100).toFixed(2); // 100 ops = $1
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -25,6 +32,40 @@ function DonationModal({ isOpen, onClose, userId, projectId, projectName, isOwnA
         return;
       }
 
+      // If user needs to buy ops, redirect to Stripe
+      if (needsToBuy) {
+        const response = await fetch('/api/operations/purchase', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            opsToPurchase: opsNeeded, // Amount to buy
+            totalOpsAmount: opsAmount, // Total amount to donate after purchase
+            recipientUserId: isOwnAccount ? null : userId,
+            message: isOwnAccount ? null : (message || null),
+            isAnonymous: isOwnAccount ? false : isAnonymous,
+            returnPath: window.location.pathname // Current page to return to after payment
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || 'Failed to create checkout session');
+        }
+
+        // Redirect to Stripe
+        if (data.checkoutUrl) {
+          window.location.href = data.checkoutUrl;
+        } else {
+          throw new Error('No checkout URL received');
+        }
+        return;
+      }
+
+      // Otherwise, contribute directly from user's ops balance
       if (isOwnAccount) {
         // Transfer ops to own company
         const response = await fetch('/api/operations/transfer', {
@@ -42,9 +83,9 @@ function DonationModal({ isOpen, onClose, userId, projectId, projectName, isOwnA
           throw new Error(data.message || 'Failed to transfer operations');
         }
 
-        // Success
+        // Success - wait for refresh before closing
         if (onSuccess) {
-          onSuccess();
+          await onSuccess();
         }
         onClose();
       } else {
@@ -69,9 +110,9 @@ function DonationModal({ isOpen, onClose, userId, projectId, projectName, isOwnA
           throw new Error(data.message || 'Failed to contribute operations');
         }
 
-        // Success
+        // Success - wait for refresh before closing
         if (onSuccess) {
-          onSuccess();
+          await onSuccess();
         }
         onClose();
       }
@@ -90,13 +131,8 @@ function DonationModal({ isOpen, onClose, userId, projectId, projectName, isOwnA
         <button className="donation-modal-close" onClick={onClose}>Close</button>
 
         <h2 className="donation-modal-title">
-          {isOwnAccount ? 'Transfer Ops to Company' : `Donate Ops to ${projectName}`}
+          {isOwnAccount ? 'Add Ops' : `Donate Ops to ${projectName}`}
         </h2>
-        <p className="donation-modal-subtitle">
-          {isOwnAccount
-            ? 'Move ops from your personal balance to your company for autonomous operations.'
-            : 'These ops will be used exclusively for autonomous operations and actions.'}
-        </p>
 
         <form onSubmit={handleSubmit} className="donation-form">
           <div className="donation-quick-amounts">
@@ -167,9 +203,13 @@ function DonationModal({ isOpen, onClose, userId, projectId, projectName, isOwnA
             <button
               type="submit"
               className="donation-btn donation-btn-submit"
-              disabled={loading}
+              disabled={loading || !opsAmount}
             >
-              {loading ? 'Processing...' : (isOwnAccount ? 'Transfer to Company' : 'Contribute Operations')}
+              {loading ? 'Processing...' : (
+                needsToBuy
+                  ? `Buy ${opsNeeded} ops for $${usdCost}`
+                  : (isOwnAccount ? 'Transfer to Company' : `Donate ${opsAmount} ops`)
+              )}
             </button>
           </div>
         </form>

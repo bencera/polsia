@@ -181,15 +181,42 @@ router.post('/webhook', async (req, res) => {
                 const session = event.data.object;
                 console.log(`[Donation Routes] Checkout session completed: ${session.id}`);
 
-                // Complete the donation using session ID
-                const completedDonation = await db.completeDonation(session.id);
+                // Check if this is an ops purchase
+                if (session.metadata.type === 'ops_purchase') {
+                    const buyerUserId = parseInt(session.metadata.buyer_user_id);
+                    const opsToPurchase = parseInt(session.metadata.ops_to_purchase);
+                    const totalOpsAmount = parseInt(session.metadata.total_ops_amount);
+                    const recipientUserId = session.metadata.recipient_user_id ? parseInt(session.metadata.recipient_user_id) : null;
+                    const message = session.metadata.message || null;
+                    const isAnonymous = session.metadata.is_anonymous === 'true';
 
-                // Trigger thank-you automation asynchronously (don't block webhook response)
-                if (completedDonation?.id) {
-                    console.log(`[Donation Routes] 🎁 Triggering thank-you automation for donation ${completedDonation.id}`);
-                    triggerDonationThanker(completedDonation.id).catch(err => {
-                        console.error(`[Donation Routes] Failed to trigger donation thanker:`, err);
-                    });
+                    console.log(`[Donation Routes] Processing ops purchase: Buying ${opsToPurchase} ops for user ${buyerUserId}`);
+
+                    // Credit purchased ops to buyer's user_operations
+                    await db.pool.query(
+                        `UPDATE user_balances
+                         SET user_operations = user_operations + $1,
+                             last_updated_at = CURRENT_TIMESTAMP
+                         WHERE user_id = $2`,
+                        [opsToPurchase, buyerUserId]
+                    );
+
+                    // If there's a recipient, automatically contribute the TOTAL amount (purchased + existing)
+                    if (recipientUserId) {
+                        console.log(`[Donation Routes] Auto-contributing ${totalOpsAmount} ops total to user ${recipientUserId} (${opsToPurchase} purchased + ${totalOpsAmount - opsToPurchase} from wallet)`);
+                        await db.contributeToUser(buyerUserId, recipientUserId, totalOpsAmount, message, isAnonymous);
+                    }
+                } else {
+                    // Complete the donation using session ID
+                    const completedDonation = await db.completeDonation(session.id);
+
+                    // Trigger thank-you automation asynchronously (don't block webhook response)
+                    if (completedDonation?.id) {
+                        console.log(`[Donation Routes] 🎁 Triggering thank-you automation for donation ${completedDonation.id}`);
+                        triggerDonationThanker(completedDonation.id).catch(err => {
+                            console.error(`[Donation Routes] Failed to trigger donation thanker:`, err);
+                        });
+                    }
                 }
                 break;
 

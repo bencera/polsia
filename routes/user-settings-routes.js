@@ -128,4 +128,32 @@ router.post('/settings/check-slug', async (req, res) => {
     }
 });
 
+// PUT /api/user/public-dashboard - Toggle public dashboard setting
+router.put('/public-dashboard', async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { public_dashboard_enabled } = req.body;
+
+        if (typeof public_dashboard_enabled !== 'boolean') {
+            return res.status(400).json({ error: 'public_dashboard_enabled must be a boolean' });
+        }
+
+        const updatedUser = await db.updateUserCompanySettings(userId, {
+            publicDashboardEnabled: public_dashboard_enabled
+        });
+
+        if (!updatedUser) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        res.json({
+            success: true,
+            public_dashboard_enabled: updatedUser.public_dashboard_enabled
+        });
+    } catch (err) {
+        console.error('Error updating public dashboard setting:', err);
+        res.status(500).json({ error: 'Failed to update public dashboard setting' });
+    }
+});
+
 module.exports = router;

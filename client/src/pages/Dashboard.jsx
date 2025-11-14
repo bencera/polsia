@@ -43,6 +43,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [balance, setBalance] = useState(null);
+  const [authUserBalance, setAuthUserBalance] = useState(null); // Authenticated user's balance (for donation modal)
   const [topFunders, setTopFunders] = useState([]);
   const [fundingProjects, setFundingProjects] = useState([]);
   const [isDonationModalOpen, setIsDonationModalOpen] = useState(false);
@@ -137,6 +138,17 @@ function Dashboard({ isPublic = false, publicUser = null }) {
         // For public mode, data.balance has current_balance_usd
         // For authenticated mode, data has company_operations and user_operations
         setBalance(isPublic ? data.balance : data);
+      }
+
+      // If in public mode, also fetch authenticated user's balance for donation modal
+      if (isPublic && token) {
+        const authResponse = await fetch('/api/operations', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const authData = await authResponse.json();
+        if (authResponse.ok) {
+          setAuthUserBalance(authData);
+        }
       }
     } catch (err) {
       console.error('Failed to fetch balance:', err);
@@ -481,9 +493,14 @@ function Dashboard({ isPublic = false, publicUser = null }) {
   const handleDonationModalClose = () => {
     setIsDonationModalOpen(false);
     setSelectedProject(null);
-    // Refresh data after donation
-    fetchBalance();
-    fetchTopFunders();
+  };
+
+  const handleDonationSuccess = async () => {
+    // Refresh all data after successful donation
+    await Promise.all([
+      fetchBalance(),
+      fetchTopFunders()
+    ]);
   };
 
   const handleDocumentClick = (docType, content) => {
@@ -642,7 +659,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
             <h2 className="dashboard-title">Autonomous Resources</h2>
             <div className="dashboard-section">
               <span className="dashboard-stat">Company Operations: <span className="dashboard-value">
-                {balance ? (isPublic ? Math.round(parseFloat(balance.current_balance_usd) * 100) : (balance.company_operations || 0)) : '0'}
+                {balance ? (balance.company_operations || 0) : '0'}
               </span></span>
               <button className="dashboard-btn" onClick={() => handleDonateClick()}>Add Ops</button>
             </div>
@@ -712,7 +729,23 @@ function Dashboard({ isPublic = false, publicUser = null }) {
                   Top Contributors: {topFunders.slice(0, 5).map((funder, index) => (
                     <span key={index}>
                       {index > 0 && ', '}
-                      {funder.donor_name} ({Math.round(parseFloat(funder.total_donated) * 100)} ops)
+                      {funder.donor_name}
+                      {funder.twitter_handle && (
+                        <a
+                          href={`https://twitter.com/${funder.twitter_handle.replace('@', '')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            marginLeft: '4px',
+                            fontSize: '0.9em',
+                            color: '#000',
+                            textDecoration: 'underline',
+                            fontStyle: 'italic'
+                          }}
+                        >
+                          {funder.twitter_handle.startsWith('@') ? funder.twitter_handle : `@${funder.twitter_handle}`}
+                        </a>
+                      )} ({Math.round(parseFloat(funder.total_donated) * 100)} ops)
                     </span>
                   ))}
                 </div>
@@ -1065,9 +1098,10 @@ function Dashboard({ isPublic = false, publicUser = null }) {
         userId={user?.id}
         projectId={selectedProject?.id}
         projectName={selectedProject?.name || user?.company_name || 'Your Account'}
-        isOwnAccount={true}
+        isOwnAccount={!isPublic}
         token={token}
-        onSuccess={fetchBalance}
+        onSuccess={handleDonationSuccess}
+        userBalance={isPublic ? authUserBalance : balance}
       />
 
       {/* Document Viewer Modal */}
@@ -1176,7 +1210,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
               <div>
                 <h1 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif', fontSize: '2.5em' }}>Polsia</h1>
-                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.163</p>
+                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.164</p>
               </div>
               <button
                 onClick={() => setIsPolsiaModalOpen(false)}
@@ -1421,7 +1455,26 @@ function Dashboard({ isPublic = false, publicUser = null }) {
                       }}
                     >
                       <div>
-                        <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{funder.donor_name}</div>
+                        <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
+                          {funder.donor_name}
+                          {funder.twitter_handle && (
+                            <a
+                              href={`https://twitter.com/${funder.twitter_handle.replace('@', '')}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                marginLeft: '8px',
+                                fontSize: '13px',
+                                color: '#000',
+                                textDecoration: 'underline',
+                                fontStyle: 'italic',
+                                fontWeight: 'normal'
+                              }}
+                            >
+                              {funder.twitter_handle.startsWith('@') ? funder.twitter_handle : `@${funder.twitter_handle}`}
+                            </a>
+                          )}
+                        </div>
                         {funder.message && (
                           <div style={{ fontSize: '12px', color: '#666', fontStyle: 'italic' }}>
                             "{funder.message}"

@@ -238,6 +238,8 @@ app.get('/api/auth/me', authenticateToken, (req, res) => {
             id: req.user.id,
             email: req.user.email,
             name: req.user.name,
+            full_name: req.user.full_name,
+            twitter_handle: req.user.twitter_handle,
             has_autonomous_company: req.user.has_autonomous_company,
             company_name: req.user.company_name,
             company_slug: req.user.company_slug,
@@ -627,6 +629,10 @@ app.use('/api/public', publicDashboardRoutes);
 // User Settings Routes - Manage company settings and public dashboard
 const userSettingsRoutes = require('./routes/user-settings-routes');
 app.use('/api/user', authenticateToken, userSettingsRoutes);
+
+// User Profile Routes - Manage user profile information
+const userRoutes = require('./routes/user-routes');
+app.use('/api/users', authenticateToken, userRoutes);
 
 // Funding and donations routes (webhook route already registered above before express.json())
 const fundingProjectRoutes = require('./routes/funding-project-routes')(authenticateToken);
