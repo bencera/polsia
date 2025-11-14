@@ -81,6 +81,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
   const [isConnectionsModalOpen, setIsConnectionsModalOpen] = useState(false);
   const [isCycleFrequencyModalOpen, setIsCycleFrequencyModalOpen] = useState(false);
   const [isPublicConnectionsModalOpen, setIsPublicConnectionsModalOpen] = useState(false);
+  const [isModelModalOpen, setIsModelModalOpen] = useState(false);
   const [allActivity, setAllActivity] = useState([]);
   const [activityPage, setActivityPage] = useState(1);
   const [hasMoreActivity, setHasMoreActivity] = useState(true);
@@ -773,20 +774,33 @@ function Dashboard({ isPublic = false, publicUser = null }) {
             </div>
             <div className="dashboard-section" style={{marginTop: '10px'}}>
               <span className="dashboard-stat">Model:</span>
-              <select
-                className="model-selector"
-                style={{
-                  padding: '4px 8px',
-                  border: '1px solid #1a1a1a',
-                  borderRadius: '2px',
-                  fontFamily: 'Arial, Helvetica, sans-serif',
-                  fontSize: '12px',
-                  cursor: 'pointer',
-                  backgroundColor: '#fff'
+              <div
+                style={{ display: 'inline-block' }}
+                onClick={(e) => {
+                  if (isPublic) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsModelModalOpen(true);
+                  }
                 }}
               >
-                <option value="claude-sonnet-4-5-20250929">claude-sonnet-4-5-20250929</option>
-              </select>
+                <select
+                  className="model-selector"
+                  style={{
+                    padding: '4px 8px',
+                    border: '1px solid #1a1a1a',
+                    borderRadius: '2px',
+                    fontFamily: 'Arial, Helvetica, sans-serif',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    backgroundColor: '#fff',
+                    color: '#000',
+                    pointerEvents: isPublic ? 'none' : 'auto'
+                  }}
+                >
+                  <option value="claude-sonnet-4-5-20250929">claude-sonnet-4-5-20250929</option>
+                </select>
+              </div>
             </div>
 
             {/* 3. User Operations - Only show in private mode */}
@@ -1410,7 +1424,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
               <div>
                 <h1 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif', fontSize: '2.5em' }}>Polsia</h1>
-                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.170</p>
+                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.171</p>
               </div>
               <button
                 onClick={() => setIsPolsiaModalOpen(false)}
@@ -1874,6 +1888,60 @@ function Dashboard({ isPublic = false, publicUser = null }) {
               </p>
               <p style={{ marginBottom: '20px', fontSize: '13px', color: '#666' }}>
                 Available frequencies range from hourly to weekly, with "auto" letting the system decide based on workload and activity.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Model Modal */}
+      {isModelModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }}
+          onClick={() => setIsModelModalOpen(false)}
+        >
+          <div
+            style={{
+              backgroundColor: '#fff',
+              padding: '40px',
+              borderRadius: '4px',
+              maxWidth: '500px',
+              width: '100%',
+              border: '1px solid #000',
+              position: 'relative'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif' }}>AI Model</h2>
+              <button
+                onClick={() => setIsModelModalOpen(false)}
+                className="dashboard-btn"
+              >
+                Close
+              </button>
+            </div>
+            <div style={{ fontFamily: 'Times New Roman, Times, serif', fontSize: '14px', lineHeight: '1.8' }}>
+              <p style={{ marginBottom: '20px' }}>
+                The model is the "brain" of the AI that powers this autonomous company. It determines how the system thinks, reasons, and makes decisions.
+              </p>
+              <p style={{ marginBottom: '20px' }}>
+                <strong>Only the owner can change the model.</strong> Different models offer varying levels of intelligence, speed, and cost-effectiveness.
+              </p>
+              <p style={{ marginBottom: '0', fontSize: '13px', color: '#666' }}>
+                The currently selected model (Claude Sonnet 4.5) provides advanced reasoning capabilities for complex autonomous operations.
               </p>
             </div>
           </div>
