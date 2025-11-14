@@ -8,6 +8,22 @@ import SignupModal from '../components/SignupModal';
 import LoginModal from '../components/LoginModal';
 import './Dashboard.css';
 
+// Ops pricing with bulk discounts
+function getOpsPrice(ops) {
+  // Fixed pack prices (only for exact amounts)
+  if (ops === 10000) return 70;
+  if (ops === 5000) return 40;
+  if (ops === 2500) return 20;
+  if (ops === 1000) return 10;
+  // Default: 100 ops = $1
+  return ops / 100;
+}
+
+// Format price without trailing zeros
+function formatPrice(price) {
+  return price % 1 === 0 ? price.toString() : price.toFixed(2);
+}
+
 // Countdown timer hook
 function useCountdown(targetDate) {
   const [timeLeft, setTimeLeft] = useState('');
@@ -58,7 +74,10 @@ function Dashboard({ isPublic = false, publicUser = null }) {
   const [allFunders, setAllFunders] = useState([]);
   const [isAutoFundModalOpen, setIsAutoFundModalOpen] = useState(false);
   const [isAutoRefillInfoModalOpen, setIsAutoRefillInfoModalOpen] = useState(false);
+  const [isBuyOpsModalOpen, setIsBuyOpsModalOpen] = useState(false);
+  const [opsNeededAmount, setOpsNeededAmount] = useState(0);
   const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
+  const [recentLogs, setRecentLogs] = useState([]);
   const [isConnectionsModalOpen, setIsConnectionsModalOpen] = useState(false);
   const [allActivity, setAllActivity] = useState([]);
   const [activityPage, setActivityPage] = useState(1);
@@ -102,6 +121,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
       fetchDocuments();
       fetchReports();
       fetchConnections();
+      fetchRecentLogs();
     }
   }, [user]);
 
@@ -277,6 +297,21 @@ function Dashboard({ isPublic = false, publicUser = null }) {
     }
   };
 
+  const fetchRecentLogs = async () => {
+    try {
+      const url = isPublic ? `/api/logs/recent/${user.id}` : '/api/logs/recent';
+      const headers = isPublic ? {} : { 'Authorization': `Bearer ${token}` };
+
+      const response = await fetch(url, { headers });
+      const data = await response.json();
+      if (response.ok) {
+        setRecentLogs(data.logs || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch recent logs:', err);
+    }
+  };
+
   // Connection functions
   const connectGitHub = () => {
     const isProduction = window.location.hostname !== 'localhost';
@@ -413,7 +448,13 @@ function Dashboard({ isPublic = false, publicUser = null }) {
         fetchBalance();
         // TODO: Trigger actual metrics refresh
       } else {
-        alert(data.message || 'Failed to refresh metrics');
+        // Check if error is about insufficient operations
+        if (data.message && data.message.toLowerCase().includes('insufficient')) {
+          setOpsNeededAmount(data.required || 200);
+          setIsBuyOpsModalOpen(true);
+        } else {
+          alert(data.message || 'Failed to refresh metrics');
+        }
       }
     } catch (err) {
       alert('Failed to refresh metrics. Please try again.');
@@ -440,7 +481,13 @@ function Dashboard({ isPublic = false, publicUser = null }) {
         fetchBalance();
         // TODO: Trigger actual CEO decision
       } else {
-        alert(data.message || 'Failed to force decision');
+        // Check if error is about insufficient operations
+        if (data.message && data.message.toLowerCase().includes('insufficient')) {
+          setOpsNeededAmount(data.required || 500);
+          setIsBuyOpsModalOpen(true);
+        } else {
+          alert(data.message || 'Failed to force decision');
+        }
       }
     } catch (err) {
       alert('Failed to force decision. Please try again.');
@@ -456,7 +503,8 @@ function Dashboard({ isPublic = false, publicUser = null }) {
     }
 
     if (!balance || balance.user_operations < amount) {
-      alert('Insufficient user operations for transfer');
+      setOpsNeededAmount(amount - (balance?.user_operations || 0));
+      setIsBuyOpsModalOpen(true);
       return;
     }
 
@@ -477,7 +525,13 @@ function Dashboard({ isPublic = false, publicUser = null }) {
         setTransferAmount('');
         fetchBalance(); // Refresh balance
       } else {
-        alert(data.message || 'Failed to transfer operations');
+        // Check if error is about insufficient operations
+        if (data.message && data.message.toLowerCase().includes('insufficient')) {
+          setOpsNeededAmount(amount - (balance?.user_operations || 0));
+          setIsBuyOpsModalOpen(true);
+        } else {
+          alert(data.message || 'Failed to transfer operations');
+        }
       }
     } catch (err) {
       alert('Failed to transfer operations. Please try again.');
@@ -507,6 +561,38 @@ function Dashboard({ isPublic = false, publicUser = null }) {
   const handleDocumentClick = (docType, content) => {
     setSelectedDocument({ type: docType, content });
     setIsDocumentModalOpen(true);
+  };
+
+  const handleBuyOps = async (opsToPurchase) => {
+    try {
+      const response = await fetch('/api/operations/purchase', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          opsToPurchase,
+          returnPath: window.location.pathname
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to create checkout session');
+      }
+
+      // Redirect to Stripe
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
+      } else {
+        throw new Error('No checkout URL received');
+      }
+    } catch (error) {
+      console.error('Error purchasing ops:', error);
+      alert('Failed to initiate purchase. Please try again.');
+    }
   };
 
   const handleDocumentModalClose = () => {
@@ -541,7 +627,9 @@ function Dashboard({ isPublic = false, publicUser = null }) {
   };
 
   // Get last 5 logs for terminal display
-  const displayLogs = terminalLogs.slice(-5);
+  // Always use recentLogs - fetched from database for the user being viewed
+  // This ensures consistency between public and private views of the same dashboard
+  const displayLogs = recentLogs.slice(-5);
 
   return (
     <>
@@ -895,7 +983,19 @@ function Dashboard({ isPublic = false, publicUser = null }) {
 
             {/* Engineering Projects */}
             <h2 className="dashboard-title">Engineering Projects</h2>
-            <div className="dashboard-project">
+            <div
+              className="dashboard-project"
+              style={{ cursor: 'pointer' }}
+              onClick={() => {
+                const opsRequired = 1200;
+                if (!balance || balance.user_operations < opsRequired) {
+                  setOpsNeededAmount(opsRequired - (balance?.user_operations || 0));
+                  setIsBuyOpsModalOpen(true);
+                } else {
+                  alert('Project execution not yet implemented');
+                }
+              }}
+            >
               <div className="dashboard-project-title">
                 Fix authentication bug (1,200 ops)
               </div>
@@ -903,7 +1003,19 @@ function Dashboard({ isPublic = false, publicUser = null }) {
                 Users unable to login with GitHub OAuth. Investigate token refresh issue.
               </div>
             </div>
-            <div className="dashboard-project">
+            <div
+              className="dashboard-project"
+              style={{ cursor: 'pointer' }}
+              onClick={() => {
+                const opsRequired = 2500;
+                if (!balance || balance.user_operations < opsRequired) {
+                  setOpsNeededAmount(opsRequired - (balance?.user_operations || 0));
+                  setIsBuyOpsModalOpen(true);
+                } else {
+                  alert('Project execution not yet implemented');
+                }
+              }}
+            >
               <div className="dashboard-project-title">
                 Optimize database queries (2,500 ops)
               </div>
@@ -911,7 +1023,19 @@ function Dashboard({ isPublic = false, publicUser = null }) {
                 Slow loading times on dashboard. Add indexes to agents and executions tables.
               </div>
             </div>
-            <div className="dashboard-project">
+            <div
+              className="dashboard-project"
+              style={{ cursor: 'pointer' }}
+              onClick={() => {
+                const opsRequired = 4500;
+                if (!balance || balance.user_operations < opsRequired) {
+                  setOpsNeededAmount(opsRequired - (balance?.user_operations || 0));
+                  setIsBuyOpsModalOpen(true);
+                } else {
+                  alert('Project execution not yet implemented');
+                }
+              }}
+            >
               <div className="dashboard-project-title">
                 Implement caching layer (4,500 ops)
               </div>
@@ -922,7 +1046,19 @@ function Dashboard({ isPublic = false, publicUser = null }) {
 
             {/* Marketing Projects */}
             <h2 className="dashboard-title">Marketing Projects</h2>
-            <div className="dashboard-project">
+            <div
+              className="dashboard-project"
+              style={{ cursor: 'pointer' }}
+              onClick={() => {
+                const opsRequired = 1800;
+                if (!balance || balance.user_operations < opsRequired) {
+                  setOpsNeededAmount(opsRequired - (balance?.user_operations || 0));
+                  setIsBuyOpsModalOpen(true);
+                } else {
+                  alert('Project execution not yet implemented');
+                }
+              }}
+            >
               <div className="dashboard-project-title">
                 Launch product announcement (1,800 ops)
               </div>
@@ -930,7 +1066,19 @@ function Dashboard({ isPublic = false, publicUser = null }) {
                 Create and schedule social media posts for new agent marketplace launch.
               </div>
             </div>
-            <div className="dashboard-project">
+            <div
+              className="dashboard-project"
+              style={{ cursor: 'pointer' }}
+              onClick={() => {
+                const opsRequired = 2200;
+                if (!balance || balance.user_operations < opsRequired) {
+                  setOpsNeededAmount(opsRequired - (balance?.user_operations || 0));
+                  setIsBuyOpsModalOpen(true);
+                } else {
+                  alert('Project execution not yet implemented');
+                }
+              }}
+            >
               <div className="dashboard-project-title">
                 Write blog post (2,200 ops)
               </div>
@@ -938,7 +1086,19 @@ function Dashboard({ isPublic = false, publicUser = null }) {
                 Technical deep-dive on autonomous agents. Target: 2,000 words with code examples.
               </div>
             </div>
-            <div className="dashboard-project">
+            <div
+              className="dashboard-project"
+              style={{ cursor: 'pointer' }}
+              onClick={() => {
+                const opsRequired = 1500;
+                if (!balance || balance.user_operations < opsRequired) {
+                  setOpsNeededAmount(opsRequired - (balance?.user_operations || 0));
+                  setIsBuyOpsModalOpen(true);
+                } else {
+                  alert('Project execution not yet implemented');
+                }
+              }}
+            >
               <div className="dashboard-project-title">
                 Generate Instagram content (1,500 ops)
               </div>
@@ -1224,7 +1384,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
               <div>
                 <h1 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif', fontSize: '2.5em' }}>Polsia</h1>
-                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.165</p>
+                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.166</p>
               </div>
               <button
                 onClick={() => setIsPolsiaModalOpen(false)}
@@ -1634,6 +1794,89 @@ function Dashboard({ isPublic = false, publicUser = null }) {
                 >
                   Donate Ops
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Buy Ops Modal */}
+      {isBuyOpsModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }}
+          onClick={() => setIsBuyOpsModalOpen(false)}
+        >
+          <div
+            style={{
+              backgroundColor: '#fff',
+              padding: '40px',
+              borderRadius: '4px',
+              maxWidth: '500px',
+              width: '100%',
+              border: '1px solid #000',
+              position: 'relative'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif' }}>Insufficient Operations</h2>
+              <button
+                onClick={() => setIsBuyOpsModalOpen(false)}
+                className="dashboard-btn"
+              >
+                Close
+              </button>
+            </div>
+            <div style={{ fontFamily: 'Times New Roman, Times, serif', fontSize: '14px', lineHeight: '1.8' }}>
+              <p style={{ marginBottom: '15px' }}>
+                You need at least <strong>{opsNeededAmount} ops</strong> to perform this action.
+              </p>
+              <p style={{ marginBottom: '20px', fontSize: '13px', color: '#666', fontStyle: 'italic' }}>
+                Manual actions require personal funds. Purchase ops to continue.
+              </p>
+              <p style={{ marginBottom: '20px', fontSize: '13px', color: '#666' }}>
+                Select an amount to purchase:
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {[
+                  { ops: Math.ceil(opsNeededAmount / 100) * 100, label: 'Minimum needed' },
+                  { ops: 1000, label: 'Popular' },
+                  { ops: 2500, label: 'Best value' },
+                  { ops: 5000, label: 'Great deal' },
+                  { ops: 10000, label: 'Power user' }
+                ].filter(option => option.ops >= opsNeededAmount).slice(0, 5).map(({ ops, label }) => (
+                  <button
+                    key={ops}
+                    onClick={() => handleBuyOps(ops)}
+                    className="dashboard-btn"
+                    style={{
+                      padding: '12px 20px',
+                      fontSize: '14px',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      width: '100%'
+                    }}
+                  >
+                    <span>
+                      <strong>{ops} ops</strong>
+                      <span style={{ fontSize: '12px', color: '#666', marginLeft: '8px' }}>({label})</span>
+                    </span>
+                    <span style={{ fontWeight: 'bold' }}>${formatPrice(getOpsPrice(ops))}</span>
+                  </button>
+                ))}
               </div>
             </div>
           </div>

@@ -1,6 +1,22 @@
 import { useState } from 'react';
 import './DonationModal.css';
 
+// Ops pricing with bulk discounts
+function getOpsPrice(ops) {
+  // Fixed pack prices (only for exact amounts)
+  if (ops === 10000) return 70;
+  if (ops === 5000) return 40;
+  if (ops === 2500) return 20;
+  if (ops === 1000) return 10;
+  // Default: 100 ops = $1
+  return ops / 100;
+}
+
+// Format price without trailing zeros
+function formatPrice(price) {
+  return price % 1 === 0 ? price.toString() : price.toFixed(2);
+}
+
 function DonationModal({ isOpen, onClose, userId, projectId, projectName, isOwnAccount = false, token, onSuccess, userBalance }) {
   const [amount, setAmount] = useState('');
   const [message, setMessage] = useState('');
@@ -16,7 +32,7 @@ function DonationModal({ isOpen, onClose, userId, projectId, projectName, isOwnA
   const availableOps = userBalance?.user_operations || 0;
   const needsToBuy = opsAmount > availableOps;
   const opsNeeded = needsToBuy ? opsAmount - availableOps : 0;
-  const usdCost = (opsNeeded / 100).toFixed(2); // 100 ops = $1
+  const usdCost = formatPrice(getOpsPrice(opsNeeded));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -118,6 +134,42 @@ function DonationModal({ isOpen, onClose, userId, projectId, projectName, isOwnA
       }
     } catch (err) {
       console.error('Operations transfer error:', err);
+
+      // Check if error is about insufficient operations
+      if (err.message && err.message.toLowerCase().includes('insufficient')) {
+        // Calculate how many ops are needed
+        const currentBalance = userBalance?.user_operations || 0;
+        const opsNeeded = opsAmount - currentBalance;
+
+        // Redirect to purchase flow
+        try {
+          const response = await fetch('/api/operations/purchase', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              opsToPurchase: opsNeeded > 0 ? opsNeeded : opsAmount,
+              totalOpsAmount: opsAmount,
+              recipientUserId: isOwnAccount ? null : userId,
+              message: isOwnAccount ? null : (message || null),
+              isAnonymous: isOwnAccount ? false : isAnonymous,
+              returnPath: window.location.pathname
+            })
+          });
+
+          const data = await response.json();
+
+          if (data.checkoutUrl) {
+            window.location.href = data.checkoutUrl;
+            return;
+          }
+        } catch (purchaseErr) {
+          console.error('Failed to create purchase session:', purchaseErr);
+        }
+      }
+
       setError(err.message || 'Failed to process transfer. Please try again.');
       setLoading(false);
     }

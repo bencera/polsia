@@ -587,6 +587,10 @@ app.use('/api/documents', authenticateToken, documentRoutes);
 const reportRoutes = require('./routes/reports-routes');
 app.use('/api/reports', authenticateToken, reportRoutes);
 
+// Logs Routes - Recent execution logs
+const logsRoutes = require('./routes/logs-routes');
+app.use('/api/logs', logsRoutes);
+
 // Cost Tracking Routes - Execution cost analytics
 const costTrackingRoutes = require('./routes/cost-tracking-routes');
 app.use('/api/cost-tracking', authenticateToken, costTrackingRoutes);

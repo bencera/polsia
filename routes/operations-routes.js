@@ -21,6 +21,21 @@ const STRIPE_SECRET_KEY = isProduction
     : (process.env.STRIPE_SECRET_KEY_TEST || process.env.STRIPE_SECRET_KEY_LIVE);
 
 /**
+ * Ops pricing with bulk discounts
+ * @param {number} ops - Number of ops
+ * @returns {number} - USD cost
+ */
+function getOpsPrice(ops) {
+    // Fixed pack prices (only for exact amounts)
+    if (ops === 10000) return 70;
+    if (ops === 5000) return 40;
+    if (ops === 2500) return 20;
+    if (ops === 1000) return 10;
+    // Default: 100 ops = $1
+    return ops / 100;
+}
+
+/**
  * GET /api/operations
  * Get user's operations balance (both company and user)
  */
@@ -116,8 +131,8 @@ router.post('/purchase', async (req, res) => {
             });
         }
 
-        // Calculate USD cost (100 ops = $1) - only charge for what they're buying
-        const usdCost = opsToPurchase / 100;
+        // Calculate USD cost with bulk discounts
+        const usdCost = getOpsPrice(opsToPurchase);
 
         // Create Stripe checkout session
         if (!STRIPE_SECRET_KEY) {

@@ -19,7 +19,7 @@ function PublicDashboard() {
       const data = await response.json();
 
       if (response.ok) {
-        // Set the public user data so Dashboard can use it
+        // Set the public user data
         setPublicUser(data.user);
       } else {
         setError(data.error || 'Dashboard not found');
