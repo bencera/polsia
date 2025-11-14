@@ -130,8 +130,8 @@ function Dashboard({ isPublic = false, publicUser = null }) {
 
   const fetchTasks = async () => {
     try {
-      // Use public endpoint if in public mode (assuming we create /api/tasks/user/:userId endpoint)
-      const url = isPublic ? `/api/tasks/user/${user.id}` : '/api/tasks';
+      // Use public endpoint if in public mode
+      const url = isPublic ? `/api/tasks/public/${user.id}` : '/api/tasks';
       const headers = isPublic ? {} : { 'Authorization': `Bearer ${token}` };
 
       const response = await fetch(url, { headers });
@@ -1391,7 +1391,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
               <div>
                 <h1 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif', fontSize: '2.5em' }}>Polsia</h1>
-                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.174</p>
+                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.175</p>
               </div>
               <button
                 onClick={() => setIsPolsiaModalOpen(false)}

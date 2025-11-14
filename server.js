@@ -7,6 +7,7 @@ const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const { getValidatedFrontendURL } = require('./utils/redirect-validator');
 const {
+    pool,
     addToWaitlist,
     getWaitlistCount,
     getUserByEmail,
@@ -484,20 +485,30 @@ app.use('/api/modules', authenticateToken, moduleRoutes);
 
 // Task Management Routes - Agent-driven task workflow system
 const taskRoutes = require('./routes/task-routes');
-const { getTasksByStatus } = require('./db');
 
 // Public tasks endpoint (for public dashboards) - must be before authenticated routes
-app.get('/api/tasks/user/:userId', async (req, res) => {
+app.get('/api/tasks/public/:userId', async (req, res) => {
     try {
-        const userId = parseInt(req.params.userId);
-        const { status, limit = 50, offset = 0 } = req.query;
+        const { userId } = req.params;
+        const { limit = 10, offset = 0 } = req.query;
 
-        const options = {
+        // Check if user has public dashboard enabled
+        const userResult = await pool.query(
+            'SELECT public_dashboard_enabled FROM users WHERE id = $1',
+            [userId]
+        );
+
+        if (!userResult.rows[0] || !userResult.rows[0].public_dashboard_enabled) {
+            return res.status(404).json({
+                success: false,
+                error: 'Not found'
+            });
+        }
+
+        const tasks = await getTasksByUserId(userId, {
             limit: parseInt(limit),
             offset: parseInt(offset)
-        };
-
-        const tasks = await getTasksByStatus(userId, status || null, options);
+        });
 
         res.json({
             success: true,

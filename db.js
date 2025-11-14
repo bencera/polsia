@@ -216,7 +216,8 @@ async function createUser(email, passwordHash, name = null) {
 }
 
 // Get tasks for a user with their associated services
-async function getTasksByUserId(userId) {
+async function getTasksByUserId(userId, options = {}) {
+    const { limit = 50, offset = 0 } = options;
     const client = await pool.connect();
     try {
         const result = await client.query(`
@@ -243,7 +244,8 @@ async function getTasksByUserId(userId) {
             WHERE t.user_id = $1
             GROUP BY t.id
             ORDER BY t.created_at DESC
-        `, [userId]);
+            LIMIT $2 OFFSET $3
+        `, [userId, limit, offset]);
         return result.rows;
     } catch (err) {
         console.error('Error getting tasks:', err);

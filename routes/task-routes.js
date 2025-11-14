@@ -16,50 +16,6 @@ const {
 } = require('../db');
 
 /**
- * GET /api/tasks/public/:userId
- * Get tasks for a specific user (public endpoint)
- * Requires user to have public dashboard enabled
- */
-router.get('/public/:userId', async (req, res) => {
-    try {
-        const { userId } = req.params;
-        const { limit = 10, offset = 0 } = req.query;
-
-        // Check if user has public dashboard enabled
-        const { pool } = require('../db');
-        const userResult = await pool.query(
-            'SELECT public_dashboard_enabled FROM users WHERE id = $1',
-            [userId]
-        );
-
-        if (!userResult.rows[0] || !userResult.rows[0].public_dashboard_enabled) {
-            return res.status(404).json({
-                success: false,
-                error: 'Not found'
-            });
-        }
-
-        const tasks = await getTasksByUserId(userId, {
-            limit: parseInt(limit),
-            offset: parseInt(offset)
-        });
-
-        res.json({
-            success: true,
-            count: tasks.length,
-            tasks
-        });
-    } catch (error) {
-        console.error('Error fetching public tasks:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to fetch tasks',
-            message: error.message
-        });
-    }
-});
-
-/**
  * GET /api/tasks
  * Get tasks with optional filters
  * Query params:
