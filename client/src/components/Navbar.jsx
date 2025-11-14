@@ -19,6 +19,7 @@ function Navbar({ isPublic = false, publicUser = null }) {
   const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
   const [isPublicDashboard, setIsPublicDashboard] = useState(false);
   const [isPublicConfirmModalOpen, setIsPublicConfirmModalOpen] = useState(false);
+  const [isPublicInfoModalOpen, setIsPublicInfoModalOpen] = useState(false);
 
   useEffect(() => {
     if (authUser?.id && token) {
@@ -73,7 +74,13 @@ function Navbar({ isPublic = false, publicUser = null }) {
   };
 
   const handlePublicToggle = () => {
-    setIsPublicConfirmModalOpen(true);
+    // If viewing someone else's public dashboard, show info modal
+    if (isPublic) {
+      setIsPublicInfoModalOpen(true);
+    } else {
+      // Otherwise, show the confirm modal to toggle your own status
+      setIsPublicConfirmModalOpen(true);
+    }
   };
 
   const confirmPublicToggle = async () => {
@@ -191,9 +198,7 @@ function Navbar({ isPublic = false, publicUser = null }) {
           <button
             onClick={handlePublicToggle}
             className="nav-button"
-            disabled={isPublic}
-            title={isPublic ? 'Viewing public dashboard' : (isPublicDashboard ? 'Dashboard is public' : 'Dashboard is private')}
-            style={isPublic ? { opacity: 0.6, cursor: 'not-allowed' } : {}}
+            title={isPublic ? 'Click for public dashboard info' : (isPublicDashboard ? 'Dashboard is public' : 'Dashboard is private')}
           >
             {isPublicDashboard ? 'Public' : 'Private'}
           </button>
@@ -242,7 +247,7 @@ function Navbar({ isPublic = false, publicUser = null }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
               <div>
                 <h1 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif', fontSize: '2.5em', color: isDarkMode ? '#fff' : '#000' }}>Polsia</h1>
-                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: isDarkMode ? '#ccc' : '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.157</p>
+                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: isDarkMode ? '#ccc' : '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.158</p>
               </div>
               <button
                 onClick={() => setIsPolsiaModalOpen(false)}
@@ -558,6 +563,78 @@ function Navbar({ isPublic = false, publicUser = null }) {
                 style={{ padding: '8px 16px' }}
               >
                 Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Public Dashboard Info Modal */}
+      {isPublicInfoModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }}
+          onClick={() => setIsPublicInfoModalOpen(false)}
+        >
+          <div
+            style={{
+              backgroundColor: isDarkMode ? '#000' : '#fff',
+              padding: '40px',
+              borderRadius: '4px',
+              maxWidth: '550px',
+              width: '100%',
+              border: isDarkMode ? '1px solid #fff' : '1px solid #000',
+              position: 'relative',
+              color: isDarkMode ? '#fff' : '#000'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 style={{ margin: '0 0 20px 0', fontFamily: 'Times New Roman, Times, serif', fontSize: '1.8em', color: isDarkMode ? '#fff' : '#000' }}>
+              Public Operations Interface
+            </h2>
+
+            <div style={{ marginBottom: '25px', lineHeight: '1.7', color: isDarkMode ? '#fff' : '#000', fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '14px' }}>
+              <p style={{ marginBottom: '15px' }}>
+                This autonomous company has been designated PUBLIC by its owner. You are authorized to interact with all accessible interfaces.
+              </p>
+
+              <p style={{ marginBottom: '15px' }}>
+                <strong>Available actions:</strong>
+              </p>
+              <ul style={{ marginLeft: '20px', marginBottom: '15px' }}>
+                <li style={{ marginBottom: '8px' }}>Contribute operations currency to autonomous cycles</li>
+                <li style={{ marginBottom: '8px' }}>Monitor real-time execution logs and system outputs</li>
+                <li style={{ marginBottom: '8px' }}>Review business metrics, documents, and reports</li>
+                <li style={{ marginBottom: '8px' }}>Observe connected service integrations</li>
+              </ul>
+
+              <p style={{ marginBottom: '15px' }}>
+                All contribution and interaction data is recorded. System modifications are restricted to the owner entity.
+              </p>
+
+              <p style={{ marginBottom: '0', fontSize: '13px', color: isDarkMode ? '#ccc' : '#666', fontStyle: 'italic' }}>
+                This public access designation was configured by the company owner and can be revoked at any time.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setIsPublicInfoModalOpen(false)}
+                className="nav-button"
+                style={{ padding: '8px 16px' }}
+              >
+                Acknowledged
               </button>
             </div>
           </div>
