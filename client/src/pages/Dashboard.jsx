@@ -1389,7 +1389,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
               <div>
                 <h1 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif', fontSize: '2.5em' }}>Polsia</h1>
-                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.172</p>
+                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.173</p>
               </div>
               <button
                 onClick={() => setIsPolsiaModalOpen(false)}
@@ -1728,8 +1728,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
               <div style={{ marginTop: '30px', textAlign: 'center' }}>
                 <button
                   onClick={() => {
-                    setIsAutoFundModalOpen(false);
-                    setIsSettingsModalOpen(true);
+                    alert('Coming soon');
                   }}
                   className="dashboard-btn"
                   style={{ padding: '10px 20px', fontSize: '14px' }}
