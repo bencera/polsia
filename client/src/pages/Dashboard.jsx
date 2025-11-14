@@ -803,41 +803,6 @@ function Dashboard({ isPublic = false, publicUser = null }) {
               </div>
             </div>
 
-            {/* 3. User Operations - Only show in private mode */}
-            {!isPublic && (
-              <>
-                <h2 className="dashboard-title">Your Operations</h2>
-                <div className="dashboard-section">
-                  <span className="dashboard-stat">Balance: <span className="dashboard-value">
-                    {balance ? (balance.user_operations || 0) : '0'}
-                  </span></span>
-                </div>
-                <div className="dashboard-section" style={{marginTop: '10px', display: 'flex', gap: '5px', alignItems: 'center'}}>
-                  <input
-                    type="number"
-                    placeholder="Amount"
-                    value={transferAmount}
-                    onChange={(e) => setTransferAmount(e.target.value)}
-                    style={{
-                      flex: '1',
-                      padding: '6px 8px',
-                      border: '1px solid #1a1a1a',
-                      borderRadius: '2px',
-                      fontFamily: 'Arial, Helvetica, sans-serif',
-                      fontSize: '12px'
-                    }}
-                  />
-                  <button
-                    className="dashboard-btn"
-                    onClick={handleTransferToCompany}
-                    style={{fontSize: '12px', padding: '6px 12px'}}
-                  >
-                    Transfer to Company
-                  </button>
-                </div>
-              </>
-            )}
-
             <div className="dashboard-stat" style={{marginTop: '15px'}}>
               Contributors: <span className="dashboard-value">{topFunders.length}</span>
             </div>
@@ -1424,7 +1389,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
               <div>
                 <h1 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif', fontSize: '2.5em' }}>Polsia</h1>
-                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.171</p>
+                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.172</p>
               </div>
               <button
                 onClick={() => setIsPolsiaModalOpen(false)}
