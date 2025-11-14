@@ -329,7 +329,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
 
   // requireAuth wrapper - prompts signup if not authenticated
   const requireAuth = (action) => {
-    if (isPublic || !token) {
+    if (!token) {
       // Store the intended action and show signup modal
       setIntendedAction(() => action);
       setIsSignupModalOpen(true);
@@ -1174,7 +1174,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
               <div>
                 <h1 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif', fontSize: '2.5em' }}>Polsia</h1>
-                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.159</p>
+                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.160</p>
               </div>
               <button
                 onClick={() => setIsPolsiaModalOpen(false)}
