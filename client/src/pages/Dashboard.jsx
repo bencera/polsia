@@ -210,11 +210,13 @@ function Dashboard({ isPublic = false, publicUser = null }) {
     if (!user?.id) return;
     try {
       const limit = 10;
-      const response = await fetch(`/api/tasks?limit=${limit}&offset=${(page - 1) * limit}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const url = isPublic
+        ? `/api/tasks/public/${user.id}?limit=${limit}&offset=${(page - 1) * limit}`
+        : `/api/tasks?limit=${limit}&offset=${(page - 1) * limit}`;
+
+      const headers = isPublic ? {} : { 'Authorization': `Bearer ${token}` };
+
+      const response = await fetch(url, { headers });
       const data = await response.json();
       if (response.ok) {
         const newTasks = data.tasks || [];
@@ -1389,7 +1391,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
               <div>
                 <h1 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif', fontSize: '2.5em' }}>Polsia</h1>
-                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.173</p>
+                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.174</p>
               </div>
               <button
                 onClick={() => setIsPolsiaModalOpen(false)}
