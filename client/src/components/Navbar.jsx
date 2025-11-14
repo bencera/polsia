@@ -27,10 +27,13 @@ function Navbar({ isPublic = false, publicUser = null }) {
   }, [authUser, token]);
 
   useEffect(() => {
-    if (user?.public_dashboard_enabled !== undefined) {
-      setIsPublicDashboard(user.public_dashboard_enabled);
+    // When viewing a public dashboard, show that dashboard's public status
+    // When viewing your own dashboard, show your own public status
+    const targetUser = isPublic && publicUser ? publicUser : authUser;
+    if (targetUser?.public_dashboard_enabled !== undefined) {
+      setIsPublicDashboard(targetUser.public_dashboard_enabled);
     }
-  }, [user]);
+  }, [isPublic, publicUser, authUser]);
 
   const fetchBalance = async () => {
     try {
@@ -239,7 +242,7 @@ function Navbar({ isPublic = false, publicUser = null }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
               <div>
                 <h1 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif', fontSize: '2.5em', color: isDarkMode ? '#fff' : '#000' }}>Polsia</h1>
-                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: isDarkMode ? '#ccc' : '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.156</p>
+                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: isDarkMode ? '#ccc' : '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.157</p>
               </div>
               <button
                 onClick={() => setIsPolsiaModalOpen(false)}
