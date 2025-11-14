@@ -939,7 +939,6 @@ function Dashboard({ isPublic = false, publicUser = null }) {
                 <select
                   className="frequency-selector"
                   defaultValue="every_6_hours"
-                  disabled={isPublic}
                   onChange={(e) => {
                     if (!isPublic) {
                       // TODO: Handle frequency change for owner
@@ -953,6 +952,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
                     fontSize: '12px',
                     cursor: 'pointer',
                     backgroundColor: '#fff',
+                    color: '#000',
                     pointerEvents: isPublic ? 'none' : 'auto'
                   }}
                 >
@@ -1403,7 +1403,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
               <div>
                 <h1 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif', fontSize: '2.5em' }}>Polsia</h1>
-                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.168</p>
+                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.169</p>
               </div>
               <button
                 onClick={() => setIsPolsiaModalOpen(false)}
