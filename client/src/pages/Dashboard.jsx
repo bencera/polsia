@@ -79,6 +79,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
   const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
   const [recentLogs, setRecentLogs] = useState([]);
   const [isConnectionsModalOpen, setIsConnectionsModalOpen] = useState(false);
+  const [isCycleFrequencyModalOpen, setIsCycleFrequencyModalOpen] = useState(false);
   const [allActivity, setAllActivity] = useState([]);
   const [activityPage, setActivityPage] = useState(1);
   const [hasMoreActivity, setHasMoreActivity] = useState(true);
@@ -925,27 +926,46 @@ function Dashboard({ isPublic = false, publicUser = null }) {
             </div>
             <div className="dashboard-section" style={{marginTop: '10px', display: 'flex', alignItems: 'center', gap: '10px'}}>
               <span className="dashboard-stat">Next cycle in: <span className="dashboard-value">{countdown}</span></span>
-              <select
-                className="frequency-selector"
-                defaultValue="every_6_hours"
-                style={{
-                  padding: '4px 8px',
-                  border: '1px solid #1a1a1a',
-                  borderRadius: '2px',
-                  fontFamily: 'Arial, Helvetica, sans-serif',
-                  fontSize: '12px',
-                  cursor: 'pointer',
-                  backgroundColor: '#fff'
+              <div
+                style={{ position: 'relative', display: 'inline-block' }}
+                onClick={(e) => {
+                  if (isPublic) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsCycleFrequencyModalOpen(true);
+                  }
                 }}
               >
-                <option value="auto">auto</option>
-                <option value="every_hour">every hour</option>
-                <option value="every_3_hours">every 3 hours</option>
-                <option value="every_6_hours">every 6 hours</option>
-                <option value="every_12_hours">every 12 hours</option>
-                <option value="daily">daily</option>
-                <option value="weekly">weekly</option>
-              </select>
+                <select
+                  className="frequency-selector"
+                  defaultValue="every_6_hours"
+                  disabled={isPublic}
+                  onChange={(e) => {
+                    if (!isPublic) {
+                      // TODO: Handle frequency change for owner
+                    }
+                  }}
+                  style={{
+                    padding: '4px 8px',
+                    border: isPublic ? '1px solid #ccc' : '1px solid #1a1a1a',
+                    borderRadius: '2px',
+                    fontFamily: 'Arial, Helvetica, sans-serif',
+                    fontSize: '12px',
+                    cursor: isPublic ? 'pointer' : 'pointer',
+                    backgroundColor: isPublic ? '#f5f5f5' : '#fff',
+                    color: isPublic ? '#666' : '#000',
+                    pointerEvents: isPublic ? 'none' : 'auto'
+                  }}
+                >
+                  <option value="auto">auto</option>
+                  <option value="every_hour">every hour</option>
+                  <option value="every_3_hours">every 3 hours</option>
+                  <option value="every_6_hours">every 6 hours</option>
+                  <option value="every_12_hours">every 12 hours</option>
+                  <option value="daily">daily</option>
+                  <option value="weekly">weekly</option>
+                </select>
+              </div>
             </div>
             <div style={{marginTop: '10px'}}>
               <button className="dashboard-btn" onClick={() => requireAuth(handleMakeDecision)}>Run cycle now</button>
@@ -1384,7 +1404,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
               <div>
                 <h1 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif', fontSize: '2.5em' }}>Polsia</h1>
-                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.166</p>
+                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.167</p>
               </div>
               <button
                 onClick={() => setIsPolsiaModalOpen(false)}
@@ -1795,6 +1815,60 @@ function Dashboard({ isPublic = false, publicUser = null }) {
                   Donate Ops
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cycle Frequency Info Modal */}
+      {isCycleFrequencyModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }}
+          onClick={() => setIsCycleFrequencyModalOpen(false)}
+        >
+          <div
+            style={{
+              backgroundColor: '#fff',
+              padding: '40px',
+              borderRadius: '4px',
+              maxWidth: '500px',
+              width: '100%',
+              border: '1px solid #000',
+              position: 'relative'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif' }}>Cycle Frequency</h2>
+              <button
+                onClick={() => setIsCycleFrequencyModalOpen(false)}
+                className="dashboard-btn"
+              >
+                Close
+              </button>
+            </div>
+            <div style={{ fontFamily: 'Times New Roman, Times, serif', fontSize: '14px', lineHeight: '1.8' }}>
+              <p style={{ marginBottom: '20px' }}>
+                The cycle frequency determines how often the autonomous system runs to make decisions and take actions for this company.
+              </p>
+              <p style={{ marginBottom: '20px' }}>
+                <strong>Only the owner can change the cycle frequency.</strong> This setting affects how the autonomous agents operate and when they execute tasks.
+              </p>
+              <p style={{ marginBottom: '20px', fontSize: '13px', color: '#666' }}>
+                Available frequencies range from hourly to weekly, with "auto" letting the system decide based on workload and activity.
+              </p>
             </div>
           </div>
         </div>
