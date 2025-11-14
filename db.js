@@ -4360,6 +4360,74 @@ async function transferToCompany(userId, operationsAmount) {
 }
 
 /**
+ * Contribute operations from one user to another user's company
+ * @param {number} donorUserId - ID of user contributing operations
+ * @param {number} recipientUserId - ID of user receiving operations
+ * @param {number} operationsAmount - Amount of operations to contribute
+ * @param {string} message - Optional message from donor
+ * @param {boolean} isAnonymous - Whether the contribution is anonymous
+ * @returns {object} - Updated balances for both users
+ */
+async function contributeToUser(donorUserId, recipientUserId, operationsAmount, message = null, isAnonymous = false) {
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // Ensure both users have balance records
+        await ensureUserBalance(donorUserId);
+        await ensureUserBalance(recipientUserId);
+
+        // Check if donor has sufficient operations
+        const donorBalance = await getUserBalance(donorUserId);
+        if (donorBalance.user_operations < operationsAmount) {
+            throw new Error('Insufficient user operations');
+        }
+
+        // Check if recipient exists
+        const recipientCheck = await client.query('SELECT id FROM users WHERE id = $1', [recipientUserId]);
+        if (recipientCheck.rows.length === 0) {
+            throw new Error('Recipient user not found');
+        }
+
+        // Deduct from donor's user operations
+        const donorResult = await client.query(
+            `UPDATE user_balances
+             SET user_operations = user_operations - $1,
+                 last_updated_at = CURRENT_TIMESTAMP
+             WHERE user_id = $2
+             RETURNING *`,
+            [operationsAmount, donorUserId]
+        );
+
+        // Add to recipient's company operations
+        const recipientResult = await client.query(
+            `UPDATE user_balances
+             SET company_operations = company_operations + $1,
+                 last_updated_at = CURRENT_TIMESTAMP
+             WHERE user_id = $2
+             RETURNING *`,
+            [operationsAmount, recipientUserId]
+        );
+
+        // Record the contribution for transparency (could create a contributions table in the future)
+        // For now, we'll just log it
+        console.log(`[Operations Contribution] ${isAnonymous ? 'Anonymous' : `User ${donorUserId}`} contributed ${operationsAmount} ops to User ${recipientUserId}${message ? ` with message: ${message}` : ''}`);
+
+        await client.query('COMMIT');
+
+        return {
+            donor_balance: donorResult.rows[0],
+            recipient_balance: recipientResult.rows[0]
+        };
+    } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+    } finally {
+        client.release();
+    }
+}
+
+/**
  * Get user's operations balance (both company and user)
  * @param {number} userId - User ID
  * @returns {object} - Balance object with operations and USD fields
@@ -4428,5 +4496,6 @@ module.exports.creditOperations = creditOperations;
 module.exports.deductCompanyOperations = deductCompanyOperations;
 module.exports.deductUserOperations = deductUserOperations;
 module.exports.transferToCompany = transferToCompany;
+module.exports.contributeToUser = contributeToUser;
 module.exports.getUserOperationsBalance = getUserOperationsBalance;
 module.exports.checkCompanyOperationsAndPauseModules = checkCompanyOperationsAndPauseModules;
