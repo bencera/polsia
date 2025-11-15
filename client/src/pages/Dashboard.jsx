@@ -102,6 +102,9 @@ function Dashboard({ isPublic = false, publicUser = null }) {
   const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [intendedAction, setIntendedAction] = useState(null);
+  const [isConfirmActionModalOpen, setIsConfirmActionModalOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState(null);
+  const [dontAskAgain, setDontAskAgain] = useState(false);
 
   // Use publicUser if in public mode, otherwise use authenticated user
   const { token, user: authUser, refreshUser } = useAuth();
@@ -479,8 +482,50 @@ function Dashboard({ isPublic = false, publicUser = null }) {
     setIsSignupModalOpen(true);
   };
 
-  // Handle refresh button click
-  const handleRefresh = async () => {
+  // Check if user wants confirmation before actions
+  const shouldShowConfirmation = (actionType) => {
+    const dontAskKey = `polsia_dont_ask_${actionType}`;
+    return !localStorage.getItem(dontAskKey);
+  };
+
+  // Show confirmation modal before action
+  const confirmAction = (actionType, actionName, cost, description, callback) => {
+    if (shouldShowConfirmation(actionType)) {
+      setPendingAction({
+        type: actionType,
+        name: actionName,
+        cost,
+        description,
+        callback
+      });
+      setIsConfirmActionModalOpen(true);
+    } else {
+      callback();
+    }
+  };
+
+  // Handle confirmation modal confirm button
+  const handleConfirmAction = () => {
+    if (dontAskAgain && pendingAction) {
+      localStorage.setItem(`polsia_dont_ask_${pendingAction.type}`, 'true');
+    }
+    setIsConfirmActionModalOpen(false);
+    setDontAskAgain(false);
+    if (pendingAction?.callback) {
+      pendingAction.callback();
+    }
+    setPendingAction(null);
+  };
+
+  // Handle confirmation modal cancel button
+  const handleCancelAction = () => {
+    setIsConfirmActionModalOpen(false);
+    setDontAskAgain(false);
+    setPendingAction(null);
+  };
+
+  // Execute refresh (called after confirmation or if don't ask again is set)
+  const executeRefresh = async () => {
     try {
       const response = await fetch('/api/operations/deduct-user', {
         method: 'POST',
@@ -550,8 +595,19 @@ function Dashboard({ isPublic = false, publicUser = null }) {
     }
   };
 
-  // Handle "Make Decision Now" button click
-  const handleMakeDecision = async () => {
+  // Handle refresh button click (shows confirmation modal first)
+  const handleRefresh = () => {
+    confirmAction(
+      'refresh_metrics',
+      'Refresh Metrics',
+      200,
+      'Agents will connect to the production databases and analyze the core analytics of the business.',
+      executeRefresh
+    );
+  };
+
+  // Execute CEO decision (called after confirmation or if don't ask again is set)
+  const executeMakeDecision = async () => {
     try {
       const response = await fetch('/api/operations/deduct-user', {
         method: 'POST',
@@ -581,6 +637,17 @@ function Dashboard({ isPublic = false, publicUser = null }) {
     } catch (err) {
       alert('Failed to force decision. Please try again.');
     }
+  };
+
+  // Handle "Make Decision Now" button click (shows confirmation modal first)
+  const handleMakeDecision = () => {
+    confirmAction(
+      'force_ceo_decision',
+      'Force CEO Decision',
+      500,
+      'This will trigger the CEO agent to make an immediate strategic decision for your company based on current metrics and data.',
+      executeMakeDecision
+    );
   };
 
   const handleTransferToCompany = async () => {
@@ -1372,6 +1439,118 @@ function Dashboard({ isPublic = false, publicUser = null }) {
         userBalance={isPublic ? authUserBalance : balance}
       />
 
+      {/* Confirm Action Modal */}
+      {isConfirmActionModalOpen && pendingAction && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }}
+          onClick={handleCancelAction}
+        >
+          <div
+            style={{
+              backgroundColor: '#fff',
+              borderRadius: '4px',
+              maxWidth: '500px',
+              width: '100%',
+              border: '1px solid #000',
+              padding: '40px',
+              position: 'relative'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={handleCancelAction}
+              className="dashboard-btn"
+              style={{
+                position: 'absolute',
+                top: '20px',
+                right: '20px',
+                backgroundColor: '#fff',
+                color: '#000',
+                border: '1px solid #000',
+                padding: '3px 10px',
+                fontSize: '12px'
+              }}
+            >
+              Close
+            </button>
+
+            <h2 style={{
+              marginTop: 0,
+              marginBottom: '20px',
+              fontFamily: 'Times New Roman, Times, serif',
+              fontSize: '28px',
+              fontWeight: 'bold',
+              paddingRight: '30px'
+            }}>
+              {pendingAction.name}
+            </h2>
+
+            <div style={{ marginBottom: '25px' }}>
+              <p style={{
+                margin: '0 0 20px 0',
+                lineHeight: '1.6',
+                fontFamily: 'Times New Roman, Times, serif',
+                fontSize: '14px'
+              }}>
+                {pendingAction.description}
+              </p>
+              <p style={{
+                margin: 0,
+                fontFamily: 'Times New Roman, Times, serif',
+                fontSize: '14px'
+              }}>
+                <strong>Cost:</strong> {pendingAction.cost} ops
+              </p>
+            </div>
+
+            <div style={{ marginBottom: '25px' }}>
+              <label style={{
+                display: 'flex',
+                alignItems: 'center',
+                cursor: 'pointer',
+                userSelect: 'none',
+                fontFamily: 'Times New Roman, Times, serif',
+                fontSize: '14px'
+              }}>
+                <input
+                  type="checkbox"
+                  checked={dontAskAgain}
+                  onChange={(e) => setDontAskAgain(e.target.checked)}
+                  style={{ marginRight: '8px', cursor: 'pointer' }}
+                />
+                <span>Don't ask me again for this action</span>
+              </label>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                onClick={handleConfirmAction}
+                className="dashboard-btn"
+                style={{
+                  backgroundColor: '#fff',
+                  color: '#000',
+                  border: '1px solid #000'
+                }}
+              >
+                {pendingAction.name}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Document Viewer Modal */}
       {isDocumentModalOpen && selectedDocument && (
         <div
@@ -1478,7 +1657,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
               <div>
                 <h1 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif', fontSize: '2.5em' }}>Polsia</h1>
-                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.177</p>
+                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.178</p>
               </div>
               <button
                 onClick={() => setIsPolsiaModalOpen(false)}

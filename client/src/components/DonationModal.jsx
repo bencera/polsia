@@ -186,6 +186,10 @@ function DonationModal({ isOpen, onClose, userId, projectId, projectName, isOwnA
           {isOwnAccount ? 'Add Ops' : `Donate Ops to ${projectName}`}
         </h2>
 
+        <p className="donation-info-notice" style={{ marginBottom: '20px' }}>
+          Operations ("ops") is the energy used by Polsia to think. You must make sure that there is enough ops for it to function autonomously. Operations donated can only be used for autonomous actions (not manual ones).
+        </p>
+
         <form onSubmit={handleSubmit} className="donation-form">
           <div className="donation-quick-amounts">
             {quickAmounts.map((quickAmount) => (
@@ -260,7 +264,7 @@ function DonationModal({ isOpen, onClose, userId, projectId, projectName, isOwnA
               {loading ? 'Processing...' : (
                 needsToBuy
                   ? `Buy ${opsNeeded} ops for $${usdCost}`
-                  : (isOwnAccount ? 'Transfer to Company' : `Donate ${opsAmount} ops`)
+                  : (isOwnAccount ? `Add ${opsAmount} ops` : `Donate ${opsAmount} ops`)
               )}
             </button>
           </div>
