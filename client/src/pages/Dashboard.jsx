@@ -105,21 +105,9 @@ function Dashboard({ isPublic = false, publicUser = null }) {
   const [isConfirmActionModalOpen, setIsConfirmActionModalOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState(null);
   const [dontAskAgain, setDontAskAgain] = useState(false);
-  const [isTerminalExpanded, setIsTerminalExpanded] = useState(false);
   const [isTerminalManuallyExpanded, setIsTerminalManuallyExpanded] = useState(false);
   const [historicalLogs, setHistoricalLogs] = useState([]);
   const terminalRef = useRef(null);
-
-  // Auto-collapse terminal after 30 seconds (only for auto-expansion, not manual)
-  useEffect(() => {
-    if (isTerminalExpanded) {
-      const timer = setTimeout(() => {
-        setIsTerminalExpanded(false);
-      }, 30000); // 30 seconds
-
-      return () => clearTimeout(timer);
-    }
-  }, [isTerminalExpanded]);
 
   // Use publicUser if in public mode, otherwise use authenticated user
   const { token, user: authUser, refreshUser } = useAuth();
@@ -143,7 +131,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
     }
   }, [historicalLogs.length > 0]); // Only on initial load
 
-  // Scroll to bottom when expanding/collapsing
+  // Scroll to bottom when manually expanding/collapsing
   useEffect(() => {
     if (terminalRef.current) {
       setTimeout(() => {
@@ -152,7 +140,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
         }
       }, 150); // Slightly longer delay for animation
     }
-  }, [isTerminalExpanded, isTerminalManuallyExpanded]);
+  }, [isTerminalManuallyExpanded]);
 
   // Store previous log count to detect new logs
   const prevLogCountRef = useRef(0);
@@ -609,9 +597,6 @@ function Dashboard({ isPublic = false, publicUser = null }) {
 
   // Execute refresh (called after confirmation or if don't ask again is set)
   const executeRefresh = async () => {
-    // Expand terminal to draw attention
-    setIsTerminalExpanded(true);
-
     try {
       const response = await fetch('/api/operations/deduct-user', {
         method: 'POST',
@@ -868,9 +853,6 @@ function Dashboard({ isPublic = false, publicUser = null }) {
     return `[${time}] ${log.stage ? `[${log.stage}] ` : ''}${log.message}`;
   };
 
-  // Terminal is expanded if either manually clicked or auto-expanded by refresh action
-  const isTerminalCurrentlyExpanded = isTerminalExpanded || isTerminalManuallyExpanded;
-
   // Get logs for terminal display - always show full history, just change container height
   // Priority: Use historical logs as base, merge with live stream
   // Filter out temporary UI feedback logs (created by TerminalContext when triggering agents)
@@ -907,7 +889,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
         onClick={() => setIsTerminalManuallyExpanded(!isTerminalManuallyExpanded)}
         style={{
           transition: 'all 0.5s ease-in-out',
-          height: isTerminalCurrentlyExpanded ? '300px' : '120px',
+          height: isTerminalManuallyExpanded ? '300px' : '120px',
           overflowY: 'auto',
           display: 'block',
           cursor: 'pointer'
@@ -1762,7 +1744,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
               <div>
                 <h1 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif', fontSize: '2.5em' }}>Polsia</h1>
-                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.179</p>
+                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.180</p>
               </div>
               <button
                 onClick={() => setIsPolsiaModalOpen(false)}
