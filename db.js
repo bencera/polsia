@@ -1362,7 +1362,10 @@ async function updateModuleExecution(executionId, updates) {
         // Emit completion event for real-time streaming when execution finishes
         if (execution && updates.status && (updates.status === 'completed' || updates.status === 'failed')) {
             const logStreamEmitter = require('./services/log-stream-emitter');
+            // Emit to execution-specific subscribers
             logStreamEmitter.emitCompletion(executionId, updates.status);
+            // Emit to company-wide subscribers
+            logStreamEmitter.emitCompletionToUser(execution.user_id, executionId, updates.status);
         }
 
         return execution;
@@ -1413,8 +1416,20 @@ async function saveExecutionLog(executionId, logData) {
 
         const log = result.rows[0];
 
-        // Emit log to real-time subscribers (true streaming, bypasses database polling)
+        // Emit log to execution-specific subscribers
         logStreamEmitter.emit(executionId, log);
+
+        // Get userId for company-wide emission
+        const userResult = await pool.query(
+            `SELECT user_id FROM agent_executions WHERE id = $1`,
+            [executionId]
+        );
+
+        if (userResult.rows.length > 0) {
+            const userId = userResult.rows[0].user_id;
+            // Emit to company-wide subscribers (all dashboards watching this user)
+            logStreamEmitter.emitToUser(userId, executionId, log);
+        }
 
         return log;
     } catch (err) {

@@ -387,9 +387,120 @@ app.use('/api/connections/appstore-connect', appStoreConnectRoutes);
 const mcpRoutes = require('./routes/mcp-routes');
 app.use('/mcp', authenticateToken, mcpRoutes);
 
-// SSE route for streaming logs (needs query auth because EventSource doesn't support headers)
-// IMPORTANT: This must be registered BEFORE the general module routes to avoid route conflicts
+// SSE routes for streaming logs (needs query auth because EventSource doesn't support headers)
+// IMPORTANT: These must be registered BEFORE the general module routes to avoid route conflicts
 const { getModuleById, getExecutionLogs, getExecutionLogsSince, getModuleExecutions } = require('./db');
+
+/**
+ * Company-wide SSE stream - streams ALL execution logs for authenticated user
+ * GET /api/executions/stream?token={jwt}
+ * Shows all autonomous/scheduled/manual executions in real-time
+ */
+app.get('/api/executions/stream', authenticateTokenFromQuery, async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        // Set up SSE headers
+        res.writeHead(200, {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            'X-Accel-Buffering': 'no', // Disable nginx buffering
+        });
+
+        console.log(`[SSE] Client connected to company-wide stream for user ${userId}`);
+
+        // Send initial comment to establish connection
+        res.write(': connected\n\n');
+
+        // Subscribe to ALL execution logs for this user
+        const logStreamEmitter = require('./services/log-stream-emitter');
+        logStreamEmitter.subscribeToUser(userId, res);
+
+        console.log(`[SSE] Subscribed to company-wide stream for user ${userId}`);
+
+        // Clean up on client disconnect
+        req.on('close', () => {
+            console.log(`[SSE] Client disconnected from company-wide stream for user ${userId}`);
+            logStreamEmitter.unsubscribeFromUser(userId, res);
+            res.end();
+        });
+
+        // Auto-timeout after 2 hours (company-wide streams can be long-lived)
+        setTimeout(() => {
+            console.log(`[SSE] Company-wide stream timeout for user ${userId}`);
+            logStreamEmitter.unsubscribeFromUser(userId, res);
+            res.end();
+        }, 2 * 60 * 60 * 1000);
+
+    } catch (error) {
+        console.error('Error setting up company-wide SSE stream:', error);
+        if (!res.headersSent) {
+            res.status(500).json({ success: false, message: 'Failed to stream logs' });
+        }
+    }
+});
+
+/**
+ * Public company-wide SSE stream - streams ALL execution logs for a specific user (unauthenticated)
+ * GET /api/users/:userId/executions/stream
+ * Used by public dashboards to show real-time automation activity
+ */
+app.get('/api/users/:userId/executions/stream', async (req, res) => {
+    try {
+        const userId = parseInt(req.params.userId);
+
+        if (isNaN(userId)) {
+            return res.status(400).json({ success: false, message: 'Invalid user ID' });
+        }
+
+        // TODO: Verify user has public dashboard enabled (for now, all users allow public streaming)
+
+        // Set up SSE headers
+        res.writeHead(200, {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            'X-Accel-Buffering': 'no', // Disable nginx buffering
+        });
+
+        console.log(`[SSE] Public client connected to stream for user ${userId}`);
+
+        // Send initial comment to establish connection
+        res.write(': connected\n\n');
+
+        // Subscribe to ALL execution logs for this user
+        const logStreamEmitter = require('./services/log-stream-emitter');
+        logStreamEmitter.subscribeToUser(userId, res);
+
+        console.log(`[SSE] Public client subscribed to stream for user ${userId}`);
+
+        // Clean up on client disconnect
+        req.on('close', () => {
+            console.log(`[SSE] Public client disconnected from stream for user ${userId}`);
+            logStreamEmitter.unsubscribeFromUser(userId, res);
+            res.end();
+        });
+
+        // Auto-timeout after 2 hours (public streams can be long-lived for demos)
+        setTimeout(() => {
+            console.log(`[SSE] Public stream timeout for user ${userId}`);
+            logStreamEmitter.unsubscribeFromUser(userId, res);
+            res.end();
+        }, 2 * 60 * 60 * 1000);
+
+    } catch (error) {
+        console.error('Error setting up public SSE stream:', error);
+        if (!res.headersSent) {
+            res.status(500).json({ success: false, message: 'Failed to stream logs' });
+        }
+    }
+});
+
+/**
+ * Execution-specific SSE stream - streams logs for a single execution
+ * GET /api/modules/:id/executions/:executionId/logs/stream?token={jwt}
+ */
 app.get('/api/modules/:id/executions/:executionId/logs/stream', authenticateTokenFromQuery, async (req, res) => {
     try {
         const moduleId = parseInt(req.params.id);

@@ -78,6 +78,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
   const [opsNeededAmount, setOpsNeededAmount] = useState(0);
   const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
   const [recentLogs, setRecentLogs] = useState([]);
+  const [publicStreamLogs, setPublicStreamLogs] = useState([]);
   const [isConnectionsModalOpen, setIsConnectionsModalOpen] = useState(false);
   const [isCycleFrequencyModalOpen, setIsCycleFrequencyModalOpen] = useState(false);
   const [isPublicConnectionsModalOpen, setIsPublicConnectionsModalOpen] = useState(false);
@@ -127,6 +128,51 @@ function Dashboard({ isPublic = false, publicUser = null }) {
       fetchRecentLogs();
     }
   }, [user]);
+
+  // Connect to public SSE stream if viewing public dashboard
+  useEffect(() => {
+    if (!isPublic || !user?.id) {
+      return;
+    }
+
+    console.log('[Dashboard] Connecting to public SSE stream for user', user.id);
+
+    const streamUrl = `/api/users/${user.id}/executions/stream`;
+    const eventSource = new EventSource(streamUrl);
+
+    eventSource.onopen = () => {
+      console.log('[Dashboard] Public SSE connection opened');
+    };
+
+    eventSource.onmessage = (event) => {
+      console.log('[Dashboard] Received public log:', event.data);
+      try {
+        const data = JSON.parse(event.data);
+
+        // Check if this is a completion event
+        if (data.type === 'completion') {
+          console.log('[Dashboard] Execution completed:', data.status);
+          return;
+        }
+
+        // Add log to public stream (keep last 100 logs)
+        setPublicStreamLogs(prev => [...prev, data].slice(-100));
+      } catch (err) {
+        console.error('[Dashboard] Error parsing public log:', err);
+      }
+    };
+
+    eventSource.onerror = (err) => {
+      console.error('[Dashboard] Public SSE connection error:', err);
+      eventSource.close();
+    };
+
+    // Cleanup on unmount
+    return () => {
+      console.log('[Dashboard] Cleaning up public SSE connection');
+      eventSource.close();
+    };
+  }, [isPublic, user?.id]);
 
   const fetchTasks = async () => {
     try {
@@ -670,9 +716,12 @@ function Dashboard({ isPublic = false, publicUser = null }) {
   };
 
   // Get last 5 logs for terminal display
-  // Use real-time terminalLogs if available (for authenticated user's own dashboard)
-  // Otherwise fallback to recentLogs (for public dashboards or initial load)
-  const displayLogs = (terminalLogs && terminalLogs.length > 0 ? terminalLogs : recentLogs).slice(-5);
+  // Priority: publicStreamLogs (for public dashboards) > terminalLogs (for authenticated user) > recentLogs (fallback)
+  const displayLogs = (
+    isPublic && publicStreamLogs.length > 0
+      ? publicStreamLogs
+      : (terminalLogs && terminalLogs.length > 0 ? terminalLogs : recentLogs)
+  ).slice(-5);
 
   return (
     <>
@@ -1429,7 +1478,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
               <div>
                 <h1 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif', fontSize: '2.5em' }}>Polsia</h1>
-                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.176</p>
+                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.177</p>
               </div>
               <button
                 onClick={() => setIsPolsiaModalOpen(false)}

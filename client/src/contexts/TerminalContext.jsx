@@ -14,90 +14,67 @@ export function TerminalProvider({ children }) {
   const [activeModuleId, setActiveModuleId] = useState(null);
   const eventSourceRef = useRef(null);
 
-  // Check for running executions on mount and when token changes
+  // Auto-connect to company-wide stream on mount
   useEffect(() => {
     if (!token) {
       return;
     }
 
-    checkForRunningExecutions();
+    connectToCompanyStream();
+
+    // Cleanup on unmount
+    return () => {
+      if (eventSourceRef.current) {
+        console.log('[TerminalContext] Cleaning up company-wide SSE connection');
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
+    };
   }, [token]);
 
-  // Check if there are any currently running executions
-  const checkForRunningExecutions = async () => {
-    try {
-      // Get all modules
-      const modulesResponse = await fetch('/api/modules', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!modulesResponse.ok) {
-        return;
-      }
-
-      const modulesData = await modulesResponse.json();
-      const modules = modulesData.modules || [];
-
-      // Check each module for running executions
-      for (const module of modules) {
-        const executionsResponse = await fetch(`/api/modules/${module.id}/executions?limit=1`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (!executionsResponse.ok) {
-          continue;
-        }
-
-        const executionsData = await executionsResponse.json();
-        const latestExecution = executionsData.executions?.[0];
-
-        // If we found a running execution, connect to it
-        if (latestExecution && latestExecution.status === 'running') {
-          console.log('[TerminalContext] Found running execution:', latestExecution.id);
-
-          // Load existing logs
-          const logsResponse = await fetch(`/api/modules/${module.id}/executions/${latestExecution.id}/logs`, {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-
-          if (logsResponse.ok) {
-            const logsData = await logsResponse.json();
-            if (logsData.logs && logsData.logs.length > 0) {
-              setTerminalLogs(logsData.logs);
-            }
-          }
-
-          // Start streaming
-          startLogStream(module.id, latestExecution.id);
-          return; // Only connect to the first running execution we find
-        }
-
-        // If no running execution, load latest completed logs
-        if (latestExecution && (latestExecution.status === 'completed' || latestExecution.status === 'failed')) {
-          const logsResponse = await fetch(`/api/modules/${module.id}/executions/${latestExecution.id}/logs`, {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-
-          if (logsResponse.ok) {
-            const logsData = await logsResponse.json();
-            if (logsData.logs && logsData.logs.length > 0) {
-              setTerminalLogs(logsData.logs);
-              return; // Load logs from first module with execution history
-            }
-          }
-        }
-      }
-    } catch (err) {
-      console.error('[TerminalContext] Error checking for running executions:', err);
+  // Connect to company-wide stream (all executions for this user)
+  const connectToCompanyStream = () => {
+    // Close existing connection if any
+    if (eventSourceRef.current) {
+      console.log('[TerminalContext] Closing existing SSE connection');
+      eventSourceRef.current.close();
     }
+
+    const streamUrl = `/api/executions/stream?token=${token}`;
+    console.log('[TerminalContext] Connecting to company-wide stream:', streamUrl);
+
+    const eventSource = new EventSource(streamUrl);
+    eventSourceRef.current = eventSource;
+
+    eventSource.onopen = () => {
+      console.log('[TerminalContext] Company-wide SSE connection opened');
+    };
+
+    eventSource.onmessage = (event) => {
+      console.log('[TerminalContext] Received message:', event.data);
+      try {
+        const data = JSON.parse(event.data);
+
+        // Check if this is a completion event
+        if (data.type === 'completion') {
+          console.log('[TerminalContext] Execution completed:', data.status, 'for execution', data.execution_id);
+          return;
+        }
+
+        // Add log to terminal (keep last 100 logs)
+        console.log('[TerminalContext] Adding log to terminal');
+        setTerminalLogs(prev => [...prev, data].slice(-100));
+      } catch (err) {
+        console.error('[TerminalContext] Error parsing log:', err);
+      }
+    };
+
+    eventSource.onerror = (err) => {
+      console.error('[TerminalContext] Company-wide SSE connection error:', err);
+      console.error('[TerminalContext] EventSource readyState:', eventSource.readyState);
+      eventSource.close();
+      eventSourceRef.current = null;
+    };
   };
 
   // Start streaming logs for a specific execution
@@ -269,16 +246,6 @@ export function TerminalProvider({ children }) {
       return false;
     }
   };
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (eventSourceRef.current) {
-        console.log('[TerminalContext] Cleaning up SSE connection');
-        eventSourceRef.current.close();
-      }
-    };
-  }, []);
 
   const value = {
     terminalLogs,
