@@ -62,7 +62,6 @@ export function TerminalProvider({ children }) {
         }
 
         // Add log to terminal (keep last 100 logs)
-        console.log('[TerminalContext] Adding log to terminal');
         setTerminalLogs(prev => [...prev, data].slice(-100));
       } catch (err) {
         console.error('[TerminalContext] Error parsing log:', err);
@@ -194,13 +193,14 @@ export function TerminalProvider({ children }) {
   // Manually trigger a routine execution (called from Routines page)
   const runRoutine = async (agentId, agentName) => {
     try {
-      // Add a starting log message
+      // Add a starting log message (marked as temporary UI feedback)
       const startLog = {
-        id: Date.now(),
+        id: `temp-${Date.now()}`,
         timestamp: new Date().toISOString(),
         log_level: 'info',
         stage: 'init',
-        message: `Starting agent: ${agentName}`
+        message: `Starting agent: ${agentName}`,
+        isTemporary: true // Mark as temporary UI log
       };
       setTerminalLogs(prev => [...prev, startLog]);
 
@@ -223,11 +223,12 @@ export function TerminalProvider({ children }) {
         startLogStream(agentId, data.execution.id, false);
 
         const successLog = {
-          id: Date.now() + 1,
+          id: `temp-${Date.now() + 1}`,
           timestamp: new Date().toISOString(),
           log_level: 'info',
           stage: 'triggered',
-          message: `Agent "${agentName}" triggered successfully (Execution ID: ${data.execution.id})`
+          message: `Agent "${agentName}" triggered successfully (Execution ID: ${data.execution.id})`,
+          isTemporary: true // Mark as temporary UI log
         };
         setTerminalLogs(prev => [...prev, successLog]);
       }

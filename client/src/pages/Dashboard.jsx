@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTerminal } from '../contexts/TerminalContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -105,12 +105,75 @@ function Dashboard({ isPublic = false, publicUser = null }) {
   const [isConfirmActionModalOpen, setIsConfirmActionModalOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState(null);
   const [dontAskAgain, setDontAskAgain] = useState(false);
+  const [isTerminalExpanded, setIsTerminalExpanded] = useState(false);
+  const [isTerminalManuallyExpanded, setIsTerminalManuallyExpanded] = useState(false);
+  const [historicalLogs, setHistoricalLogs] = useState([]);
+  const terminalRef = useRef(null);
+
+  // Auto-collapse terminal after 30 seconds (only for auto-expansion, not manual)
+  useEffect(() => {
+    if (isTerminalExpanded) {
+      const timer = setTimeout(() => {
+        setIsTerminalExpanded(false);
+      }, 30000); // 30 seconds
+
+      return () => clearTimeout(timer);
+    }
+  }, [isTerminalExpanded]);
 
   // Use publicUser if in public mode, otherwise use authenticated user
   const { token, user: authUser, refreshUser } = useAuth();
   const user = isPublic ? publicUser : authUser;
   const { terminalLogs, runRoutine } = useTerminal();
   const { isDarkMode } = useTheme();
+
+  // Helper function to check if terminal is scrolled to bottom (or near bottom)
+  const isScrolledToBottom = () => {
+    if (!terminalRef.current) return false;
+    const { scrollTop, scrollHeight, clientHeight } = terminalRef.current;
+    // Consider "at bottom" if within 50px of bottom
+    return scrollHeight - scrollTop - clientHeight < 50;
+  };
+
+  // Auto-scroll to bottom when terminal first loads
+  useEffect(() => {
+    if (terminalRef.current && historicalLogs.length > 0) {
+      // Initial scroll to bottom after historical logs load
+      terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
+    }
+  }, [historicalLogs.length > 0]); // Only on initial load
+
+  // Scroll to bottom when expanding/collapsing
+  useEffect(() => {
+    if (terminalRef.current) {
+      setTimeout(() => {
+        if (terminalRef.current) {
+          terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
+        }
+      }, 150); // Slightly longer delay for animation
+    }
+  }, [isTerminalExpanded, isTerminalManuallyExpanded]);
+
+  // Store previous log count to detect new logs
+  const prevLogCountRef = useRef(0);
+
+  // Auto-scroll to bottom when new logs arrive (only if already at bottom)
+  useEffect(() => {
+    // Check if we have new logs (compare to previous count)
+    const currentLogCount = terminalLogs.length;
+    if (currentLogCount > prevLogCountRef.current && terminalRef.current) {
+      // Only auto-scroll if user is already at/near the bottom
+      if (isScrolledToBottom()) {
+        // Use requestAnimationFrame for smoother scrolling
+        requestAnimationFrame(() => {
+          if (terminalRef.current) {
+            terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
+          }
+        });
+      }
+    }
+    prevLogCountRef.current = currentLogCount;
+  }, [terminalLogs.length]);
 
   // CEO next decision countdown - set to a fixed target time for demo (6 hours from now)
   const [nextDecisionTime] = useState(() => {
@@ -129,6 +192,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
       fetchReports();
       fetchConnections();
       fetchRecentLogs();
+      fetchHistoricalLogs(); // Always fetch historical logs on mount
     }
   }, [user]);
 
@@ -366,6 +430,25 @@ function Dashboard({ isPublic = false, publicUser = null }) {
     }
   };
 
+  const fetchHistoricalLogs = async () => {
+    try {
+      const url = isPublic ? `/api/logs/recent/${user.id}?limit=100` : '/api/logs/recent?limit=100';
+      const headers = isPublic ? {} : { 'Authorization': `Bearer ${token}` };
+
+      const response = await fetch(url, { headers });
+      const data = await response.json();
+      if (response.ok) {
+        const logs = data.logs || [];
+        setHistoricalLogs(logs);
+
+        // Clear old logs from recentLogs state to prevent stale data
+        setRecentLogs([]);
+      }
+    } catch (err) {
+      console.error('Failed to fetch historical logs:', err);
+    }
+  };
+
   // Connection functions
   const connectGitHub = () => {
     const isProduction = window.location.hostname !== 'localhost';
@@ -526,6 +609,9 @@ function Dashboard({ isPublic = false, publicUser = null }) {
 
   // Execute refresh (called after confirmation or if don't ask again is set)
   const executeRefresh = async () => {
+    // Expand terminal to draw attention
+    setIsTerminalExpanded(true);
+
     try {
       const response = await fetch('/api/operations/deduct-user', {
         method: 'POST',
@@ -782,38 +868,57 @@ function Dashboard({ isPublic = false, publicUser = null }) {
     return `[${time}] ${log.stage ? `[${log.stage}] ` : ''}${log.message}`;
   };
 
-  // Get last 5 logs for terminal display
-  // Priority: publicStreamLogs (for public dashboards) > terminalLogs (for authenticated user) > recentLogs (fallback)
-  const displayLogs = (
-    isPublic && publicStreamLogs.length > 0
-      ? publicStreamLogs
-      : (terminalLogs && terminalLogs.length > 0 ? terminalLogs : recentLogs)
-  ).slice(-5);
+  // Terminal is expanded if either manually clicked or auto-expanded by refresh action
+  const isTerminalCurrentlyExpanded = isTerminalExpanded || isTerminalManuallyExpanded;
+
+  // Get logs for terminal display - always show full history, just change container height
+  // Priority: Use historical logs as base, merge with live stream
+  // Filter out temporary UI feedback logs (created by TerminalContext when triggering agents)
+  const liveStreamLogs = isPublic && publicStreamLogs.length > 0
+    ? publicStreamLogs.filter(log => !log.isTemporary)
+    : (terminalLogs || []).filter(log => !log.isTemporary);
+
+  // Always merge historical logs with live stream logs for full scrollable history
+  const mergedLogs = [...historicalLogs, ...liveStreamLogs];
+
+  // Remove duplicates based on log ID and sort by timestamp
+  const uniqueLogs = Array.from(
+    new Map(mergedLogs.map(log => [log.id, log])).values()
+  );
+
+  const allLogs = uniqueLogs.sort((a, b) => {
+    const timeA = new Date(a.timestamp).getTime();
+    const timeB = new Date(b.timestamp).getTime();
+
+    // Handle invalid dates
+    if (isNaN(timeA)) return 1;  // Put invalid dates at the end
+    if (isNaN(timeB)) return -1; // Put invalid dates at the end
+
+    return timeA - timeB; // Ascending order (oldest first)
+  });
+
+  const displayLogs = allLogs;
 
   return (
     <>
-      <div className="terminal">
+      <div
+        ref={terminalRef}
+        className="terminal"
+        onClick={() => setIsTerminalManuallyExpanded(!isTerminalManuallyExpanded)}
+        style={{
+          transition: 'all 0.5s ease-in-out',
+          height: isTerminalCurrentlyExpanded ? '300px' : '120px',
+          overflowY: 'auto',
+          display: 'block',
+          cursor: 'pointer'
+        }}
+      >
         {displayLogs.length === 0 ? (
-          // Show 5 lines when idle
-          <>
-            <div>&gt; Autonomous Operations Control</div>
-            <div>&nbsp;</div>
-            <div>&nbsp;</div>
-            <div>&nbsp;</div>
-            <div>&nbsp;</div>
-          </>
+          <div>&gt; Autonomous Operations Control</div>
         ) : (
-          // Show logs and fill remaining lines
-          <>
-            {displayLogs.map((log, index) => (
-              <div key={`${log.id}-${index}`}>&gt; {formatLogMessage(log)}</div>
-            ))}
-            {displayLogs.length < 5 &&
-              Array.from({ length: 5 - displayLogs.length }).map((_, i) => (
-                <div key={`empty-${i}`}>&nbsp;</div>
-              ))
-            }
-          </>
+          displayLogs.map((log, index) => (
+            <div key={`${log.id}-${index}`}>&gt; {formatLogMessage(log)}</div>
+          ))
         )}
       </div>
 
@@ -1657,7 +1762,7 @@ function Dashboard({ isPublic = false, publicUser = null }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
               <div>
                 <h1 style={{ margin: 0, fontFamily: 'Times New Roman, Times, serif', fontSize: '2.5em' }}>Polsia</h1>
-                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.178</p>
+                <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#666', fontFamily: 'Arial, Helvetica, sans-serif' }}>v0.179</p>
               </div>
               <button
                 onClick={() => setIsPolsiaModalOpen(false)}

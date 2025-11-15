@@ -25,14 +25,17 @@ router.get('/recent', async (req, res) => {
             return res.status(403).json({ success: false, error: 'Invalid token' });
         }
 
+        // Get limit from query params, default to 5, max 200
+        const limit = Math.min(parseInt(req.query.limit) || 5, 200);
+
         const result = await db.pool.query(`
             SELECT el.id, el.timestamp, el.log_level, el.stage, el.message, el.metadata
             FROM execution_logs el
             INNER JOIN agent_executions ae ON el.execution_id = ae.id
             WHERE ae.user_id = $1
             ORDER BY el.timestamp DESC
-            LIMIT 5
-        `, [userId]);
+            LIMIT $2
+        `, [userId, limit]);
 
         res.json({
             success: true,
@@ -68,14 +71,17 @@ router.get('/recent/:userId', async (req, res) => {
             });
         }
 
+        // Get limit from query params, default to 5, max 200
+        const limit = Math.min(parseInt(req.query.limit) || 5, 200);
+
         const result = await db.pool.query(`
             SELECT el.id, el.timestamp, el.log_level, el.stage, el.message, el.metadata
             FROM execution_logs el
             INNER JOIN agent_executions ae ON el.execution_id = ae.id
             WHERE ae.user_id = $1
             ORDER BY el.timestamp DESC
-            LIMIT 5
-        `, [userId]);
+            LIMIT $2
+        `, [userId, limit]);
 
         res.json({
             success: true,
